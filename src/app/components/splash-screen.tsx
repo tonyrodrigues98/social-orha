@@ -20,9 +20,7 @@ export function SplashScreen({ ready = false, onFinished }: SplashScreenProps) {
   useEffect(() => {
     if (!ready || !entered || exiting) return;
     setExiting(true);
-    const finishTimer = window.setTimeout(() => onFinished?.(), 400);
-    return () => window.clearTimeout(finishTimer);
-  }, [entered, exiting, onFinished, ready]);
+  }, [entered, exiting, ready]);
 
   return (
     <div className="splash-screen" role="status" aria-label="Abrindo ORHA">
@@ -33,6 +31,9 @@ export function SplashScreen({ ready = false, onFinished }: SplashScreenProps) {
           ? { opacity: 0, scale: reduceMotion ? 1 : 1.04, filter: reduceMotion ? "blur(0px)" : "blur(12px)" }
           : { opacity: 1, scale: 1, filter: "blur(0px)" }}
         transition={{ duration: exiting || reduceMotion ? 0.4 : 0.6, ease: [0.22, 1, 0.36, 1] }}
+        onAnimationComplete={() => {
+          if (exiting) onFinished?.();
+        }}
       >
         <BrandMark className="splash-logo" />
         <span className="splash-caption">Conhe&#xE7;a <b>&#8226;</b> Conecte-se <b>&#8226;</b> Perten&#xE7;a</span>
