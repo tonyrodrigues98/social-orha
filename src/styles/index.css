@@ -464,14 +464,15 @@ button {
 }
 
 .splash-logo {
-  width: min(110vw, 560px);
+  width: min(125vw, 640px);
   height: auto;
+  margin-bottom: -3.2rem;
   mix-blend-mode: multiply;
 }
 
 .splash-caption {
   color: #767676;
-  margin-top: 0.6rem;
+  margin-top: 0;
   font-size: clamp(14px, 4.1vw, 18px);
   font-weight: 520;
   letter-spacing: 0.075em;
