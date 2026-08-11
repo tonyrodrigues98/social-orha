@@ -31,9 +31,8 @@ export function SplashScreen({ onFinished }: SplashScreenProps) {
       >
         <BrandMark className="splash-logo" />
         <div className="splash-divider" aria-hidden="true"><span /><i /><span /></div>
-        <span className="splash-caption">ConheÃ§a <b>â€¢</b> Conecte-se <b>â€¢</b> PertenÃ§a</span>
+        <span className="splash-caption">Conhe&#xE7;a <b>&#8226;</b> Conecte-se <b>&#8226;</b> Perten&#xE7;a</span>
       </motion.div>
     </div>
   );
 }
-
