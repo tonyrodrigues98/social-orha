@@ -7,13 +7,15 @@ export function BrandMark({
   variant = "primary",
   className = "",
 }: BrandMarkProps) {
+  const assetBase = import.meta.env.BASE_URL;
+
   return (
     <img
       className={`brand-mark ${className}`}
       src={
         variant === "primary"
-          ? "/brand/orha-splash-primary.jpg"
-          : "/brand/orha-splash-soft.jpg"
+          ? `${assetBase}brand/orha-splash-primary.jpg`
+          : `${assetBase}brand/orha-splash-soft.jpg`
       }
       alt="ORHA"
       draggable={false}
