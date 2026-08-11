@@ -1,5 +1,5 @@
 import { motion, useReducedMotion } from "motion/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BrandMark } from "./brand-mark";
 
 type SplashScreenProps = {
@@ -11,7 +11,7 @@ export function SplashScreen({ ready = false, onFinished }: SplashScreenProps) {
   const reduceMotion = useReducedMotion();
   const [entered, setEntered] = useState(false);
   const [minimumDisplayReached, setMinimumDisplayReached] = useState(false);
-  const [exiting, setExiting] = useState(false);
+  const finishNotified = useRef(false);
 
   useEffect(() => {
     const entryTimer = window.setTimeout(() => setEntered(true), 600);
@@ -22,10 +22,7 @@ export function SplashScreen({ ready = false, onFinished }: SplashScreenProps) {
     };
   }, []);
 
-  useEffect(() => {
-    if (!ready || !entered || !minimumDisplayReached || exiting) return;
-    setExiting(true);
-  }, [entered, exiting, minimumDisplayReached, ready]);
+  const exiting = ready && entered && minimumDisplayReached;
 
   return (
     <div className="splash-screen" role="status" aria-label="Abrindo ORHA">
@@ -37,7 +34,10 @@ export function SplashScreen({ ready = false, onFinished }: SplashScreenProps) {
           : { opacity: 1, scale: 1, filter: "blur(0px)" }}
         transition={{ duration: exiting || reduceMotion ? 0.4 : 0.6, ease: [0.22, 1, 0.36, 1] }}
         onAnimationComplete={() => {
-          if (exiting) onFinished?.();
+          if (exiting && !finishNotified.current) {
+            finishNotified.current = true;
+            onFinished?.();
+          }
         }}
       >
         <BrandMark className="splash-logo" />

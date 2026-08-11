@@ -1,5 +1,6 @@
 import { Clapperboard, Gamepad2, PawPrint, ShoppingBag, Smile, UsersRound } from "lucide-react";
 import { NativeHeader } from "../components/native-header";
+import { usePrototype } from "../prototype-context";
 
 const destinations = [
   { name: "Cinema", detail: "Filmes e estreias", icon: Clapperboard, className: "coral" },
@@ -11,6 +12,7 @@ const destinations = [
 ];
 
 export function ExplorePage() {
+  const { openDrawer } = usePrototype();
   return (
     <div className="page">
       <NativeHeader title="Explorar" subtitle="Tudo que pode fazer parte do seu mundo" />
@@ -27,7 +29,7 @@ export function ExplorePage() {
           <div className="section-heading"><div><span className="section-overline">DESTINOS</span><h2>O que você quer encontrar?</h2></div></div>
           <div className="destination-grid">
             {destinations.map(({ name, detail, icon: Icon, className }) => (
-              <button type="button" className={`destination-card ${className}`} key={name}>
+              <button type="button" className={`destination-card ${className}`} key={name} onClick={() => openDrawer({ type: "explore", destination: name })}>
                 <Icon size={25} />
                 <span><strong>{name}</strong><small>{detail}</small></span>
               </button>

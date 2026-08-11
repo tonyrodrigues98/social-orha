@@ -6,6 +6,8 @@ import { ConversationsPage } from "./pages/conversations-page";
 import { ExplorePage } from "./pages/explore-page";
 import { HomePage } from "./pages/home-page";
 import { ProfilePage } from "./pages/profile-page";
+import { PrototypeProvider } from "./prototype-context";
+import { PrototypeDrawer } from "./components/prototype-drawer";
 import type { AppSection } from "./types";
 
 const pages: Record<AppSection, React.ComponentType> = {
@@ -28,7 +30,7 @@ export function AuthenticatedApp() {
   const ActivePage = pages[section];
 
   return (
-    <>
+    <PrototypeProvider navigate={setSection}>
       <div className="app-viewport">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
@@ -43,6 +45,7 @@ export function AuthenticatedApp() {
         </AnimatePresence>
       </div>
       <BottomNavigation value={section} onChange={setSection} />
-    </>
+      <PrototypeDrawer />
+    </PrototypeProvider>
   );
 }

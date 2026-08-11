@@ -1,6 +1,6 @@
 import { Bell, Search } from "lucide-react";
 import { Avatar } from "@/components/base/avatar/avatar";
-import { useAuth } from "@/app/auth/auth-context";
+import { usePrototype } from "../prototype-context";
 import { BrandMark } from "./brand-mark";
 
 type NativeHeaderProps = {
@@ -9,14 +9,10 @@ type NativeHeaderProps = {
   showBrand?: boolean;
 };
 
-export function NativeHeader({
-  title,
-  subtitle,
-  showBrand = false,
-}: NativeHeaderProps) {
-  const { identity } = useAuth();
-  const initials = identity?.profile.full_name
-    ?.split(/\s+/)
+export function NativeHeader({ title, subtitle, showBrand = false }: NativeHeaderProps) {
+  const { profile, navigate, openDrawer, notificationsUnread } = usePrototype();
+  const initials = profile.fullName
+    .split(/\s+/)
     .slice(0, 2)
     .map((part) => part[0])
     .join("")
@@ -25,28 +21,18 @@ export function NativeHeader({
   return (
     <header className="native-header">
       <div className="header-title-wrap">
-        {showBrand ? (
-          <BrandMark className="header-brand" />
-        ) : (
-          <>
-            <h1>{title}</h1>
-            {subtitle ? <p>{subtitle}</p> : null}
-          </>
-        )}
+        {showBrand ? <BrandMark className="header-brand" /> : <><h1>{title}</h1>{subtitle ? <p>{subtitle}</p> : null}</>}
       </div>
       <div className="header-actions">
-        <button type="button" className="icon-button" aria-label="Pesquisar">
+        <button type="button" className="icon-button" aria-label="Pesquisar" onClick={() => openDrawer({ type: "search" })}>
           <Search size={20} strokeWidth={1.9} />
         </button>
-        <button type="button" className="icon-button has-indicator" aria-label="Notificações">
+        <button type="button" className={`icon-button ${notificationsUnread ? "has-indicator" : ""}`} aria-label="Notificações" onClick={() => openDrawer({ type: "notifications" })}>
           <Bell size={20} strokeWidth={1.9} />
         </button>
-        <Avatar
-          size="sm"
-          initials={initials}
-          alt="Seu perfil"
-          contentClassName="avatar-neutral"
-        />
+        <button type="button" className="header-profile-trigger" aria-label="Abrir perfil" onClick={() => navigate("perfil")}>
+          <Avatar size="sm" initials={initials} alt="Seu perfil" contentClassName="avatar-neutral" />
+        </button>
       </div>
     </header>
   );

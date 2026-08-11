@@ -12,6 +12,7 @@ import { communities } from "../prototype-data";
 import { NativeHeader } from "../components/native-header";
 import { PeopleCarousel } from "../components/people-carousel";
 import { useAuth } from "../auth/auth-context";
+import { usePrototype } from "../prototype-context";
 
 const firstSteps = [
   {
@@ -36,7 +37,10 @@ const firstSteps = [
 
 export function HomePage() {
   const { identity } = useAuth();
+  const { profile, navigate, openDrawer } = usePrototype();
   const firstName = identity?.profile.full_name?.split(/\s+/)[0] ?? "você";
+
+  const displayFirstName = profile.fullName.split(/\s+/)[0] || firstName;
 
   return (
     <div className="page home-page">
@@ -44,7 +48,7 @@ export function HomePage() {
 
       <main className="page-content">
         <section className="welcome-copy">
-          <span className="eyebrow">BOA NOITE, {firstName.toUpperCase()}</span>
+          <span className="eyebrow">BOA NOITE, {displayFirstName.toUpperCase()}</span>
           <h1>Seu lugar começa<br />com um encontro.</h1>
           <p>
             Complete seu perfil para descobrir pessoas e comunidades que combinam com você.
@@ -61,6 +65,7 @@ export function HomePage() {
               color="primary"
               iconTrailing={ArrowRight}
               className="home-cta"
+              onPress={() => navigate("perfil")}
             >
               Continuar perfil
             </Button>
@@ -81,7 +86,11 @@ export function HomePage() {
           </div>
           <div className="first-steps">
             {firstSteps.map(({ icon: Icon, title, detail, tone }) => (
-              <button className="step-row" type="button" key={title}>
+              <button className="step-row" type="button" key={title} onClick={() => {
+                if (title === "Encontrar uma comunidade") navigate("comunidade");
+                else if (title === "Conhecer novas pessoas") openDrawer({ type: "search" });
+                else navigate("perfil");
+              }}>
                 <span className={`step-icon ${tone}`}><Icon size={19} /></span>
                 <span className="step-copy"><strong>{title}</strong><small>{detail}</small></span>
                 <ChevronRight size={18} aria-hidden />
@@ -96,7 +105,7 @@ export function HomePage() {
               <span className="section-overline">ALGO EM COMUM</span>
               <h2>Pessoas que você pode gostar</h2>
             </div>
-            <button type="button" className="text-button">Ver todas</button>
+            <button type="button" className="text-button" onClick={() => openDrawer({ type: "search" })}>Ver todas</button>
           </div>
           <PeopleCarousel />
         </section>
@@ -107,11 +116,11 @@ export function HomePage() {
               <span className="section-overline">PERTENÇA</span>
               <h2>Comunidades para você</h2>
             </div>
-            <button type="button" className="text-button">Explorar</button>
+            <button type="button" className="text-button" onClick={() => navigate("comunidade")}>Explorar</button>
           </div>
           <div className="community-list">
             {communities.slice(0, 2).map((community) => (
-              <button type="button" className="community-row" key={community.name}>
+              <button type="button" className="community-row" key={community.name} onClick={() => openDrawer({ type: "community", communityName: community.name })}>
                 <span className="community-monogram" style={{ background: community.accent }}>
                   {community.name.slice(0, 2).toUpperCase()}
                 </span>
