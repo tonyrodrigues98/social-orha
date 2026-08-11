@@ -1362,6 +1362,66 @@ button {
 
 .prototype-toast svg { flex: 0 0 auto; color: #9fe0c6; }
 
+/* Private conversations use the installed chatcn primitives as a full native surface. */
+.chat-viewport {
+  overflow: hidden;
+}
+
+.private-chat-route,
+.private-chat-page {
+  height: 100%;
+}
+
+.private-chat-page {
+  display: flex;
+  min-height: 100dvh;
+  background: var(--chat-bg-app);
+}
+
+.orha-private-chat {
+  display: flex;
+  width: 100%;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  background: var(--chat-bg-main);
+}
+
+.orha-private-chat > header {
+  padding-top: max(12px, env(safe-area-inset-top));
+}
+
+.orha-private-chat .chat-composer {
+  padding-bottom: max(8px, env(safe-area-inset-bottom));
+}
+
+.private-chat-avatar {
+  background: var(--orha-lilac) !important;
+}
+
+.private-chat-actions {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.private-chat-actions button {
+  display: grid;
+  width: 31px;
+  height: 31px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--chat-text-secondary);
+}
+
+.private-chat-actions button:active {
+  background: var(--chat-accent-soft);
+  color: var(--chat-accent);
+}
+
 @media (max-width: 370px) {
   .page-content { padding-right: 15px; padding-left: 15px; }
   .edge-to-edge, .profile-cover { margin-right: -15px; margin-left: -15px; }

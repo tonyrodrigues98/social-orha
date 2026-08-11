@@ -31,6 +31,7 @@ export type ChatMessage = {
   author: string;
   content: string;
   mine?: boolean;
+  timestamp: number;
 };
 
 export type DrawerView =
@@ -112,9 +113,11 @@ function toLabels(values: unknown[]) {
 export function PrototypeProvider({
   children,
   navigate,
+  openChat,
 }: {
   children: ReactNode;
   navigate: (section: AppSection) => void;
+  openChat: (conversationId: string) => void;
 }) {
   const { identity } = useAuth();
   const [drawer, setDrawer] = useState<DrawerView | null>(null);
@@ -132,9 +135,9 @@ export function PrototypeProvider({
   );
   const [conversationMessages, setConversationMessages] = useState<Record<string, ChatMessage[]>>(() =>
     Object.fromEntries(
-      conversationSeed.map((conversation) => {
+      conversationSeed.map((conversation, index) => {
         const id = toId(conversation.name);
-        return [id, [{ id: `${id}-initial`, author: conversation.name, content: conversation.message }]];
+        return [id, [{ id: `${id}-initial`, author: conversation.name, content: conversation.message, timestamp: Date.now() - ((index + 1) * 120000) }]];
       }),
     ),
   );
@@ -207,8 +210,8 @@ export function PrototypeProvider({
     setConversations((current) => current.map((conversation) => (
       conversation.id === conversationId ? { ...conversation, unread: 0 } : conversation
     )));
-    setDrawer({ type: "conversation", conversationId });
-  }, []);
+    openChat(conversationId);
+  }, [openChat]);
 
   const sendMessage = useCallback((conversationId: string, content: string) => {
     const message = content.trim();
@@ -217,7 +220,7 @@ export function PrototypeProvider({
       ...current,
       [conversationId]: [
         ...(current[conversationId] ?? []),
-        { id: `${conversationId}-${Date.now()}`, author: "Você", content: message, mine: true },
+        { id: `${conversationId}-${Date.now()}`, author: "Você", content: message, mine: true, timestamp: Date.now() },
       ],
     }));
     setConversations((current) => current.map((conversation) => (
@@ -248,13 +251,13 @@ export function PrototypeProvider({
       ]);
       setConversationMessages((current) => ({
         ...current,
-        [id]: [{ id: `${id}-first`, author: "Você", content: draft, mine: true }],
+        [id]: [{ id: `${id}-first`, author: "Você", content: draft, mine: true, timestamp: Date.now() }],
       }));
     }
     navigate("conversas");
-    setDrawer({ type: "conversation", conversationId: id });
+    openChat(id);
     announce(`Conversa com ${recipient} pronta para teste.`);
-  }, [announce, conversations, navigate]);
+  }, [announce, conversations, navigate, openChat]);
 
   const respondToConversationRequest = useCallback((name: string, accepted: boolean) => {
     setConversationRequests((current) => current.filter((request) => request !== name));
