@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { Button } from "@/components/base/buttons/button";
 import { signOut } from "@/infrastructure/supabase/email-auth";
 import { useAuth } from "./auth/auth-context";
@@ -26,13 +26,8 @@ function AppGate() {
   const { status, identity, isPasswordRecovery, error, refreshIdentity } = useAuth();
   const [minimumLaunchFinished, setMinimumLaunchFinished] = useState(false);
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => setMinimumLaunchFinished(true), 900);
-    return () => window.clearTimeout(timer);
-  }, []);
-
   if (!minimumLaunchFinished || status === "initializing" || status === "loading_identity") {
-    return <SplashScreen />;
+    return <SplashScreen onFinished={() => setMinimumLaunchFinished(true)} />;
   }
 
   if (isPasswordRecovery) return <LazyScreen><ResetPasswordScreen /></LazyScreen>;
@@ -41,8 +36,8 @@ function AppGate() {
   if (status === "error") {
     return (
       <div className="session-error-screen">
-        <span>Não conseguimos abrir sua conta</span>
-        <h1>Sua sessão está segura.</h1>
+        <span>NÃ£o conseguimos abrir sua conta</span>
+        <h1>Sua sessÃ£o estÃ¡ segura.</h1>
         <p>{error}</p>
         <Button className="auth-primary-button" size="xl" onPress={() => void refreshIdentity()}>Tentar novamente</Button>
         <button type="button" className="auth-text-action" onClick={() => void signOut()}>Sair desta conta</button>
@@ -57,3 +52,4 @@ function AppGate() {
 function LazyScreen({ children }: { children: React.ReactNode }) {
   return <Suspense fallback={<SplashScreen />}>{children}</Suspense>;
 }
+
