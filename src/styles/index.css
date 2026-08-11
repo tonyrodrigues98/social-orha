@@ -457,6 +457,12 @@ button {
   background: #fff;
 }
 
+.splash-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 .splash-logo {
   width: min(75vw, 310px);
   height: auto;
@@ -464,13 +470,44 @@ button {
 }
 
 .splash-caption {
-  position: absolute;
-  bottom: max(34px, calc(env(safe-area-inset-bottom) + 20px));
   color: #767676;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 560;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.splash-caption b {
+  margin: 0 0.28rem;
+  color: #b6b6b2;
+  font-weight: 500;
+}
+
+.splash-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: min(14rem, 72vw);
+  margin: 1.4rem 0 0.85rem;
+  color: rgba(29, 30, 34, 0.45);
+}
+
+.splash-divider span {
+  height: 1px;
+  flex: 1;
+  background: linear-gradient(90deg, transparent, rgba(29, 30, 34, 0.28));
+}
+
+.splash-divider span:last-child {
+  background: linear-gradient(90deg, rgba(29, 30, 34, 0.28), transparent);
+}
+
+.splash-divider i {
+  width: 0.42rem;
+  height: 0.42rem;
+  transform: rotate(45deg);
+  border: 1px solid currentColor;
+  background: #fff;
 }
 
 .welcome-copy {
