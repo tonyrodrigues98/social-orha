@@ -31,24 +31,34 @@ export function AuthenticatedApp() {
   }, [activeConversationId, reduceMotion, section]);
 
   const ActivePage = pages[section];
-  const currentKey = activeConversationId ? `chat-${activeConversationId}` : section;
 
   return (
     <PrototypeProvider navigate={setSection} openChat={setActiveConversationId}>
       <div className={`app-viewport ${activeConversationId ? "chat-viewport" : ""}`}>
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
-            key={currentKey}
-            className={activeConversationId ? "private-chat-route" : undefined}
+            key={section}
             initial={reduceMotion ? false : { opacity: 0, x: 12 }}
             animate={{ opacity: 1, x: 0 }}
             exit={reduceMotion ? { opacity: 1 } : { opacity: 0, x: -8 }}
             transition={{ duration: reduceMotion ? 0 : 0.22, ease: "easeOut" }}
           >
-            {activeConversationId ? (
-              <PrivateChatPage conversationId={activeConversationId} onBack={() => setActiveConversationId(null)} />
-            ) : <ActivePage />}
+            <ActivePage />
           </motion.div>
+        </AnimatePresence>
+
+        <AnimatePresence initial={false}>
+          {activeConversationId ? (
+            <motion.div
+              className="private-chat-route"
+              initial={reduceMotion ? { opacity: 1 } : { opacity: 0, x: 16 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={reduceMotion ? { opacity: 1 } : { opacity: 0, x: 16 }}
+              transition={{ duration: reduceMotion ? 0 : 0.2, ease: "easeOut" }}
+            >
+              <PrivateChatPage conversationId={activeConversationId} onBack={() => setActiveConversationId(null)} />
+            </motion.div>
+          ) : null}
         </AnimatePresence>
       </div>
       {!activeConversationId ? <BottomNavigation value={section} onChange={setSection} /> : null}

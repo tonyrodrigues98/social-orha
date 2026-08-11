@@ -1364,12 +1364,20 @@ button {
 
 /* Private conversations use the installed chatcn primitives as a full native surface. */
 .chat-viewport {
+  position: relative;
   overflow: hidden;
 }
 
-.private-chat-route,
 .private-chat-page {
   height: 100%;
+}
+
+.private-chat-route {
+  position: absolute;
+  z-index: 30;
+  inset: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
 .private-chat-page {
