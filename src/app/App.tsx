@@ -24,11 +24,12 @@ export function App() {
 
 function AppGate() {
   const { status, identity, isPasswordRecovery, error, refreshIdentity } = useAuth();
-  const [minimumLaunchFinished, setMinimumLaunchFinished] = useState(false);
-  const finishLaunch = useCallback(() => setMinimumLaunchFinished(true), []);
+  const [splashFinished, setSplashFinished] = useState(false);
+  const finishLaunch = useCallback(() => setSplashFinished(true), []);
+  const sessionReady = status !== "initializing" && status !== "loading_identity";
 
-  if (!minimumLaunchFinished || status === "initializing" || status === "loading_identity") {
-    return <SplashScreen onFinished={finishLaunch} />;
+  if (!splashFinished || !sessionReady) {
+    return <SplashScreen ready={sessionReady} onFinished={finishLaunch} />;
   }
 
   if (isPasswordRecovery) return <LazyScreen><ResetPasswordScreen /></LazyScreen>;
@@ -51,5 +52,5 @@ function AppGate() {
 }
 
 function LazyScreen({ children }: { children: React.ReactNode }) {
-  return <Suspense fallback={<SplashScreen />}>{children}</Suspense>;
+  return <Suspense fallback={<div className="splash-screen" aria-hidden="true" />}>{children}</Suspense>;
 }
