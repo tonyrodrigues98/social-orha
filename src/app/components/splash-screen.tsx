@@ -30,7 +30,6 @@ export function SplashScreen({ onFinished }: SplashScreenProps) {
         transition={{ duration: phase === "out" || reduceMotion ? 0.4 : 0.6, ease: [0.22, 1, 0.36, 1] }}
       >
         <BrandMark className="splash-logo" />
-        <div className="splash-divider" aria-hidden="true"><span /><i /><span /></div>
         <span className="splash-caption">Conhe&#xE7;a <b>&#8226;</b> Conecte-se <b>&#8226;</b> Perten&#xE7;a</span>
       </motion.div>
     </div>
