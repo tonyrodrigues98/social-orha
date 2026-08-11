@@ -1376,6 +1376,7 @@ button {
   display: flex;
   min-height: 100dvh;
   background: var(--chat-bg-app);
+  touch-action: pan-y;
 }
 
 .orha-private-chat {
@@ -1393,6 +1394,10 @@ button {
 
 .orha-private-chat .chat-composer {
   padding-bottom: max(8px, env(safe-area-inset-bottom));
+}
+
+.orha-private-chat .chat-composer textarea {
+  font-size: 16px !important;
 }
 
 .private-chat-avatar {

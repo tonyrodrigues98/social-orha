@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { useDrag } from "@use-gesture/react";
 import { MoreHorizontal, Phone, Video } from "lucide-react";
 import { Avatar } from "@/components/base/avatar/avatar";
 import {
@@ -20,6 +22,25 @@ export function PrivateChatPage({ conversationId, onBack }: PrivateChatPageProps
   const { identity } = useAuth();
   const { conversations, conversationMessages, profile, sendMessage, announce } = usePrototype();
   const conversation = conversations.find((item) => item.id === conversationId);
+  const [dragOffset, setDragOffset] = useState(0);
+  const bindBackSwipe = useDrag(
+    ({ first, last, movement: [movementX], velocity: [velocityX], direction: [directionX], initial: [initialX], cancel }) => {
+      if (first && initialX > 28) {
+        cancel();
+        return;
+      }
+
+      const offset = Math.min(Math.max(movementX, 0), 140);
+      if (!last) {
+        setDragOffset(offset);
+        return;
+      }
+
+      setDragOffset(0);
+      if (offset > 88 || (velocityX > 0.45 && directionX > 0)) onBack();
+    },
+    { axis: "x", filterTaps: true, threshold: 8 },
+  );
 
   if (!conversation) return null;
 
@@ -39,7 +60,12 @@ export function PrivateChatPage({ conversationId, onBack }: PrivateChatPageProps
   }));
 
   return (
-    <section className="private-chat-page" aria-label={`Conversa com ${conversation.name}`}>
+    <section
+      {...bindBackSwipe()}
+      className="private-chat-page"
+      aria-label={`Conversa com ${conversation.name}`}
+      style={{ transform: `translateX(${dragOffset}px)`, transition: dragOffset ? "none" : "transform 180ms ease-out" }}
+    >
       <ChatProvider
         currentUser={currentUser}
         theme="lunar"
