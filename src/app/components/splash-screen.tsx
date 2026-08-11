@@ -10,17 +10,22 @@ type SplashScreenProps = {
 export function SplashScreen({ ready = false, onFinished }: SplashScreenProps) {
   const reduceMotion = useReducedMotion();
   const [entered, setEntered] = useState(false);
+  const [minimumDisplayReached, setMinimumDisplayReached] = useState(false);
   const [exiting, setExiting] = useState(false);
 
   useEffect(() => {
     const entryTimer = window.setTimeout(() => setEntered(true), 600);
-    return () => window.clearTimeout(entryTimer);
+    const minimumDisplayTimer = window.setTimeout(() => setMinimumDisplayReached(true), 2600);
+    return () => {
+      window.clearTimeout(entryTimer);
+      window.clearTimeout(minimumDisplayTimer);
+    };
   }, []);
 
   useEffect(() => {
-    if (!ready || !entered || exiting) return;
+    if (!ready || !entered || !minimumDisplayReached || exiting) return;
     setExiting(true);
-  }, [entered, exiting, ready]);
+  }, [entered, exiting, minimumDisplayReached, ready]);
 
   return (
     <div className="splash-screen" role="status" aria-label="Abrindo ORHA">
