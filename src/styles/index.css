@@ -1023,24 +1023,132 @@ button {
 .progress-track { height: 5px; margin-top: 12px; overflow: hidden; border-radius: 99px; background: #ededeb; }
 .progress-track span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #4d455b, #9e7180); }
 
-.collection-card {
+.profile-favorite-sections {
+  display: grid;
+  gap: 25px;
+}
+
+.profile-favorite-section {
+  min-width: 0;
+}
+
+.profile-favorite-heading {
   display: flex;
-  min-height: 72px;
   align-items: center;
+  min-height: 32px;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.profile-favorite-heading > div {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-favorite-icon,
+.profile-favorite-card-icon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 11px;
+}
+
+.profile-favorite-icon {
+  width: 31px;
+  height: 31px;
+}
+
+.profile-favorite-icon.violet { background: #e7e1f5; color: #594d7a; }
+.profile-favorite-icon.coral { background: #f7dfd7; color: #954f40; }
+.profile-favorite-icon.green { background: #dceee7; color: #356d5d; }
+.profile-favorite-icon.blue { background: #dceaf6; color: #3d6788; }
+.profile-favorite-icon.amber { background: #f5e8c9; color: #8a682b; }
+.profile-favorite-icon.rose { background: #f1dce7; color: #8d4868; }
+
+.profile-favorite-heading h3 {
+  overflow: hidden;
+  margin: 0;
+  color: var(--orha-ink);
+  font-size: 14px;
+  letter-spacing: -0.015em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-favorite-heading small {
+  color: var(--orha-subtle);
+  font-size: 10px;
+}
+
+.profile-favorite-heading .text-button {
+  flex: 0 0 auto;
+}
+
+.profile-favorites-viewport {
+  margin-right: -20px;
+  overflow: hidden;
+}
+
+.profile-favorites-track {
+  display: flex;
   gap: 9px;
-  padding: 12px;
+  padding-right: 20px;
+  touch-action: pan-y pinch-zoom;
+}
+
+.profile-favorite-card {
+  display: flex;
+  width: 156px;
+  min-width: 156px;
+  min-height: 142px;
+  flex: 0 0 156px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 14px;
   border: 0;
-  border-radius: 18px;
+  border-radius: 20px;
   text-align: left;
 }
 
-.collection-card > span { display: flex; min-width: 0; flex: 1; flex-direction: column; }
-.collection-card strong { font-size: 12px; }
-.collection-card small { margin-top: 2px; opacity: 0.65; font-size: 9px; }
-.collection-card.violet { background: #e7e1f5; color: #584b7a; }
-.collection-card.coral { background: #f7dfd7; color: #954f40; }
-.collection-card.green { background: #dceee7; color: #356d5d; }
-.collection-card.blue { background: #dceaf6; color: #3d6788; }
+.profile-favorite-card-icon {
+  width: 38px;
+  height: 38px;
+  margin-bottom: auto;
+  background: rgb(255 255 255 / 0.46);
+}
+
+.profile-favorite-card strong {
+  display: -webkit-box;
+  overflow: hidden;
+  width: 100%;
+  margin-top: 15px;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 13px;
+  line-height: 1.16;
+}
+
+.profile-favorite-card small {
+  margin-top: 4px;
+  opacity: 0.66;
+  font-size: 9px;
+}
+
+.profile-favorite-card.violet { background: linear-gradient(145deg, #e7e1f5, #d8d1ed); color: #594d7a; }
+.profile-favorite-card.coral { background: linear-gradient(145deg, #f7dfd7, #efcfc5); color: #954f40; }
+.profile-favorite-card.green { background: linear-gradient(145deg, #dceee7, #c7e3d7); color: #356d5d; }
+.profile-favorite-card.blue { background: linear-gradient(145deg, #dceaf6, #c6dcf0); color: #3d6788; }
+.profile-favorite-card.amber { background: linear-gradient(145deg, #f5e8c9, #efdbad); color: #8a682b; }
+.profile-favorite-card.rose { background: linear-gradient(145deg, #f1dce7, #eacbdb); color: #8d4868; }
+
+.profile-favorite-empty {
+  border: 1px dashed currentColor;
+  background: transparent !important;
+}
 
 .gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
 .gallery-grid > * { min-height: 112px; border-radius: 17px; }
@@ -1438,6 +1546,8 @@ button {
 @media (max-width: 370px) {
   .page-content { padding-right: 15px; padding-left: 15px; }
   .edge-to-edge, .profile-cover { margin-right: -15px; margin-left: -15px; }
+  .profile-favorites-viewport { margin-right: -15px; }
+  .profile-favorites-track { padding-right: 15px; }
   .section-heading-padded { padding-right: 15px; padding-left: 15px; }
   .people-viewport { padding-right: 15px; padding-left: 15px; }
   .orha-tab-bar > button { padding-right: 10px !important; padding-left: 10px !important; }

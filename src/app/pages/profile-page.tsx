@@ -1,13 +1,27 @@
 import { useRef } from "react";
-import { BookOpen, Camera, ChevronRight, Film, Gamepad2, LogOut, Music2, Pencil, Settings2 } from "lucide-react";
+import { BookOpen, Camera, Film, Gamepad2, LogOut, MicVocal, Music2, Pencil, Settings2, Tv } from "lucide-react";
 import { Avatar } from "@/components/base/avatar/avatar";
 import { roleLabels } from "@/domain/identity";
 import { signOut } from "@/infrastructure/supabase/email-auth";
 import { useAuth } from "../auth/auth-context";
 import { NativeHeader } from "../components/native-header";
-import { usePrototype } from "../prototype-context";
+import { ProfileFavoriteCarousel } from "../components/profile-favorite-carousel";
+import { type FavoriteCategory, usePrototype } from "../prototype-context";
 
-const favoriteCategories = ["movies", "songs", "books", "games"] as const;
+const favoriteSections: ReadonlyArray<{
+  category: FavoriteCategory;
+  label: string;
+  singularLabel: string;
+  tone: "violet" | "coral" | "green" | "blue" | "amber" | "rose";
+  icon: typeof Film;
+}> = [
+  { category: "movies", label: "Filmes", singularLabel: "Filme", tone: "violet", icon: Film },
+  { category: "series", label: "Séries", singularLabel: "Série", tone: "blue", icon: Tv },
+  { category: "songs", label: "Músicas", singularLabel: "Música", tone: "coral", icon: Music2 },
+  { category: "artists", label: "Artistas", singularLabel: "Artista", tone: "rose", icon: MicVocal },
+  { category: "books", label: "Livros", singularLabel: "Livro", tone: "green", icon: BookOpen },
+  { category: "games", label: "Jogos", singularLabel: "Jogo", tone: "amber", icon: Gamepad2 },
+];
 
 export function ProfilePage() {
   const { identity } = useAuth();
@@ -30,13 +44,6 @@ export function ProfilePage() {
     .map((part) => part[0])
     .join("")
     .toUpperCase() || "OR";
-  const profileCollections = [
-    { label: "Filmes", icon: Film, tone: "violet" },
-    { label: "Músicas", icon: Music2, tone: "coral" },
-    { label: "Livros", icon: BookOpen, tone: "green" },
-    { label: "Jogos", icon: Gamepad2, tone: "blue" },
-  ];
-
   return (
     <div className="page profile-page">
       <NativeHeader title="Perfil" subtitle="Seu espaço, do seu jeito" />
@@ -87,15 +94,15 @@ export function ProfilePage() {
             <div><span className="section-overline">SEUS FAVORITOS</span><h2>O que faz parte de você</h2></div>
             <button type="button" className="text-button" onClick={() => openDrawer({ type: "privacy" })}><Settings2 size={16} /> Privacidade</button>
           </div>
-          <div className="collection-grid">
-            {profileCollections.map(({ label, icon: Icon, tone }, index) => {
-              const category = favoriteCategories[index];
-              return (
-                <button type="button" className={`collection-card ${tone}`} key={label} onClick={() => openDrawer({ type: "favorites", category })}>
-                  <Icon size={21} /><span><strong>{label}</strong><small>{favorites[category].length} de 5</small></span><ChevronRight size={16} />
-                </button>
-              );
-            })}
+          <div className="profile-favorite-sections">
+            {favoriteSections.map((section) => (
+              <ProfileFavoriteCarousel
+                key={section.category}
+                {...section}
+                items={favorites[section.category]}
+                onEdit={(category) => openDrawer({ type: "favorites", category })}
+              />
+            ))}
           </div>
         </section>
 
