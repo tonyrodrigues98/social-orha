@@ -380,7 +380,40 @@ function ChatBoard({
 }: ChatBoardProps) {
   return (
     <ChatProvider currentUser={currentUser} theme={theme}>
-      <div className={cn("flex h-full flex-col bg-[var(--chat-bg-mën-¢G§²ÚîÆ­yÝ px-2 py-0.5 text-[11px] font-medium text-[var(--chat-accent)]">{tag}</span>
+      <div className={cn("flex h-full flex-col bg-[var(--chat-bg-main)]", className)}>
+        {activeTopic ? (
+          <>
+            <ChatHeader title={activeTopic.title} subtitle={`${activeTopic.replyCount} replies`} onBack={onBack} />
+            <div className="flex-1 overflow-y-auto px-4 py-4">
+              <div className="mx-auto max-w-3xl">{children}</div>
+            </div>
+          </>
+        ) : (
+          <>
+            <ChatHeader title="Discussions" actions={
+              <button className="flex size-8 items-center justify-center rounded-lg bg-[var(--chat-accent)] text-white"><Plus className="size-4" /></button>
+            } />
+            <div className="flex-1 overflow-y-auto">
+              {topics.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => onSelectTopic(t.id)}
+                  className="flex w-full items-start gap-3 border-b border-[var(--chat-border)] px-4 py-3 text-left transition-colors hover:bg-[var(--chat-accent-soft)]"
+                >
+                  {t.isPinned && <Pin className="mt-0.5 size-3.5 shrink-0 text-[var(--chat-orange)]" />}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[14px] font-semibold text-[var(--chat-text-primary)]">{t.title}</p>
+                    <div className="mt-0.5 flex items-center gap-2 text-[12px] text-[var(--chat-text-secondary)]">
+                      <span>{t.author}</span>
+                      <span>\u00B7</span>
+                      <span>{t.replyCount} replies</span>
+                      <span>\u00B7</span>
+                      <span>{t.lastActivity}</span>
+                    </div>
+                    {t.tags && t.tags.length > 0 && (
+                      <div className="mt-1 flex gap-1">
+                        {t.tags.map((tag) => (
+                          <span key={tag} className="rounded-full bg-[var(--chat-accent-soft)] px-2 py-0.5 text-[11px] font-medium text-[var(--chat-accent)]">{tag}</span>
                         ))}
                       </div>
                     )}
