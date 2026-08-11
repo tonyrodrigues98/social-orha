@@ -1,6 +1,11 @@
 "use client";
 
-import { AnimatePresence, motion, type PanInfo } from "framer-motion";
+import {
+  AnimatePresence,
+  motion,
+  type PanInfo,
+  useDragControls,
+} from "framer-motion";
 import * as React from "react";
 import { createPortal } from "react-dom";
 
@@ -43,6 +48,7 @@ const Drawer = React.forwardRef<HTMLDivElement, DrawerProps>(
   ) => {
     const mounted = useMounted();
     const isBottom = side === "bottom";
+    const dragControls = useDragControls();
 
     React.useEffect(() => {
       if (!open) return;
@@ -101,6 +107,8 @@ const Drawer = React.forwardRef<HTMLDivElement, DrawerProps>(
                 mass: 0.9,
               }}
               drag={isBottom ? "y" : "x"}
+              dragControls={dragControls}
+              dragListener={false}
               dragConstraints={{ top: 0, bottom: 0, left: 0, right: 0 }}
               dragElastic={
                 isBottom ? { top: 0, bottom: 0.6 } : { left: 0, right: 0.6 }
@@ -108,15 +116,25 @@ const Drawer = React.forwardRef<HTMLDivElement, DrawerProps>(
               onDragEnd={handleDragEnd}
               className={`absolute flex flex-col bg-card p-5 text-card-foreground shadow-xl ${PANEL_BY_SIDE[side]} ${className ?? ""}`}
             >
-              {isBottom ? (
-                <div className="mx-auto mb-4 h-1.5 w-12 shrink-0 cursor-grab rounded-full bg-muted-foreground/30 active:cursor-grabbing" />
-              ) : null}
+              <div
+                data-slot="drawer-handle"
+                className="-mt-2 mb-1 flex h-10 w-full shrink-0 cursor-grab touch-none items-center justify-center active:cursor-grabbing"
+                style={{ touchAction: "none" }}
+                onPointerDown={(event) => dragControls.start(event)}
+              >
+                <div
+                  aria-hidden
+                  className="h-1.5 w-12 rounded-full bg-muted-foreground/30"
+                />
+              </div>
               {title ? (
                 <h2 className="mb-3 text-lg font-semibold text-foreground">
                   {title}
                 </h2>
               ) : null}
-              <div className="overflow-y-auto">{children}</div>
+              <div className="min-h-0 overflow-y-auto overscroll-contain">
+                {children}
+              </div>
             </motion.div>
           </div>
         ) : null}
