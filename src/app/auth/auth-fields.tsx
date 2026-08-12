@@ -10,6 +10,7 @@ type ControlledInputProps<TValues extends FieldValues> = {
   type?: string;
   icon?: ComponentType<HTMLAttributes<HTMLOrSVGElement>>;
   autoComplete?: string;
+  variant?: "default" | "access";
   rules?: Parameters<typeof Controller<TValues>>[0]["rules"];
 };
 
@@ -21,6 +22,7 @@ export function ControlledInput<TValues extends FieldValues>({
   type,
   icon,
   autoComplete,
+  variant = "default",
   rules,
 }: ControlledInputProps<TValues>) {
   return (
@@ -43,9 +45,9 @@ export function ControlledInput<TValues extends FieldValues>({
           isInvalid={fieldState.invalid}
           hint={fieldState.error?.message}
           size="lg"
-          className="orha-field"
-          wrapperClassName="orha-field-control"
-          inputClassName="orha-field-input"
+          className={variant === "access" ? "access-field" : "orha-field"}
+          wrapperClassName={variant === "access" ? "access-field-control" : "orha-field-control"}
+          inputClassName={variant === "access" ? "access-field-input" : "orha-field-input"}
         />
       )}
     />
@@ -56,3 +58,4 @@ export function AuthError({ message }: { message: string | null }) {
   if (!message) return null;
   return <div className="auth-error" role="alert">{message}</div>;
 }
+
