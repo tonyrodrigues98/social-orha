@@ -15,7 +15,7 @@ export interface ChatMessageData {
   text?: string
   images?: { url: string; width: number; height: number; alt?: string }[]
   files?: { name: string; size: number; type: string; url: string }[]
-  voice?: { url: string; duration: number; waveform: number[] }
+  voice?: { url: string; duration: number; waveform?: number[] }
   linkPreview?: {
     url: string
     title: string
@@ -76,4 +76,3 @@ export interface TypingUser {
 
 /** Available built-in themes */
 export type ChatTheme = "lunar" | "aurora" | "ember" | "midnight"
-

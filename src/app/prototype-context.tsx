@@ -32,6 +32,7 @@ export type ChatMessage = {
   content: string;
   mine?: boolean;
   timestamp: number;
+  voice?: { url: string; duration: number };
 };
 
 export type DrawerView =
@@ -75,6 +76,7 @@ type PrototypeContextValue = {
   conversationMessages: Record<string, ChatMessage[]>;
   openConversation: (conversationId: string) => void;
   sendMessage: (conversationId: string, content: string) => void;
+  sendVoiceMessage: (conversationId: string, voice: { url: string; duration: number }) => void;
   startConversation: (recipient: string, firstMessage?: string) => void;
   conversationRequests: string[];
   respondToConversationRequest: (name: string, accepted: boolean) => void;
@@ -230,6 +232,19 @@ export function PrototypeProvider({
     )));
   }, []);
 
+  const sendVoiceMessage = useCallback((conversationId: string, voice: { url: string; duration: number }) => {
+    setConversationMessages((current) => ({
+      ...current,
+      [conversationId]: [
+        ...(current[conversationId] ?? []),
+        { id: `${conversationId}-voice-${Date.now()}`, author: "Você", content: "", mine: true, timestamp: Date.now(), voice },
+      ],
+    }));
+    setConversations((current) => current.map((conversation) => (
+      conversation.id === conversationId ? { ...conversation, message: "🎙️ Mensagem de áudio", time: "agora", unread: 0 } : conversation
+    )));
+  }, []);
+
   const startConversation = useCallback((recipient: string, firstMessage?: string) => {
     const id = toId(recipient);
     const draft = firstMessage?.trim() || "Olá! Que bom te encontrar por aqui.";
@@ -326,7 +341,8 @@ export function PrototypeProvider({
       conversations,
       conversationMessages,
       openConversation,
-      sendMessage,
+    sendMessage,
+    sendVoiceMessage,
       startConversation,
       conversationRequests,
       respondToConversationRequest,

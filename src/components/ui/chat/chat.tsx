@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import WaveSurfer from "wavesurfer.js"
 import { cn } from "@/lib/utils"
 import {
   Check,
@@ -310,11 +311,8 @@ interface ChatMessageProps {
 function ChatVoiceMessage({ voice, isOutgoing }: { voice: NonNullable<ChatMessageData["voice"]>; isOutgoing: boolean }) {
   const [playing, setPlaying] = React.useState(false)
   const [progress, setProgress] = React.useState(0)
-  const progressRef = React.useRef(0)
-
-  React.useEffect(() => {
-    progressRef.current = progress
-  }, [progress])
+  const waveformRef = React.useRef<HTMLDivElement>(null)
+  const playerRef = React.useRef<WaveSurfer | null>(null)
 
   const totalMins = Math.floor(voice.duration / 60)
   const totalSecs = Math.floor(voice.duration % 60)
@@ -325,28 +323,34 @@ function ChatVoiceMessage({ voice, isOutgoing }: { voice: NonNullable<ChatMessag
     ? `${elapsedMins}:${elapsedSecs.toString().padStart(2, "0")}`
     : `${totalMins}:${totalSecs.toString().padStart(2, "0")}`
 
-  const progressIndex = Math.floor(progress * voice.waveform.length)
-
   React.useEffect(() => {
-    if (!playing) return
-    const fps = 20
-    const step = 1 / (voice.duration * fps)
-    const id = setInterval(() => {
-      const next = progressRef.current + step
-      if (next >= 1) {
-        setProgress(0)
-        setPlaying(false)
-        clearInterval(id)
-      } else {
-        setProgress(next)
-      }
-    }, 1000 / fps)
-    return () => clearInterval(id)
-  }, [playing, voice.duration])
+    if (!waveformRef.current) return
+    const player = WaveSurfer.create({
+      container: waveformRef.current,
+      url: voice.url,
+      height: 32,
+      barWidth: 3,
+      barGap: 2,
+      barRadius: 3,
+      cursorWidth: 0,
+      waveColor: isOutgoing ? "rgba(255,255,255,0.36)" : "#7564a8",
+      progressColor: isOutgoing ? "#ffffff" : "#3f3760",
+      normalize: true,
+    })
+    playerRef.current = player
+    const offTime = player.on("timeupdate", (time) => setProgress(voice.duration ? time / voice.duration : 0))
+    const offPlay = player.on("play", () => setPlaying(true))
+    const offPause = player.on("pause", () => setPlaying(false))
+    const offFinish = player.on("finish", () => { setPlaying(false); setProgress(0) })
+    return () => {
+      offTime(); offPlay(); offPause(); offFinish()
+      player.destroy()
+      playerRef.current = null
+    }
+  }, [isOutgoing, voice.duration, voice.url])
 
   const toggle = () => {
-    if (!playing && progress === 0) setProgress(0)
-    setPlaying((p) => !p)
+    void playerRef.current?.playPause()
   }
 
   return (
@@ -363,23 +367,7 @@ function ChatVoiceMessage({ voice, isOutgoing }: { voice: NonNullable<ChatMessag
           <Play className="w-4 h-4 ml-0.5" style={{ color: "white" }} fill="white" />
         )}
       </button>
-      <div className="flex flex-1 items-center gap-[2px] h-8">
-        {voice.waveform.map((v, i) => {
-          const played = i < progressIndex
-          return (
-            <div
-              key={i}
-              className="w-[3px] rounded-full transition-opacity"
-              style={{
-                height: `${v * 100}%`,
-                background: isOutgoing ? "white" : "var(--chat-accent)",
-                opacity: played ? 1 : 0.6 + v * 0.4,
-                ...(isOutgoing && !played ? { opacity: 0.4 + v * 0.3 } : {}),
-              }}
-            />
-          )
-        })}
-      </div>
+      <div ref={waveformRef} className="h-8 min-w-0 flex-1" aria-label="Onda do áudio" />
       <span className="text-[12px] shrink-0 opacity-60 tabular-nums">{timeLabel}</span>
     </div>
   )
@@ -1138,6 +1126,10 @@ interface ChatComposerProps {
   onTyping?: (isTyping: boolean) => void
   onFileUpload?: (files: File[]) => void
   onVoiceRecord?: () => void
+  voiceRecording?: boolean
+  voiceDurationLabel?: string
+  onVoiceCancel?: () => void
+  onVoiceSend?: () => void
   placeholder?: string
   disabled?: boolean
   replyingTo?: ChatMessageData | null
@@ -1150,6 +1142,10 @@ function ChatComposer({
   onTyping,
   onFileUpload,
   onVoiceRecord,
+  voiceRecording = false,
+  voiceDurationLabel = "0:00",
+  onVoiceCancel,
+  onVoiceSend,
   placeholder = "Message",
   disabled = false,
   replyingTo,
@@ -1290,6 +1286,14 @@ function ChatComposer({
       {/* Composer body — frosted glass */}
       <div className="border-t border-[var(--chat-border)] bg-[var(--chat-bg-composer)] px-3 py-2 backdrop-blur-[20px] backdrop-saturate-[180%]">
         <div className="mx-auto max-w-3xl">
+          {voiceRecording ? (
+            <div className="flex min-h-11 items-center gap-3 rounded-[22px] border border-[var(--chat-border)] bg-[var(--chat-bg-sidebar)] px-3">
+              <button type="button" onClick={onVoiceCancel} className="text-[13px] font-semibold text-[var(--chat-text-secondary)]" aria-label="Cancelar gravação">Cancelar</button>
+              <span className="flex flex-1 items-center justify-center gap-2 text-[14px] font-semibold text-[var(--chat-text-primary)]"><span className="size-2 rounded-full bg-red-500 animate-pulse" />Gravando {voiceDurationLabel}</span>
+              <button type="button" onClick={onVoiceSend} className="flex size-8 items-center justify-center rounded-full bg-[var(--chat-accent)] text-white" aria-label="Enviar áudio"><ArrowUp className="size-4" strokeWidth={2.5} /></button>
+            </div>
+          ) : (
+            <>
           {/* Input row */}
           <div className="flex items-end gap-2">
             {/* + button with attachment popout */}
@@ -1377,6 +1381,8 @@ function ChatComposer({
               )}
             </div>
           </div>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -1413,4 +1419,3 @@ export type {
   ChatTypingIndicatorProps,
   ChatReplyPreviewProps,
 }
-
