@@ -117,6 +117,14 @@ export function PrivateChatPage({ conversationId, onBack }: PrivateChatPageProps
 
   if (!conversation) return null;
 
+  if (showDetails) {
+    return (
+      <section className="private-chat-page" aria-label={`Dados de ${conversation.name}`}>
+        <ContactDetails name={conversation.name} initials={conversation.initials} kind={conversation.kind} onBack={() => setShowDetails(false)} onAnnounce={announce} />
+      </section>
+    );
+  }
+
   const currentUser: ChatUser = { id: identity?.profile.id ?? "local-user", name: profile.fullName, status: "online" };
   const messages: ChatMessageData[] = (conversationMessages[conversationId] ?? []).map((message) => ({
     id: message.id,
@@ -179,7 +187,6 @@ export function PrivateChatPage({ conversationId, onBack }: PrivateChatPageProps
         <ChatMessages messages={messages} />
         <ChatComposer placeholder="Mensagem" onSend={(text) => sendMessage(conversationId, text)} onFileUpload={(files) => announce(`${files.length} anexo${files.length > 1 ? "s" : ""} preparado${files.length > 1 ? "s" : ""} para envio.`)} onVoiceRecord={() => void beginVoiceRecord()} voiceRecording={recording} voiceDurationLabel={formatDuration(recordedSeconds)} onVoiceCancel={cancelVoiceRecord} onVoiceSend={() => void sendVoiceRecord()} />
       </ChatProvider>
-      {showDetails ? <ContactDetails name={conversation.name} initials={conversation.initials} kind={conversation.kind} onBack={() => setShowDetails(false)} onAnnounce={announce} /> : null}
     </section>
   );
 }

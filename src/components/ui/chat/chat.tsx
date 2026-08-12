@@ -323,6 +323,7 @@ function ChatVoiceMessage({ voice, isOutgoing }: { voice: NonNullable<ChatMessag
   const timeLabel = playing || progress > 0
     ? `${elapsedMins}:${elapsedSecs.toString().padStart(2, "0")}`
     : `${totalMins}:${totalSecs.toString().padStart(2, "0")}`
+  const playedBars = Math.round(progress * fallbackWave.length)
 
   React.useEffect(() => {
     if (!waveformRef.current) return
@@ -369,10 +370,10 @@ function ChatVoiceMessage({ voice, isOutgoing }: { voice: NonNullable<ChatMessag
         )}
       </button>
       <div className="relative h-8 min-w-0 flex-1" aria-label="Onda do áudio">
-        <div className="absolute inset-0 flex items-center gap-[2px] overflow-hidden" aria-hidden="true">
-          {fallbackWave.map((amplitude, index) => <i key={index} className="w-[3px] shrink-0 rounded-full" style={{ height: `${Math.max(15, amplitude * 100)}%`, background: isOutgoing ? "rgba(255,255,255,0.38)" : "#7564a8" }} />)}
+        <div className="absolute inset-0 z-1 flex items-center gap-[2px] overflow-hidden" aria-hidden="true">
+          {fallbackWave.map((amplitude, index) => <i key={index} className="w-[3px] shrink-0 rounded-full transition-colors duration-100" style={{ height: `${Math.max(15, amplitude * 100)}%`, background: index < playedBars ? (isOutgoing ? "#fff" : "#3f3760") : (isOutgoing ? "rgba(255,255,255,0.38)" : "#7564a8") }} />)}
         </div>
-        <div ref={waveformRef} className="absolute inset-0" />
+        <div ref={waveformRef} className="absolute inset-0 opacity-0 pointer-events-none" />
       </div>
       <span className="text-[12px] shrink-0 opacity-60 tabular-nums">{timeLabel}</span>
     </div>
