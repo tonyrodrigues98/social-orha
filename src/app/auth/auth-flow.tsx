@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowLeft, CheckCircle2, LockKeyhole, Mail } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Mail } from "lucide-react";
 import { motion } from "motion/react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/base/buttons/button";

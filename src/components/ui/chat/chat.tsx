@@ -313,6 +313,7 @@ function ChatVoiceMessage({ voice, isOutgoing }: { voice: NonNullable<ChatMessag
   const [progress, setProgress] = React.useState(0)
   const waveformRef = React.useRef<HTMLDivElement>(null)
   const playerRef = React.useRef<WaveSurfer | null>(null)
+  const fallbackWave = React.useMemo(() => voice.waveform ?? [0.28, 0.52, 0.73, 0.4, 0.87, 0.59, 0.33, 0.67, 0.46, 0.78, 0.36, 0.6, 0.82, 0.49, 0.3, 0.68], [voice.waveform])
 
   const totalMins = Math.floor(voice.duration / 60)
   const totalSecs = Math.floor(voice.duration % 60)
@@ -367,7 +368,12 @@ function ChatVoiceMessage({ voice, isOutgoing }: { voice: NonNullable<ChatMessag
           <Play className="w-4 h-4 ml-0.5" style={{ color: "white" }} fill="white" />
         )}
       </button>
-      <div ref={waveformRef} className="h-8 min-w-0 flex-1" aria-label="Onda do áudio" />
+      <div className="relative h-8 min-w-0 flex-1" aria-label="Onda do áudio">
+        <div className="absolute inset-0 flex items-center gap-[2px] overflow-hidden" aria-hidden="true">
+          {fallbackWave.map((amplitude, index) => <i key={index} className="w-[3px] shrink-0 rounded-full" style={{ height: `${Math.max(15, amplitude * 100)}%`, background: isOutgoing ? "rgba(255,255,255,0.38)" : "#7564a8" }} />)}
+        </div>
+        <div ref={waveformRef} className="absolute inset-0" />
+      </div>
       <span className="text-[12px] shrink-0 opacity-60 tabular-nums">{timeLabel}</span>
     </div>
   )

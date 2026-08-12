@@ -14,7 +14,7 @@ type SplashScreenProps = {
  * splash to be mounted later in the auth flow.
  */
 export function SplashScreen({ ready = false, onExiting, onFinished }: SplashScreenProps) {
-  const mountedAt = useRef(performance.now());
+  const mountedAt = useRef<number | null>(null);
   const finishNotified = useRef(false);
   const exitTimer = useRef<number | undefined>(undefined);
   const finishTimer = useRef<number | undefined>(undefined);
@@ -22,6 +22,8 @@ export function SplashScreen({ ready = false, onExiting, onFinished }: SplashScr
 
   useEffect(() => {
     if (!ready || leaving || finishNotified.current) return;
+
+    mountedAt.current ??= performance.now();
 
     const remainingBeforeExit = Math.max(0, 2250 - (performance.now() - mountedAt.current));
     exitTimer.current = window.setTimeout(() => {
@@ -53,4 +55,3 @@ export function SplashScreen({ ready = false, onExiting, onFinished }: SplashScr
     </section>
   );
 }
-

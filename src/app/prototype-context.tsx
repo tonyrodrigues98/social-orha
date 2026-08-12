@@ -32,7 +32,7 @@ export type ChatMessage = {
   content: string;
   mine?: boolean;
   timestamp: number;
-  voice?: { url: string; duration: number };
+  voice?: { url: string; duration: number; waveform?: number[] };
 };
 
 export type DrawerView =
@@ -76,7 +76,7 @@ type PrototypeContextValue = {
   conversationMessages: Record<string, ChatMessage[]>;
   openConversation: (conversationId: string) => void;
   sendMessage: (conversationId: string, content: string) => void;
-  sendVoiceMessage: (conversationId: string, voice: { url: string; duration: number }) => void;
+  sendVoiceMessage: (conversationId: string, voice: { url: string; duration: number; waveform?: number[] }) => void;
   startConversation: (recipient: string, firstMessage?: string) => void;
   conversationRequests: string[];
   respondToConversationRequest: (name: string, accepted: boolean) => void;
@@ -232,7 +232,7 @@ export function PrototypeProvider({
     )));
   }, []);
 
-  const sendVoiceMessage = useCallback((conversationId: string, voice: { url: string; duration: number }) => {
+  const sendVoiceMessage = useCallback((conversationId: string, voice: { url: string; duration: number; waveform?: number[] }) => {
     setConversationMessages((current) => ({
       ...current,
       [conversationId]: [

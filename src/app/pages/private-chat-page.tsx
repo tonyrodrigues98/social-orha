@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useDrag } from "@use-gesture/react";
-import { Archive, BellOff, ChevronRight, Files, MoreHorizontal, ShieldCheck, Trash2, UserRound } from "lucide-react";
+import { Archive, BellOff, ChevronRight, Files, ShieldCheck, Trash2, UserRound } from "lucide-react";
 import { Avatar } from "@/components/base/avatar/avatar";
 import { Dropdown } from "@/components/base/dropdown/dropdown";
 import {
@@ -22,6 +22,26 @@ type PrivateChatPageProps = {
 
 function formatDuration(seconds: number) {
   return `${Math.floor(seconds / 60)}:${Math.floor(seconds % 60).toString().padStart(2, "0")}`;
+}
+
+async function createWaveform(blob: Blob) {
+  const context = new AudioContext();
+  try {
+    const data = await blob.arrayBuffer();
+    const buffer = await context.decodeAudioData(data.slice(0));
+    const samples = buffer.getChannelData(0);
+    const bars = 32;
+    const blockSize = Math.max(1, Math.floor(samples.length / bars));
+    return Array.from({ length: bars }, (_, index) => {
+      let peak = 0;
+      const from = index * blockSize;
+      const until = Math.min(samples.length, from + blockSize);
+      for (let sample = from; sample < until; sample += 1) peak = Math.max(peak, Math.abs(samples[sample] ?? 0));
+      return Math.min(1, Math.max(0.13, peak));
+    });
+  } finally {
+    await context.close();
+  }
 }
 
 function ContactDetails({ name, initials, kind, onBack, onAnnounce }: {
@@ -134,7 +154,8 @@ export function PrivateChatPage({ conversationId, onBack }: PrivateChatPageProps
     try {
       const blob = await recorder.stop();
       const duration = Math.max(1, (Date.now() - recordingStartedAt.current) / 1000);
-      sendVoiceMessage(conversationId, { url: URL.createObjectURL(blob), duration });
+      const waveform = await createWaveform(blob).catch(() => undefined);
+      sendVoiceMessage(conversationId, { url: URL.createObjectURL(blob), duration, waveform });
       announce("Áudio enviado nesta conversa.");
     } catch (error) {
       announce(error instanceof Error ? error.message : "Não foi possível finalizar o áudio.");
@@ -153,7 +174,7 @@ export function PrivateChatPage({ conversationId, onBack }: PrivateChatPageProps
           subtitle={conversation.kind === "group" ? "Grupo" : "Disponível agora"}
           onBack={onBack}
           avatar={<Avatar size="sm" initials={conversation.initials} contentClassName="avatar-transparent private-chat-avatar" />}
-          actions={<div className="private-chat-actions"><Dropdown.Root><button type="button" aria-label="Mais opções" className="private-chat-menu-trigger"><MoreHorizontal size={19} /></button><Dropdown.Popover className="private-chat-menu"><Dropdown.Menu selectionMode="none" onAction={(key) => { if (key === "details") setShowDetails(true); if (key === "mute") announce("Notificações silenciadas para teste."); if (key === "archive") announce("Conversa arquivada para teste."); }}><Dropdown.Item id="details" icon={UserRound}>Dados do contato</Dropdown.Item><Dropdown.Item id="mute" icon={BellOff}>Silenciar notificações</Dropdown.Item><Dropdown.Item id="archive" icon={Archive}>Arquivar conversa</Dropdown.Item></Dropdown.Menu></Dropdown.Popover></Dropdown.Root></div>}
+          actions={<div className="private-chat-actions"><Dropdown.Root><Dropdown.DotsButton className="private-chat-menu-trigger" aria-label="Mais opções" /><Dropdown.Popover className="private-chat-menu"><Dropdown.Menu selectionMode="none" onAction={(key) => { if (key === "details") setShowDetails(true); if (key === "mute") announce("Notificações silenciadas para teste."); if (key === "archive") announce("Conversa arquivada para teste."); }}><Dropdown.Item id="details" icon={UserRound}>Dados do contato</Dropdown.Item><Dropdown.Item id="mute" icon={BellOff}>Silenciar notificações</Dropdown.Item><Dropdown.Item id="archive" icon={Archive}>Arquivar conversa</Dropdown.Item></Dropdown.Menu></Dropdown.Popover></Dropdown.Root></div>}
         />
         <ChatMessages messages={messages} />
         <ChatComposer placeholder="Mensagem" onSend={(text) => sendMessage(conversationId, text)} onFileUpload={(files) => announce(`${files.length} anexo${files.length > 1 ? "s" : ""} preparado${files.length > 1 ? "s" : ""} para envio.`)} onVoiceRecord={() => void beginVoiceRecord()} voiceRecording={recording} voiceDurationLabel={formatDuration(recordedSeconds)} onVoiceCancel={cancelVoiceRecord} onVoiceSend={() => void sendVoiceRecord()} />

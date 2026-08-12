@@ -232,6 +232,22 @@ body,
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Aplicativo nativo em tecnologia web: conteúdo não é selecionável. */
+.native-app-shell,
+.native-app-shell * {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.native-app-shell input,
+.native-app-shell textarea,
+.native-app-shell select,
+.native-app-shell [contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 html,
 body,
 #root {
