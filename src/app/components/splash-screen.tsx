@@ -1,48 +1,56 @@
-import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { BrandMark } from "./brand-mark";
 
 type SplashScreenProps = {
   ready?: boolean;
+  onExiting?: () => void;
   onFinished?: () => void;
 };
 
-export function SplashScreen({ ready = false, onFinished }: SplashScreenProps) {
-  const reduceMotion = useReducedMotion();
-  const [entered, setEntered] = useState(false);
-  const [minimumDisplayReached, setMinimumDisplayReached] = useState(false);
+/**
+ * The launch timeline deliberately matches the approved Splash → Login asset:
+ * focus-in on mount, begin leaving at 2.25 s, and hand the screen to login at
+ * 3 s.  A slow session check may extend this state, but never causes a second
+ * splash to be mounted later in the auth flow.
+ */
+export function SplashScreen({ ready = false, onExiting, onFinished }: SplashScreenProps) {
+  const mountedAt = useRef(performance.now());
   const finishNotified = useRef(false);
+  const exitTimer = useRef<number | undefined>(undefined);
+  const finishTimer = useRef<number | undefined>(undefined);
+  const [leaving, setLeaving] = useState(false);
 
   useEffect(() => {
-    const entryTimer = window.setTimeout(() => setEntered(true), 600);
-    const minimumDisplayTimer = window.setTimeout(() => setMinimumDisplayReached(true), 2600);
+    if (!ready || leaving || finishNotified.current) return;
+
+    const remainingBeforeExit = Math.max(0, 2250 - (performance.now() - mountedAt.current));
+    exitTimer.current = window.setTimeout(() => {
+      setLeaving(true);
+      onExiting?.();
+      finishTimer.current = window.setTimeout(() => {
+        if (finishNotified.current) return;
+        finishNotified.current = true;
+        onFinished?.();
+      }, 750);
+    }, remainingBeforeExit);
+
     return () => {
-      window.clearTimeout(entryTimer);
-      window.clearTimeout(minimumDisplayTimer);
+      if (exitTimer.current) window.clearTimeout(exitTimer.current);
     };
+  }, [leaving, onExiting, onFinished, ready]);
+
+  useEffect(() => () => {
+    if (exitTimer.current) window.clearTimeout(exitTimer.current);
+    if (finishTimer.current) window.clearTimeout(finishTimer.current);
   }, []);
 
-  const exiting = ready && entered && minimumDisplayReached;
-
   return (
-    <div className="splash-screen" role="status" aria-label="Abrindo ORHA">
-      <motion.div
-        className="splash-content"
-        initial={reduceMotion ? { opacity: 1 } : { opacity: 0, scale: 0.86, filter: "blur(12px)" }}
-        animate={exiting
-          ? { opacity: 0, scale: reduceMotion ? 1 : 1.04, filter: reduceMotion ? "blur(0px)" : "blur(12px)" }
-          : { opacity: 1, scale: 1, filter: "blur(0px)" }}
-        transition={{ duration: exiting || reduceMotion ? 0.4 : 0.6, ease: [0.22, 1, 0.36, 1] }}
-        onAnimationComplete={() => {
-          if (exiting && !finishNotified.current) {
-            finishNotified.current = true;
-            onFinished?.();
-          }
-        }}
-      >
+    <section className={`splash-screen ${leaving ? "is-leaving" : ""}`} role="status" aria-label="Abrindo ORHA">
+      <div className="splash-content">
         <BrandMark className="splash-logo" />
-        <span className="splash-caption">Conhe&#xE7;a <b>&#8226;</b> Conecte-se <b>&#8226;</b> Perten&#xE7;a</span>
-      </motion.div>
-    </div>
+        <p className="splash-caption">Conheça <span>•</span> Conecte-se <span>•</span> Pertença</p>
+      </div>
+    </section>
   );
 }
+
