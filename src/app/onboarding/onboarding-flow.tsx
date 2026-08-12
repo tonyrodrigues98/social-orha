@@ -107,7 +107,7 @@ function ChoiceChips({ options, values, onChange, max }: { options: string[]; va
   );
 }
 
-export function OnboardingFlow() {
+export function OnboardingFlow({ onFinished }: { onFinished?: () => void }) {
   const { user, identity, refreshIdentity } = useAuth();
   const initialStep = Math.min(6, Math.max(1, (identity?.profile.onboarding_step ?? 0) + 1));
   const [step, setStep] = useState(initialStep);
@@ -135,6 +135,7 @@ export function OnboardingFlow() {
     try {
       await updateOwnProfile(userId, { onboarding_step: 6, onboarding_completed_at: new Date().toISOString() });
       await refreshIdentity();
+      onFinished?.();
     } catch {
       setError("Não foi possível concluir seu perfil. Revise os dados obrigatórios.");
       setSaving(false);
@@ -161,7 +162,11 @@ export function OnboardingFlow() {
     }
     try {
       await updateOwnProfile(userId, { state_code: values.stateCode, city: values.city, bio: values.bio, church: values.church || null, onboarding_step: improve ? 2 : 6, onboarding_completed_at: improve ? null : new Date().toISOString() });
-      if (improve) setStep(3); else await refreshIdentity();
+      if (improve) setStep(3);
+      else {
+        await refreshIdentity();
+        onFinished?.();
+      }
     } catch { setError("Não foi possível salvar sua localização e bio."); }
     finally { setSaving(false); }
   }} />;
@@ -249,3 +254,4 @@ function FavoritesStep({ saving, error, onBack, onSubmit, onSkip }: { saving: bo
   const fields: [keyof FavoritesForm, string, string][] = [["movies", "Filmes", "Interestelar, À Prova de Fogo"], ["series", "Séries", "The Chosen"], ["songs", "Músicas", "Até cinco músicas"], ["artists", "Artistas", "Até cinco artistas"], ["books", "Livros", "Até cinco livros"], ["games", "Jogos", "Até cinco jogos"]];
   return <OnboardingPage step={6} onBack={onBack}><StepHeading eyebrow="SEUS FAVORITOS" title="O que você levaria com você?" description="Adicione até cinco por categoria, separados por vírgulas. A busca por APIs entra na próxima evolução." /><form className="auth-form favorites-form" onSubmit={form.handleSubmit(onSubmit)}>{fields.map(([name, label, placeholder]) => <ControlledInput key={name} control={form.control} name={name} label={label} placeholder={placeholder} />)}{error ? <div className="auth-error">{error}</div> : null}<Button type="submit" className="auth-primary-button" size="xl" isLoading={saving}>Concluir e entrar na ORHA</Button><button type="button" className="auth-text-action" onClick={() => void onSkip()}>Pular e concluir</button></form></OnboardingPage>;
 }
+
