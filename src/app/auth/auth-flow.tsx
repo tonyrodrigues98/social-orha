@@ -32,7 +32,7 @@ function GoogleMark() {
 }
 
 function AccessBrandMark() {
-  return <img className="access-title-brand" src={`${import.meta.env.BASE_URL}brand/orha-mark-transparent.svg`} alt="ORHA" draggable={false} />;
+  return <img className="access-title-brand" src={`${import.meta.env.BASE_URL}brand/orha-mark-transparent.png`} alt="ORHA" draggable={false} />;
 }
 
 function AuthFrame({
@@ -275,4 +275,3 @@ export function ResetPasswordScreen() {
     </AuthFrame>
   );
 }
-
