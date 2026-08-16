@@ -810,16 +810,17 @@ function ChatMessageReactions({
           </button>
         )
       })}
-      {/* Add reaction button — visible on hover */}
+      {/* A reação rápida permanece tocável em superfícies sem hover. */}
       <button
+        type="button"
         onClick={() => {
           // Toggle first available reaction for demo; in prod this opens a picker
           onReactionAdd?.(messageId, "\u{1F44D}")
         }}
-        className="flex size-[26px] items-center justify-center rounded-full border border-dashed border-[var(--chat-border)] text-[var(--chat-text-tertiary)] opacity-0 transition-all hover:border-[var(--chat-accent)] hover:text-[var(--chat-accent)] group-hover/message:opacity-100"
-        aria-label="Add reaction"
+        className="flex size-11 items-center justify-center rounded-full border border-dashed border-[var(--chat-border)] text-[var(--chat-text-tertiary)] opacity-70 transition-all hover:border-[var(--chat-accent)] hover:text-[var(--chat-accent)] hover:opacity-100"
+        aria-label="Adicionar reação de gostei"
       >
-        <SmilePlus className="size-3" />
+        <SmilePlus className="size-4" />
       </button>
     </div>
   )

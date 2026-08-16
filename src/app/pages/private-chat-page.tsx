@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useDrag } from "@use-gesture/react";
 import { Archive, BellOff, ChevronLeft, ChevronRight, Files, ShieldCheck, Trash2, UserRound } from "lucide-react";
 import { Avatar } from "@/components/base/avatar/avatar";
@@ -125,7 +125,7 @@ export function PrivateChatPage({ conversationId, onBack }: PrivateChatPageProps
 
   useEffect(() => {
     if (recordingPhase !== "recording") return;
-    const timer = window.setInterval(() => setRecordedSeconds((Date.now() - recordingStartedAt.current) / 1000), 250);
+    const timer = window.setInterval(() => setRecordedSeconds((Date.now() - recordingStartedAt.current) / 1000), 1000);
     return () => window.clearInterval(timer);
   }, [recordingPhase]);
 
@@ -151,18 +151,29 @@ export function PrivateChatPage({ conversationId, onBack }: PrivateChatPageProps
     { axis: "x", filterTaps: true, threshold: 8 },
   );
 
-  if (!conversation) return null;
+  const currentUser = useMemo<ChatUser>(() => ({
+    id: identity?.profile.id ?? "local-user",
+    name: profile.fullName,
+    status: "online",
+  }), [identity?.profile.id, profile.fullName]);
+  const conversationMessageList = useMemo(
+    () => conversationMessages[conversationId] ?? [],
+    [conversationId, conversationMessages],
+  );
+  const messages = useMemo<ChatMessageData[]>(() => {
+    if (!conversation) return [];
+    return conversationMessageList.map((message) => ({
+      id: message.id,
+      senderId: message.mine ? currentUser.id : conversation.id,
+      senderName: message.mine ? currentUser.name : conversation.name,
+      text: message.content || undefined,
+      voice: message.voice,
+      timestamp: message.timestamp,
+      status: message.mine ? "read" : "delivered",
+    }));
+  }, [conversation, conversationMessageList, currentUser.id, currentUser.name]);
 
-  const currentUser: ChatUser = { id: identity?.profile.id ?? "local-user", name: profile.fullName, status: "online" };
-  const messages: ChatMessageData[] = (conversationMessages[conversationId] ?? []).map((message) => ({
-    id: message.id,
-    senderId: message.mine ? currentUser.id : conversation.id,
-    senderName: message.mine ? currentUser.name : conversation.name,
-    text: message.content || undefined,
-    voice: message.voice,
-    timestamp: message.timestamp,
-    status: message.mine ? "read" : "delivered",
-  }));
+  if (!conversation) return null;
 
   async function beginVoiceRecord() {
     if (recorderRef.current || recordingPhase !== "idle") return;
