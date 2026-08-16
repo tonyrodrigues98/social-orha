@@ -7,8 +7,8 @@ O ORHA foi auditado e endurecido como PWA native-first. A entrega elimina os P0/
 Deploy validado:
 
 - Página: <https://tonyrodrigues98.github.io/social-orha/>
-- Commit final: `40a1a882df11a91347e1ef69dcd26077e0f39959`
-- Workflow final: <https://github.com/tonyrodrigues98/social-orha/actions/runs/31963384242>
+- Commit da rodada autenticada: `331d735ee94315a5637403b70aeca865b9756ebc`
+- Workflow da rodada autenticada: <https://github.com/tonyrodrigues98/social-orha/actions/runs/31965396888>
 - Resultado do workflow: build e deploy concluídos com sucesso.
 
 Não é tecnicamente possível provar “zero bugs para sempre”. O estado verificável é: nenhum P0/P1/P2 conhecido permaneceu nas superfícies efetivamente testadas; as limitações externas e de cobertura estão registradas na seção J.
