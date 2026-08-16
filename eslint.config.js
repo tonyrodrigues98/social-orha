@@ -6,9 +6,9 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    // Registry/CLI output is vendor-owned source. It is typechecked and built,
-    // but its upstream formatting/rules are not rewritten by our linter.
-    ignores: ["dist", "node_modules", "src/components/**"],
+    // Untitled's copied registry is vendor-owned. Locally maintained GodUI and
+    // chatcn adaptations stay linted because they contain ORHA runtime logic.
+    ignores: ["dist", "node_modules", "src/components/base/**", "src/components/foundations/**"],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,

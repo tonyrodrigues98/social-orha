@@ -9,6 +9,13 @@ export type EmailSignUpInput = {
   password: string;
 };
 
+export function getAuthRedirectUrl(
+  origin = window.location.origin,
+  baseUrl = import.meta.env.BASE_URL,
+): string {
+  return new URL(baseUrl, `${origin.replace(/\/$/, "")}/`).href;
+}
+
 export async function signUpWithEmail({
   email,
   password,
@@ -17,7 +24,7 @@ export async function signUpWithEmail({
     email,
     password,
     options: {
-      emailRedirectTo: window.location.origin,
+      emailRedirectTo: getAuthRedirectUrl(),
     },
   });
 }
@@ -36,7 +43,7 @@ export async function signOut(): Promise<void> {
 
 export async function sendPasswordRecovery(email: string): Promise<void> {
   const { error } = await getSupabaseClient().auth.resetPasswordForEmail(email, {
-    redirectTo: window.location.origin,
+    redirectTo: getAuthRedirectUrl(),
   });
   if (error) throw error;
 }
@@ -50,6 +57,6 @@ export async function resendSignUpConfirmation(email: string) {
   return getSupabaseClient().auth.resend({
     type: "signup",
     email,
-    options: { emailRedirectTo: window.location.origin },
+    options: { emailRedirectTo: getAuthRedirectUrl() },
   });
 }

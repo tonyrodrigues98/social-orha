@@ -20,10 +20,15 @@ Todo usuário de Auth recebe automaticamente `profiles`, `profile_details`, `pro
 
 - RLS está habilitado em todas as tabelas públicas de identidade.
 - Usuários atualizam apenas o próprio perfil, detalhes e privacidade.
-- Perfis incompletos não são visíveis para outras contas autenticadas.
+- As tabelas brutas de perfil são legíveis apenas pelo próprio titular; descoberta social usa a RPC mascarada, que aplica privacidade por campo e amizade.
 - Idade, username e campos obrigatórios são validados também no banco.
 - A publishable key é a única chave disponível no frontend.
 - Confirmação de e-mail está ativa, TOTP preexistente foi preservado e o OTP permanece com oito dígitos.
-- Enquanto não houver domínio, os redirects permitidos são os previews locais na porta 5173. Ao publicar, o domínio deverá ser adicionado a `site_url` e `additional_redirect_urls` antes do primeiro lançamento.
+- Redirects de confirmação, reenvio e recuperação preservam `import.meta.env.BASE_URL`, incluindo `/social-orha/`. A URL do GitHub Pages está versionada em `supabase/config.toml`; a configuração remota deve ser conferida após o push.
 
-A migration aplicada é `20260811040000_auth_and_onboarding_foundation.sql`.
+Migrations versionadas:
+
+- `20260811040000_auth_and_onboarding_foundation.sql`: fundação inicial de Auth e onboarding.
+- `20260816130000_security_privacy_hardening.sql`: leitura bruta owner-only, privacidade mascarada, amizades sem follow, solicitações de conversa separadas e endurecimento de grants/payloads.
+
+A presença do arquivo no repositório não prova aplicação no banco remoto. Use um push controlado, audite registros legados e valide as constraints marcadas inicialmente como `NOT VALID` antes de declarar o ambiente de produção atualizado.

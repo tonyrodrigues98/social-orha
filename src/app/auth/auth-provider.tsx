@@ -6,7 +6,7 @@ import {
   useRef,
   useState,
 } from "react";
-import type { Session } from "@supabase/supabase-js";
+import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import type { UserIdentity } from "@/domain/identity";
 import { getSupabaseClient } from "@/infrastructure/supabase/client";
 import { loadUserIdentity } from "@/infrastructure/supabase/identity-repository";
@@ -19,32 +19,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const currentUserId = useRef<string | null>(null);
+  const hydratedUserId = useRef<string | null>(null);
+  const hydrationRequest = useRef(0);
 
   const hydrateIdentity = useCallback(async (nextSession: Session) => {
+    const request = ++hydrationRequest.current;
     currentUserId.current = nextSession.user.id;
     setStatus("loading_identity");
     setError(null);
 
     try {
       const nextIdentity = await loadUserIdentity(nextSession.user.id);
-      if (currentUserId.current !== nextSession.user.id) return;
+      if (request !== hydrationRequest.current || currentUserId.current !== nextSession.user.id) return;
+      hydratedUserId.current = nextSession.user.id;
       setIdentity(nextIdentity);
       setStatus("ready");
     } catch {
-      if (currentUserId.current !== nextSession.user.id) return;
+      if (request !== hydrationRequest.current || currentUserId.current !== nextSession.user.id) return;
       setError("Não foi possível carregar sua conta. Verifique a conexão e tente novamente.");
       setStatus("error");
     }
   }, []);
 
   const applySession = useCallback(
-    (nextSession: Session | null) => {
+    (event: AuthChangeEvent, nextSession: Session | null) => {
       setSession(nextSession);
 
       if (!nextSession) {
+        hydrationRequest.current += 1;
         currentUserId.current = null;
+        hydratedUserId.current = null;
         setIdentity(null);
+        setIsPasswordRecovery(false);
         setStatus("signed_out");
+        return;
+      }
+
+      currentUserId.current = nextSession.user.id;
+
+      // Refresh events only replace the token. Re-querying four identity tables
+      // here would duplicate work every time the tab regains focus.
+      if (event === "TOKEN_REFRESHED" && hydratedUserId.current === nextSession.user.id) return;
+      if (event === "SIGNED_IN" && hydratedUserId.current === nextSession.user.id) {
+        setStatus("ready");
         return;
       }
 
@@ -57,16 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const client = getSupabaseClient();
     const { data: authListener } = client.auth.onAuthStateChange((event, nextSession) => {
       if (event === "PASSWORD_RECOVERY") setIsPasswordRecovery(true);
-      applySession(nextSession);
-    });
-
-    void client.auth.getSession().then(({ data, error: sessionError }) => {
-      if (sessionError) {
-        setError("Não foi possível restaurar sua sessão.");
-        setStatus("error");
-        return;
-      }
-      applySession(data.session);
+      applySession(event, nextSession);
     });
 
     return () => authListener.subscription.unsubscribe();

@@ -1,15 +1,18 @@
-import { useEffect, useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { motion, useReducedMotion } from "motion/react";
+import { revokeAllRecordedAudioUrls } from "@/infrastructure/media/browser-audio-recorder";
 import { BottomNavigation } from "./components/bottom-navigation";
 import { PrototypeDrawer } from "./components/prototype-drawer";
 import { CommunityPage } from "./pages/community-page";
 import { ConversationsPage } from "./pages/conversations-page";
 import { ExplorePage } from "./pages/explore-page";
 import { HomePage } from "./pages/home-page";
-import { PrivateChatPage } from "./pages/private-chat-page";
 import { ProfilePage } from "./pages/profile-page";
 import { PrototypeProvider } from "./prototype-context";
 import type { AppSection } from "./types";
+
+const loadPrivateChatPage = () => import("./pages/private-chat-page");
+const PrivateChatPage = lazy(() => loadPrivateChatPage().then((module) => ({ default: module.PrivateChatPage })));
 
 const pages: Record<AppSection, React.ComponentType> = {
   inicio: HomePage,
@@ -19,10 +22,26 @@ const pages: Record<AppSection, React.ComponentType> = {
   perfil: ProfilePage,
 };
 
+function ChatLoadingSurface() {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      aria-label="Abrindo conversa"
+      style={{ position: "absolute", inset: 0, display: "grid", gridTemplateRows: "72px 1fr 68px", background: "#fff", color: "#202024" }}
+    >
+      <div style={{ borderBottom: "1px solid #ececef", background: "#fff" }} />
+      <div style={{ display: "grid", placeItems: "center", fontSize: 13, color: "#74747d" }}>Abrindo conversa…</div>
+      <div style={{ borderTop: "1px solid #ececef", background: "#fff" }} />
+    </div>
+  );
+}
+
 export function AuthenticatedApp() {
   const reduceMotion = useReducedMotion();
   const [section, setSection] = useState<AppSection>("inicio");
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (activeConversationId) return;
@@ -30,38 +49,58 @@ export function AuthenticatedApp() {
     viewport?.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
   }, [activeConversationId, reduceMotion, section]);
 
+  useEffect(() => {
+    if (section === "conversas") void loadPrivateChatPage();
+  }, [section]);
+
+  useEffect(() => revokeAllRecordedAudioUrls, []);
+
+  const openChat = useCallback((conversationId: string) => {
+    returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setActiveConversationId(conversationId);
+  }, []);
+
+  const closeChat = useCallback(() => {
+    setActiveConversationId(null);
+    window.requestAnimationFrame(() => returnFocusRef.current?.focus({ preventScroll: true }));
+  }, []);
+
   const ActivePage = pages[section];
+  const chatIsOpen = activeConversationId !== null;
 
   return (
-    <PrototypeProvider navigate={setSection} openChat={setActiveConversationId}>
-      <div className={`app-viewport ${activeConversationId ? "chat-viewport" : ""}`}>
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div
-            key={section}
-            initial={reduceMotion ? false : { opacity: 0, x: 12 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={reduceMotion ? { opacity: 1 } : { opacity: 0, x: -8 }}
-            transition={{ duration: reduceMotion ? 0 : 0.22, ease: "easeOut" }}
-          >
-            <ActivePage />
-          </motion.div>
-        </AnimatePresence>
+    <PrototypeProvider navigate={setSection} openChat={openChat}>
+      <div className={`app-viewport ${chatIsOpen ? "chat-viewport" : ""}`} style={{ background: "#fff" }}>
+        <motion.div
+          key={section}
+          inert={chatIsOpen ? true : undefined}
+          aria-hidden={chatIsOpen || undefined}
+          initial={reduceMotion ? false : { x: 12 }}
+          animate={{ x: 0 }}
+          transition={{ duration: reduceMotion ? 0 : 0.18, ease: "easeOut" }}
+          style={{ minHeight: "100%", background: "#fff" }}
+        >
+          <ActivePage />
+        </motion.div>
 
-        <AnimatePresence initial={false}>
-          {activeConversationId ? (
-            <motion.div
-              className="private-chat-route"
-              initial={reduceMotion ? { opacity: 1 } : { opacity: 0, x: 16 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={reduceMotion ? { opacity: 1 } : { opacity: 0, x: 16 }}
-              transition={{ duration: reduceMotion ? 0 : 0.2, ease: "easeOut" }}
-            >
-              <PrivateChatPage conversationId={activeConversationId} onBack={() => setActiveConversationId(null)} />
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
+        {activeConversationId ? (
+          <motion.div
+            className="private-chat-route"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Conversa privada"
+            initial={reduceMotion ? false : { x: 16 }}
+            animate={{ x: 0 }}
+            transition={{ duration: reduceMotion ? 0 : 0.2, ease: "easeOut" }}
+            style={{ background: "#fff" }}
+          >
+            <Suspense fallback={<ChatLoadingSurface />}>
+              <PrivateChatPage conversationId={activeConversationId} onBack={closeChat} />
+            </Suspense>
+          </motion.div>
+        ) : null}
       </div>
-      {!activeConversationId ? <BottomNavigation value={section} onChange={setSection} /> : null}
+      {!chatIsOpen ? <BottomNavigation value={section} onChange={setSection} /> : null}
       <PrototypeDrawer />
     </PrototypeProvider>
   );

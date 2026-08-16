@@ -7,27 +7,28 @@ export interface LibraryCatalogEntry {
   readonly status: IntegrationStatus;
   readonly packages?: readonly string[];
   readonly sourcePath?: string;
+  readonly sourcePaths?: readonly string[];
   readonly note: string;
 }
 
 export const libraryCatalog: readonly LibraryCatalogEntry[] = [
-  { name: "GodUI", kind: "registry-kit", status: "integrated", packages: ["framer-motion"], sourcePath: "src/components/godui/drawer.tsx", note: "Drawer instalado pelo registry oficial; código local." },
+  { name: "GodUI", kind: "registry-kit", status: "integrated", packages: ["framer-motion"], sourcePaths: ["src/components/godui/drawer.tsx", "src/components/godui/tab-bar.tsx"], note: "Drawer e Tab Bar instalados pelo registry oficial; código local preservado." },
   { name: "Untitled UI React", kind: "registry-kit", status: "integrated", packages: ["@untitledui/icons", "react-aria"], sourcePath: "src/components/base", note: "Todos os componentes base gratuitos instalados pela CLI oficial." },
-  { name: "chatcn", kind: "registry-kit", status: "integrated", packages: ["date-fns", "lucide-react"], sourcePath: "src/components/ui/chat", note: "Código oficial importado; manifesto adaptado porque o campo css usa schema legado." },
+  { name: "chatcn", kind: "registry-kit", status: "integrated", packages: ["date-fns", "lucide-react"], sourcePath: "src/components/ui/chat", note: "Base oficial incorporada e adaptada localmente para áudio, waveform, idioma e fluxo ORHA." },
   { name: "shadcn/ui", kind: "registry-kit", status: "integrated", packages: ["shadcn", "class-variance-authority", "clsx", "tailwind-merge", "lucide-react"], sourcePath: "components.json", note: "Infraestrutura de registry configurada para Vite e Tailwind 4." },
   { name: "Radix Primitives", kind: "npm", status: "installed", packages: ["radix-ui"], note: "Pacote agregador oficial instalado." },
-  { name: "React Aria", kind: "npm", status: "installed", packages: ["react-aria-components", "react-aria"], note: "Base acessível usada também pelo Untitled UI." },
+  { name: "React Aria", kind: "npm", status: "integrated", packages: ["react-aria-components", "react-aria"], sourcePaths: ["src/components/godui/drawer.tsx", "src/app/pages/conversations-page.tsx"], note: "Semântica de overlay, foco e tabs; também sustenta os primitives do Untitled UI." },
   { name: "react-modal-sheet", kind: "npm", status: "installed", packages: ["react-modal-sheet"], note: "Alternativa de bottom sheet disponível para POC." },
   { name: "Vaul", kind: "npm", status: "quarantined", packages: ["vaul"], note: "Instalado para estudo; o relatório registra ausência de manutenção." },
-  { name: "Embla Carousel", kind: "npm", status: "installed", packages: ["embla-carousel-react"], note: "Engine padrão recomendada para carrosséis." },
+  { name: "Embla Carousel", kind: "npm", status: "integrated", packages: ["embla-carousel-react"], sourcePaths: ["src/app/components/people-carousel.tsx", "src/app/components/profile-favorite-carousel.tsx"], note: "Engine padrão dos carrosséis de pessoas e favoritos." },
   { name: "Swiper", kind: "npm", status: "installed", packages: ["swiper"], note: "Reservado para casos avançados." },
-  { name: "Yet Another React Lightbox", kind: "npm", status: "installed", packages: ["yet-another-react-lightbox"], note: "Viewer fullscreen e gallery." },
-  { name: "TanStack Virtual", kind: "npm", status: "installed", packages: ["@tanstack/react-virtual"], note: "Virtualização headless de listas extensas." },
-  { name: "Motion", kind: "npm", status: "installed", packages: ["motion"], note: "Motion para React/JS; GodUI ainda usa framer-motion diretamente." },
-  { name: "use-gesture", kind: "npm", status: "installed", packages: ["@use-gesture/react"], note: "Gestos especiais; requer validação Safari/iOS por feature." },
+  { name: "Yet Another React Lightbox", kind: "npm", status: "integrated", packages: ["yet-another-react-lightbox"], sourcePath: "src/app/pages/profile-page.tsx", note: "Galeria fullscreen do perfil, com foco, teclado e gestos." },
+  { name: "TanStack Virtual", kind: "npm", status: "integrated", packages: ["@tanstack/react-virtual"], sourcePath: "src/components/ui/chat/chat.tsx", note: "Virtualização condicional para históricos com pelo menos cem mensagens." },
+  { name: "Motion", kind: "npm", status: "integrated", packages: ["motion"], sourcePaths: ["src/app/App.tsx", "src/app/authenticated-app.tsx", "src/app/onboarding/onboarding-flow.tsx"], note: "Transições native-first com suporte a prefers-reduced-motion; GodUI preserva framer-motion localmente." },
+  { name: "use-gesture", kind: "npm", status: "integrated", packages: ["@use-gesture/react"], sourcePath: "src/app/pages/private-chat-page.tsx", note: "Swipe-back da conversa privada; validação em Safari/iOS real continua necessária." },
   { name: "Vidstack", kind: "npm", status: "quarantined", packages: ["@vidstack/react"], note: "Peer types ainda declara React 18; instalado via resolução legada." },
   { name: "Media Chrome", kind: "npm", status: "installed", packages: ["media-chrome"], note: "Web Components de controles de mídia." },
-  { name: "wavesurfer.js", kind: "npm", status: "installed", packages: ["wavesurfer.js"], note: "Waveforms de áudio." },
+  { name: "wavesurfer.js", kind: "npm", status: "integrated", packages: ["wavesurfer.js"], sourcePath: "src/components/ui/chat/chat.tsx", note: "Waveform real e interativa das mensagens de áudio; fallback manual somente em erro." },
   { name: "react-media-recorder", kind: "npm", status: "quarantined", packages: ["react-media-recorder"], note: "Instalado somente para comparação; adapter nativo é o default." },
   { name: "MediaRecorder nativo", kind: "browser-api", status: "integrated", sourcePath: "src/infrastructure/media/browser-audio-recorder.ts", note: "API encapsulada atrás de uma porta própria." },
   { name: "react-easy-crop", kind: "npm", status: "installed", packages: ["react-easy-crop"], note: "Crop React recomendado." },
@@ -41,7 +42,7 @@ export const libraryCatalog: readonly LibraryCatalogEntry[] = [
   { name: "FilePond", kind: "npm", status: "installed", packages: ["filepond", "react-filepond"], note: "Alternativa visual de upload." },
   { name: "react-map-gl + MapLibre", kind: "npm", status: "installed", packages: ["react-map-gl", "maplibre-gl"], note: "Mapas sem token proprietário obrigatório." },
   { name: "Recharts", kind: "npm", status: "installed", packages: ["recharts", "react-is"], note: "Charts React; react-is está alinhado ao React 19." },
-  { name: "React Hook Form", kind: "npm", status: "installed", packages: ["react-hook-form"], note: "Form engine maduro." },
+  { name: "React Hook Form", kind: "npm", status: "integrated", packages: ["react-hook-form"], sourcePath: "src/app/auth/auth-fields.tsx", note: "Engine dos formulários maduros de autenticação." },
   { name: "TanStack Form", kind: "npm", status: "installed", packages: ["@tanstack/react-form"], note: "Alternativa typed/headless." },
   { name: "React DayPicker", kind: "npm", status: "installed", packages: ["react-day-picker"], note: "Calendário e intervalos de datas." },
   { name: "Orama", kind: "npm", status: "integrated", packages: ["@orama/orama"], sourcePath: "src/infrastructure/search/orama-search-repository.ts", note: "Repository local full-text implementado." },
@@ -55,3 +56,7 @@ export const libraryCatalog: readonly LibraryCatalogEntry[] = [
 ] as const;
 
 export const installedPackageNames = [...new Set(libraryCatalog.flatMap((entry) => entry.packages ?? []))].sort();
+
+export const quarantinedPackageNames = [
+  ...new Set(libraryCatalog.filter((entry) => entry.status === "quarantined").flatMap((entry) => entry.packages ?? [])),
+].sort();

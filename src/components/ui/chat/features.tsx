@@ -417,21 +417,32 @@ interface ChatSearchProps {
 
 function ChatSearch({ onSearch, onSelect, onClose, className }: ChatSearchProps) {
   const [query, setQuery] = React.useState("")
-  const [results, setResults] = React.useState<SearchResult[]>([])
+  const [searchState, setSearchState] = React.useState<{ query: string; results: SearchResult[] }>({ query: "", results: [] })
   const inputRef = React.useRef<HTMLInputElement>(null)
+  const normalizedQuery = query.trim()
+  const results = normalizedQuery && searchState.query === normalizedQuery ? searchState.results : []
+  const searchPending = Boolean(normalizedQuery && searchState.query !== normalizedQuery)
 
   React.useEffect(() => {
     inputRef.current?.focus()
   }, [])
 
   React.useEffect(() => {
-    if (!query.trim()) { setResults([]); return }
+    if (!normalizedQuery) return
+    let cancelled = false
     const timeout = setTimeout(async () => {
-      const r = await onSearch(query)
-      setResults(r)
+      try {
+        const nextResults = await onSearch(normalizedQuery)
+        if (!cancelled) setSearchState({ query: normalizedQuery, results: nextResults })
+      } catch {
+        if (!cancelled) setSearchState({ query: normalizedQuery, results: [] })
+      }
     }, 200)
-    return () => clearTimeout(timeout)
-  }, [query, onSearch])
+    return () => {
+      cancelled = true
+      clearTimeout(timeout)
+    }
+  }, [normalizedQuery, onSearch])
 
   React.useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose() }
@@ -450,8 +461,9 @@ function ChatSearch({ onSearch, onSelect, onClose, className }: ChatSearchProps)
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search messages..."
-            className="flex-1 bg-transparent text-[15px] text-[var(--chat-text-primary)] placeholder:text-[var(--chat-text-tertiary)] outline-none"
+            placeholder="Pesquisar mensagens"
+            aria-label="Pesquisar mensagens"
+            className="flex-1 bg-transparent text-[16px] text-[var(--chat-text-primary)] placeholder:text-[var(--chat-text-tertiary)] outline-none"
           />
           <kbd className="rounded border border-[var(--chat-border)] px-1.5 py-0.5 text-[10px] text-[var(--chat-text-tertiary)]">ESC</kbd>
         </div>
@@ -460,6 +472,7 @@ function ChatSearch({ onSearch, onSelect, onClose, className }: ChatSearchProps)
         <div className="max-h-80 overflow-y-auto">
           {results.map((r) => (
             <button
+              type="button"
               key={r.messageId}
               onClick={() => { onSelect(r); onClose() }}
               className="flex w-full flex-col gap-0.5 border-b border-[var(--chat-border)] px-4 py-2.5 text-left transition-colors hover:bg-[var(--chat-accent-soft)]"
@@ -467,7 +480,7 @@ function ChatSearch({ onSearch, onSelect, onClose, className }: ChatSearchProps)
               <div className="flex items-center gap-2">
                 <span className="text-[13px] font-semibold text-[var(--chat-text-primary)]">{r.senderName}</span>
                 {r.conversationName && (
-                  <span className="text-[11px] text-[var(--chat-text-tertiary)]">in {r.conversationName}</span>
+                  <span className="text-[11px] text-[var(--chat-text-tertiary)]">em {r.conversationName}</span>
                 )}
                 <span className="ml-auto text-[11px] text-[var(--chat-text-tertiary)]">
                   {formatTimestamp(new Date(r.timestamp))}
@@ -476,9 +489,9 @@ function ChatSearch({ onSearch, onSelect, onClose, className }: ChatSearchProps)
               <p className="truncate text-[13px] text-[var(--chat-text-secondary)]">{r.snippet}</p>
             </button>
           ))}
-          {query.trim() && results.length === 0 && (
+          {normalizedQuery && !searchPending && results.length === 0 && (
             <div className="flex h-20 items-center justify-center text-[13px] text-[var(--chat-text-tertiary)]">
-              No results found
+              Nenhum resultado encontrado
             </div>
           )}
         </div>
@@ -508,4 +521,3 @@ export type {
   SearchResult,
   ChatSearchProps,
 }
-

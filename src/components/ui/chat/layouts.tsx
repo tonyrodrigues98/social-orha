@@ -17,7 +17,6 @@ import {
   CheckCircle2,
   Circle,
   User,
-  Tag,
 } from "lucide-react"
 import type { ChatMessageData, ChatUser, ChatTheme, TypingUser } from "./types"
 import { ChatProvider } from "./chat"
@@ -31,14 +30,16 @@ interface ChatHeaderProps {
   avatar?: React.ReactNode
   actions?: React.ReactNode
   onBack?: () => void
+  backLabel?: string
+  backButtonRef?: React.Ref<HTMLButtonElement>
   className?: string
 }
 
-function ChatHeader({ title, subtitle, avatar, actions, onBack, className }: ChatHeaderProps) {
+function ChatHeader({ title, subtitle, avatar, actions, onBack, backLabel = "Voltar", backButtonRef, className }: ChatHeaderProps) {
   return (
     <header className={cn("sticky top-0 z-10 flex items-center gap-3 border-b border-[var(--chat-border)] bg-[var(--chat-bg-header)] px-4 py-3 backdrop-blur-[20px] backdrop-saturate-[180%]", className)}>
       {onBack && (
-        <button onClick={onBack} className="mr-1 text-[var(--chat-text-secondary)] hover:text-[var(--chat-text-primary)]">
+        <button ref={backButtonRef} type="button" onClick={onBack} aria-label={backLabel} className="mr-1 flex size-11 shrink-0 items-center justify-center rounded-full text-[var(--chat-text-secondary)] hover:bg-[var(--chat-accent-soft)] hover:text-[var(--chat-text-primary)]">
           <ChevronLeft className="size-5" />
         </button>
       )}
@@ -370,50 +371,7 @@ interface ChatBoardProps {
 
 function ChatBoard({
   currentUser,
-  theme = "lunar",
-  topics,
-  activeTopic,
-  onSelectTopic,
-  onBack,
-  children,
-  className,
-}: ChatBoardProps) {
-  return (
-    <ChatProvider currentUser={currentUser} theme={theme}>
-      <div className={cn("flex h-full flex-col bg-[var(--chat-bg-main)]", className)}>
-        {activeTopic ? (
-          <>
-            <ChatHeader title={activeTopic.title} subtitle={`${activeTopic.replyCount} replies`} onBack={onBack} />
-            <div className="flex-1 overflow-y-auto px-4 py-4">
-              <div className="mx-auto max-w-3xl">{children}</div>
-            </div>
-          </>
-        ) : (
-          <>
-            <ChatHeader title="Discussions" actions={
-              <button className="flex size-8 items-center justify-center rounded-lg bg-[var(--chat-accent)] text-white"><Plus className="size-4" /></button>
-            } />
-            <div className="flex-1 overflow-y-auto">
-              {topics.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => onSelectTopic(t.id)}
-                  className="flex w-full items-start gap-3 border-b border-[var(--chat-border)] px-4 py-3 text-left transition-colors hover:bg-[var(--chat-accent-soft)]"
-                >
-                  {t.isPinned && <Pin className="mt-0.5 size-3.5 shrink-0 text-[var(--chat-orange)]" />}
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[14px] font-semibold text-[var(--chat-text-primary)]">{t.title}</p>
-                    <div className="mt-0.5 flex items-center gap-2 text-[12px] text-[var(--chat-text-secondary)]">
-                      <span>{t.author}</span>
-                      <span>\u00B7</span>
-                      <span>{t.replyCount} replies</span>
-                      <span>\u00B7</span>
-                      <span>{t.lastActivity}</span>
-                    </div>
-                    {t.tags && t.tags.length > 0 && (
-                      <div className="mt-1 flex gap-1">
-                        {t.tags.map((tag) => (
-                          <span key={tag} className="rounded-full bg-[var(--chat-accent-soft)] px-2 py-0.5 text-[11px] font-medium text-[var(--chat-accent)]">{tag}</span>
+ïO-¢G§²ÚîÆ­yÙ] px-2 py-0.5 text-[11px] font-medium text-[var(--chat-accent)]">{tag}</span>
                         ))}
                       </div>
                     )}
@@ -820,4 +778,3 @@ export type {
   SupportTicket,
   SupportTicketsProps,
 }
-

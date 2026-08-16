@@ -13,25 +13,34 @@ import {
   isSameDay,
   differenceInSeconds,
 } from "date-fns"
+import { ptBR } from "date-fns/locale"
 import type { ChatMessageData, MessageListItem, MessageGroup } from "./types"
 
 // ─── Date formatting ──────────────────────────────────────────────────────────
 
-export function formatDateLabel(date: Date): string {
-  if (isToday(date)) return "Today"
-  if (isYesterday(date)) return "Yesterday"
+export function formatDateLabel(
+  date: Date,
+  dateFormat: "relative" | "absolute" | "time-only" = "relative"
+): string {
+  if (dateFormat === "absolute") return format(date, "dd/MM/yyyy", { locale: ptBR })
+  if (isToday(date)) return "Hoje"
+  if (isYesterday(date)) return "Ontem"
   const now = new Date()
   const diffDays = Math.floor(
     (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24)
   )
-  if (diffDays < 7) return format(date, "EEEE") // "Tuesday"
+  if (diffDays < 7) return format(date, "EEEE", { locale: ptBR })
   if (date.getFullYear() === now.getFullYear())
-    return format(date, "MMMM d") // "March 18"
-  return format(date, "MMMM d, yyyy") // "March 18, 2026"
+    return format(date, "d 'de' MMMM", { locale: ptBR })
+  return format(date, "d 'de' MMMM 'de' yyyy", { locale: ptBR })
 }
 
-export function formatTimestamp(date: Date): string {
-  return format(date, "h:mm a") // "10:42 AM"
+export function formatTimestamp(
+  date: Date,
+  dateFormat: "relative" | "absolute" | "time-only" = "time-only"
+): string {
+  if (dateFormat === "absolute") return format(date, "dd/MM/yyyy, HH:mm", { locale: ptBR })
+  return format(date, "HH:mm", { locale: ptBR })
 }
 
 // ─── Message grouping ─────────────────────────────────────────────────────────
@@ -39,9 +48,11 @@ export function formatTimestamp(date: Date): string {
 export function groupMessages(
   messages: ChatMessageData[],
   currentUserId: string,
-  intervalSeconds: number = 120
+  intervalSeconds: number = 120,
+  dateFormat: "relative" | "absolute" | "time-only" = "relative"
 ): MessageListItem[] {
   if (messages.length === 0) return []
+  const maxMessagesPerGroup = 24
 
   const items: MessageListItem[] = []
   let currentGroup: MessageGroup | null = null
@@ -59,7 +70,7 @@ export function groupMessages(
 
       // Insert date separator if needed
       if (!lastDate || !isSameDay(lastDate, msgDate)) {
-        items.push({ type: "date", date: msgDate, label: formatDateLabel(msgDate) })
+        items.push({ type: "date", date: msgDate, label: formatDateLabel(msgDate, dateFormat) })
         lastDate = msgDate
       }
 
@@ -73,7 +84,7 @@ export function groupMessages(
         items.push({ type: "group", group: currentGroup })
         currentGroup = null
       }
-      items.push({ type: "date", date: msgDate, label: formatDateLabel(msgDate) })
+      items.push({ type: "date", date: msgDate, label: formatDateLabel(msgDate, dateFormat) })
       lastDate = msgDate
     }
 
@@ -82,6 +93,7 @@ export function groupMessages(
       currentGroup &&
       currentGroup.senderId === msg.senderId &&
       currentGroup.messages.length > 0 &&
+      currentGroup.messages.length < maxMessagesPerGroup &&
       differenceInSeconds(
         msgDate,
         new Date(
@@ -128,7 +140,8 @@ export function useAutoScroll(
     (behavior: ScrollBehavior = "smooth") => {
       const el = containerRef.current
       if (!el) return
-      el.scrollTo({ top: el.scrollHeight, behavior })
+      const reduceMotion = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+      el.scrollTo({ top: el.scrollHeight, behavior: reduceMotion ? "auto" : behavior })
       setUnseenCount(0)
     },
     []
@@ -231,4 +244,3 @@ export function useTypingIndicator(opts?: {
 
   return { isTyping, handleKeyDown, stopTyping } as const
 }
-

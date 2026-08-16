@@ -58,6 +58,30 @@ export async function updateOwnDetails(
   return data as ProfileDetails;
 }
 
+export type ProfilePrivacyUpdate = Pick<
+  ProfilePrivacy,
+  | "profile_visibility"
+  | "location_visibility"
+  | "favorites_visibility"
+  | "gallery_visibility"
+  | "dating_enabled"
+>;
+
+export async function updateOwnPrivacy(
+  userId: string,
+  values: ProfilePrivacyUpdate,
+): Promise<ProfilePrivacy> {
+  const { data, error } = await getSupabaseClient()
+    .from("profile_privacy")
+    .update(values)
+    .eq("profile_id", userId)
+    .select("*")
+    .single();
+
+  if (error) throw error;
+  return data as ProfilePrivacy;
+}
+
 export async function isUsernameAvailable(username: string): Promise<boolean> {
   const { data, error } = await getSupabaseClient().rpc("username_is_available", {
     candidate: username,

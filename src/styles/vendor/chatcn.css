@@ -381,3 +381,29 @@
 [data-chat-theme="ember"] .chat-drop-overlay {
   border-radius: 4px;
 }
+
+/* WaveSurfer is the visible, interactive voice-message renderer. */
+[data-chat-theme] .chat-real-waveform,
+[data-chat-theme] .chat-real-waveform > div {
+  width: 100%;
+  min-width: 0;
+  height: 32px;
+}
+
+/* Portalled Untitled menus inherit the ChatProvider surface and stay fully opaque. */
+[data-chat-theme] .private-chat-menu {
+  isolation: isolate;
+  color: var(--chat-text-primary);
+  background-color: var(--chat-bg-main);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-chat-theme] *,
+  [data-chat-theme] *::before,
+  [data-chat-theme] *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -4,6 +4,11 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
+import {
+  PWA_ASSET_PATHS,
+  PWA_REGISTER_TYPE,
+  createAppManifest,
+} from "./scripts/pwa-manifest";
 
 const rootDirectory = path.dirname(fileURLToPath(import.meta.url));
 const appBase = process.env.GITHUB_ACTIONS ? "/social-orha/" : "/";
@@ -14,27 +19,11 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: "autoUpdate",
-      includeAssets: [
-        "brand/orha-splash-primary.jpg",
-        "brand/orha-splash-soft.jpg",
-      ],
-      manifest: {
-        name: "ORHA",
-        short_name: "ORHA",
-        description:
-          "Rede social cristã para criar vínculos, participar de comunidades e se expressar.",
-        lang: "pt-BR",
-        start_url: appBase,
-        scope: appBase,
-        display: "standalone",
-        orientation: "portrait-primary",
-        background_color: "#f7f7f4",
-        theme_color: "#f7f7f4",
-        categories: ["social", "lifestyle"],
-      },
+      registerType: PWA_REGISTER_TYPE,
+      includeAssets: [...PWA_ASSET_PATHS],
+      manifest: createAppManifest(appBase),
       workbox: {
-        globPatterns: ["**/*.{js,css,html,jpg,svg,woff2}"],
+        globPatterns: ["**/*.{js,css,html,jpg,png,svg,woff2}"],
         navigateFallback: `${appBase}index.html`,
       },
     }),

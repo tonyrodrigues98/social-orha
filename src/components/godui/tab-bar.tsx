@@ -24,8 +24,6 @@ export type TabBarProps = Omit<
   onChange?: (value: string) => void;
 };
 
-let tabBarSeed = 0;
-
 const TabBar = React.forwardRef<HTMLElement, TabBarProps>(
   (
     {
@@ -41,7 +39,7 @@ const TabBar = React.forwardRef<HTMLElement, TabBarProps>(
     ref,
   ) => {
     const reduceMotion = useReducedMotion();
-    const blobId = React.useMemo(() => `tab-bar-blob-${tabBarSeed++}`, []);
+    const blobId = React.useId();
     const isControlled = valueProp !== undefined;
     const [internal, setInternal] = React.useState(
       () => defaultValue ?? tabs[0]?.value,
@@ -60,7 +58,7 @@ const TabBar = React.forwardRef<HTMLElement, TabBarProps>(
     return (
       <nav
         ref={ref}
-        aria-label="Bottom navigation"
+        aria-label="Navegação principal"
         className={`inline-flex items-center gap-1 rounded-full border border-border bg-background/80 p-1.5 shadow-lg backdrop-blur-xl ${
           safeArea ? "pb-[max(0.375rem,env(safe-area-inset-bottom))]" : ""
         } ${className ?? ""}`}

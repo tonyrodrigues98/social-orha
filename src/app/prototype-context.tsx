@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- Context hooks and shared labels intentionally live beside their provider. */
 import {
   createContext,
   useCallback,
@@ -8,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import type { ProfileVisibility } from "@/domain/identity";
+import { updateOwnPrivacy } from "@/infrastructure/supabase/identity-repository";
 import { useAuth } from "./auth/auth-context";
 import { communities as communitySeed, conversations as conversationSeed, people } from "./prototype-data";
 import type { AppSection, CommunityPreview, PersonPreview } from "./types";
@@ -43,7 +45,6 @@ export type DrawerView =
   | { type: "topic"; topic: string }
   | { type: "explore"; destination: string }
   | { type: "requests" }
-  | { type: "conversation"; conversationId: string }
   | { type: "compose"; recipient?: string }
   | { type: "create-community" }
   | { type: "edit-profile" }
@@ -53,6 +54,7 @@ export type DrawerView =
 
 type PrivacyPreview = {
   profile: ProfileVisibility;
+  location: ProfileVisibility;
   favorites: ProfileVisibility;
   gallery: ProfileVisibility;
   datingEnabled: boolean;
@@ -89,10 +91,16 @@ type PrototypeContextValue = {
   addGalleryImages: (files: File[]) => void;
   removeGalleryImage: (url: string) => void;
   privacy: PrivacyPreview;
-  savePrivacy: (next: PrivacyPreview) => void;
+  savePrivacy: (next: PrivacyPreview) => Promise<boolean>;
 };
 
 const PrototypeContext = createContext<PrototypeContextValue | null>(null);
+
+const MAX_LOCAL_IMAGE_BYTES = 10 * 1024 * 1024;
+
+function isSupportedLocalImage(file: File) {
+  return file.type.startsWith("image/") && file.size > 0 && file.size <= MAX_LOCAL_IMAGE_BYTES;
+}
 
 function toId(value: string) {
   return value.toLocaleLowerCase("pt-BR").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
@@ -159,8 +167,12 @@ export function PrototypeProvider({
     games: toLabels(identity?.details.favorite_games ?? []),
   }));
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
+  const coverObjectUrl = useRef<string | null>(null);
+  const galleryImagesRef = useRef<string[]>([]);
+  const galleryObjectUrls = useRef<Set<string>>(new Set());
   const [privacy, setPrivacy] = useState<PrivacyPreview>(() => ({
     profile: identity?.privacy.profile_visibility ?? "public",
+    location: identity?.privacy.location_visibility ?? "public",
     favorites: identity?.privacy.favorites_visibility ?? "public",
     gallery: identity?.privacy.gallery_visibility ?? "public",
     datingEnabled: identity?.privacy.dating_enabled ?? false,
@@ -168,6 +180,9 @@ export function PrototypeProvider({
 
   useEffect(() => () => {
     if (toastTimer.current) window.clearTimeout(toastTimer.current);
+    if (coverObjectUrl.current) URL.revokeObjectURL(coverObjectUrl.current);
+    galleryObjectUrls.current.forEach((url) => URL.revokeObjectURL(url));
+    galleryObjectUrls.current.clear();
   }, []);
 
   const announce = useCallback((message: string) => {
@@ -285,7 +300,16 @@ export function PrototypeProvider({
   }, [announce]);
 
   const setCoverImage = useCallback((file: File) => {
-    setProfile((current) => ({ ...current, coverImage: URL.createObjectURL(file) }));
+    if (!isSupportedLocalImage(file)) {
+      announce("Escolha uma imagem de até 10 MB.");
+      return;
+    }
+
+    const nextUrl = URL.createObjectURL(file);
+    const previousUrl = coverObjectUrl.current;
+    coverObjectUrl.current = nextUrl;
+    setProfile((current) => ({ ...current, coverImage: nextUrl }));
+    if (previousUrl) URL.revokeObjectURL(previousUrl);
     announce("Nova capa aplicada neste dispositivo.");
   }, [announce]);
 
@@ -307,21 +331,57 @@ export function PrototypeProvider({
   }, [announce]);
 
   const addGalleryImages = useCallback((files: File[]) => {
-    const images = files.filter((file) => file.type.startsWith("image/")).map((file) => URL.createObjectURL(file));
-    if (!images.length) return;
-    setGalleryImages((current) => [...current, ...images].slice(0, 9));
+    const availableSlots = Math.max(0, 9 - galleryImagesRef.current.length);
+    if (availableSlots === 0) {
+      announce("O limite de nove fotos foi atingido.");
+      return;
+    }
+
+    const acceptedFiles = files.filter(isSupportedLocalImage).slice(0, availableSlots);
+    if (!acceptedFiles.length) {
+      announce("Escolha imagens de até 10 MB.");
+      return;
+    }
+
+    const images = acceptedFiles.map((file) => URL.createObjectURL(file));
+    images.forEach((url) => galleryObjectUrls.current.add(url));
+    const nextImages = [...galleryImagesRef.current, ...images];
+    galleryImagesRef.current = nextImages;
+    setGalleryImages(nextImages);
     announce(`${images.length} foto${images.length > 1 ? "s" : ""} adicionada${images.length > 1 ? "s" : ""} à galeria.`);
   }, [announce]);
 
   const removeGalleryImage = useCallback((url: string) => {
-    setGalleryImages((current) => current.filter((image) => image !== url));
+    if (galleryObjectUrls.current.delete(url)) URL.revokeObjectURL(url);
+    const nextImages = galleryImagesRef.current.filter((image) => image !== url);
+    galleryImagesRef.current = nextImages;
+    setGalleryImages(nextImages);
     announce("Foto removida da galeria de teste.");
   }, [announce]);
 
-  const savePrivacy = useCallback((next: PrivacyPreview) => {
-    setPrivacy(next);
-    announce("Preferências de privacidade salvas neste teste.");
-  }, [announce]);
+  const savePrivacy = useCallback(async (next: PrivacyPreview) => {
+    const userId = identity?.profile.id;
+    if (!userId) {
+      announce("Não foi possível identificar sua conta.");
+      return false;
+    }
+
+    try {
+      await updateOwnPrivacy(userId, {
+        profile_visibility: next.profile,
+        location_visibility: next.location,
+        favorites_visibility: next.favorites,
+        gallery_visibility: next.gallery,
+        dating_enabled: next.datingEnabled,
+      });
+      setPrivacy(next);
+      announce("Preferências de privacidade salvas.");
+      return true;
+    } catch {
+      announce("Não foi possível salvar sua privacidade. Tente novamente.");
+      return false;
+    }
+  }, [announce, identity?.profile.id]);
 
   return (
     <PrototypeContext.Provider value={{
@@ -341,8 +401,8 @@ export function PrototypeProvider({
       conversations,
       conversationMessages,
       openConversation,
-    sendMessage,
-    sendVoiceMessage,
+      sendMessage,
+      sendVoiceMessage,
       startConversation,
       conversationRequests,
       respondToConversationRequest,

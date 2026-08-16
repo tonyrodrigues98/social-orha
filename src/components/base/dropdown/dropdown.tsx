@@ -162,16 +162,17 @@ const DropdownSeparator = (props: AriaSeparatorProps) => {
 };
 
 const DropdownDotsButton = (props: AriaButtonProps & RefAttributes<HTMLButtonElement>) => {
+    const { "aria-label": ariaLabel, ...buttonProps } = props;
     return (
         <AriaButton
-            {...props}
-            aria-label="Open menu"
+            {...buttonProps}
+            aria-label={ariaLabel ?? "Abrir menu"}
             className={(state) =>
                 cx(
                     "cursor-pointer rounded-md text-fg-quaternary outline-focus-ring transition duration-100 ease-linear",
                     (state.isPressed || state.isHovered) && "text-fg-quaternary_hover",
                     (state.isPressed || state.isFocusVisible) && "outline-2 outline-offset-2",
-                    typeof props.className === "function" ? props.className(state) : props.className,
+                    typeof buttonProps.className === "function" ? buttonProps.className(state) : buttonProps.className,
                 )
             }
         >

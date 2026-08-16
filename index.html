@@ -6,19 +6,83 @@
       name="viewport"
       content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
-    <meta name="theme-color" content="#f7f7f4" />
+    <meta name="theme-color" content="#ffffff" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="ORHA" />
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href="%BASE_URL%brand/orha-apple-touch-icon.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="192x192"
+      href="%BASE_URL%brand/orha-icon-192.png"
+    />
+    <link
+      rel="preload"
+      as="image"
+      href="%BASE_URL%brand/orha-mark-transparent.png"
+      fetchpriority="high"
+    />
     <meta
       name="description"
       content="ORHA — uma rede social cristã para conhecer pessoas e pertencer a comunidades."
     />
+    <style>
+      :root {
+        color-scheme: light;
+        background: #ffffff;
+      }
+
+      html,
+      body,
+      #root {
+        width: 100%;
+        min-height: 100%;
+        margin: 0;
+        background: #ffffff;
+      }
+
+      body {
+        min-height: 100dvh;
+        overflow: hidden;
+      }
+
+      .orha-boot-surface {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        background: #ffffff;
+      }
+
+      .orha-boot-surface img {
+        display: block;
+        width: min(67vw, 295px);
+        height: auto;
+        opacity: 0.28;
+        filter: blur(10px);
+        transform: scale(1.1);
+      }
+    </style>
     <title>ORHA</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="orha-boot-surface" aria-hidden="true">
+        <img
+          src="%BASE_URL%brand/orha-mark-transparent.png"
+          width="697"
+          height="177"
+          alt=""
+          draggable="false"
+        />
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

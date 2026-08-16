@@ -32,4 +32,3 @@ export function WelcomeScreen({ onFinished }: WelcomeScreenProps) {
     </main>
   );
 }
-

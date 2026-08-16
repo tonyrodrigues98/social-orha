@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useDrag } from "@use-gesture/react";
-import { Archive, BellOff, ChevronRight, Files, ShieldCheck, Trash2, UserRound } from "lucide-react";
+import { Archive, BellOff, ChevronLeft, ChevronRight, Files, ShieldCheck, Trash2, UserRound } from "lucide-react";
 import { Avatar } from "@/components/base/avatar/avatar";
 import { Dropdown } from "@/components/base/dropdown/dropdown";
 import {
@@ -11,7 +11,7 @@ import {
   type ChatMessageData,
   type ChatUser,
 } from "@/components/ui/chat";
-import { BrowserAudioRecorder } from "@/infrastructure/media/browser-audio-recorder";
+import { BrowserAudioRecorder, createRecordedAudioUrl } from "@/infrastructure/media/browser-audio-recorder";
 import { useAuth } from "../auth/auth-context";
 import { usePrototype } from "../prototype-context";
 
@@ -20,8 +20,14 @@ type PrivateChatPageProps = {
   onBack: () => void;
 };
 
+type RecordingPhase = "idle" | "starting" | "recording" | "stopping";
+
 function formatDuration(seconds: number) {
   return `${Math.floor(seconds / 60)}:${Math.floor(seconds % 60).toString().padStart(2, "0")}`;
+}
+
+function isAbortError(error: unknown) {
+  return error instanceof DOMException && error.name === "AbortError";
 }
 
 async function createWaveform(blob: Blob) {
@@ -30,33 +36,42 @@ async function createWaveform(blob: Blob) {
     const data = await blob.arrayBuffer();
     const buffer = await context.decodeAudioData(data.slice(0));
     const samples = buffer.getChannelData(0);
-    const bars = 32;
+    const bars = 48;
     const blockSize = Math.max(1, Math.floor(samples.length / bars));
     return Array.from({ length: bars }, (_, index) => {
       let peak = 0;
       const from = index * blockSize;
       const until = Math.min(samples.length, from + blockSize);
       for (let sample = from; sample < until; sample += 1) peak = Math.max(peak, Math.abs(samples[sample] ?? 0));
-      return Math.min(1, Math.max(0.13, peak));
+      return Math.min(1, Math.max(0.08, peak));
     });
   } finally {
     await context.close();
   }
 }
 
-function ContactDetails({ name, initials, kind, onBack, onAnnounce }: {
+function ContactDetails({ name, initials, kind, onBack, onAnnounce, backButtonRef }: {
   name: string;
   initials: string;
   kind: "friend" | "group";
   onBack: () => void;
   onAnnounce: (message: string) => void;
+  backButtonRef: React.RefObject<HTMLButtonElement | null>;
 }) {
   return (
-    <section className="contact-details-page" aria-label={`Dados de ${name}`}>
+    <section className="contact-details-page" aria-labelledby="contact-details-title">
       <header className="contact-details-header">
-        <button type="button" onClick={onBack} aria-label="Voltar para a conversa">‹</button>
-        <h1>{kind === "group" ? "Dados do grupo" : "Dados do contato"}</h1>
-        <span />
+        <button
+          ref={backButtonRef}
+          type="button"
+          onClick={onBack}
+          aria-label="Voltar para a conversa"
+          style={{ width: 44, height: 44, padding: 0 }}
+        >
+          <ChevronLeft size={22} aria-hidden="true" />
+        </button>
+        <h1 id="contact-details-title">{kind === "group" ? "Dados do grupo" : "Dados do contato"}</h1>
+        <span aria-hidden="true" />
       </header>
       <main className="contact-details-content">
         <div className="contact-details-identity">
@@ -66,19 +81,19 @@ function ContactDetails({ name, initials, kind, onBack, onAnnounce }: {
         </div>
 
         <div className="contact-details-actions">
-          <button type="button" onClick={() => onAnnounce("O perfil do contato será aberto em seguida.")}><UserRound size={20} /><span>Perfil</span></button>
-          <button type="button" onClick={() => onAnnounce("Mídias compartilhadas estarão disponíveis quando os anexos forem persistidos.")}><Files size={20} /><span>Mídias</span></button>
-          <button type="button" onClick={() => onAnnounce("Notificações desta conversa silenciadas para teste.")}><BellOff size={20} /><span>Silenciar</span></button>
+          <button type="button" onClick={() => onAnnounce("Abrindo o perfil do contato.")}><UserRound size={20} /><span>Perfil</span></button>
+          <button type="button" onClick={() => onAnnounce("Abrindo mídias compartilhadas.")}><Files size={20} /><span>Mídias</span></button>
+          <button type="button" onClick={() => onAnnounce("Notificações desta conversa foram silenciadas.")}><BellOff size={20} /><span>Silenciar</span></button>
         </div>
 
         <section className="contact-details-card" aria-label="Informações da conversa">
-          <button type="button" onClick={() => onAnnounce("Lista de mídias compartilhadas preparada.")}><Files size={19} /><span><strong>Mídias e arquivos</strong><small>Áudios, imagens e links da conversa</small></span><ChevronRight size={18} /></button>
-          <button type="button" onClick={() => onAnnounce("Configurações de privacidade preparadas.")}><ShieldCheck size={19} /><span><strong>Privacidade e segurança</strong><small>Bloqueios e permissões da conversa</small></span><ChevronRight size={18} /></button>
+          <button type="button" onClick={() => onAnnounce("Abrindo mídias e arquivos.")}><Files size={19} /><span><strong>Mídias e arquivos</strong><small>Áudios, imagens e links da conversa</small></span><ChevronRight size={18} /></button>
+          <button type="button" onClick={() => onAnnounce("Abrindo privacidade e segurança.")}><ShieldCheck size={19} /><span><strong>Privacidade e segurança</strong><small>Bloqueios e permissões da conversa</small></span><ChevronRight size={18} /></button>
         </section>
 
         <section className="contact-details-card contact-details-muted" aria-label="Ações da conversa">
-          <button type="button" onClick={() => onAnnounce("Conversa arquivada para teste.")}><Archive size={19} /><span><strong>Arquivar conversa</strong><small>Você poderá encontrá-la depois</small></span><ChevronRight size={18} /></button>
-          <button type="button" onClick={() => onAnnounce("A limpeza da conversa pedirá confirmação quando estiver conectada ao banco.")}><Trash2 size={19} /><span><strong>Limpar mensagens</strong><small>Remove mensagens apenas desta tela</small></span><ChevronRight size={18} /></button>
+          <button type="button" onClick={() => onAnnounce("Conversa arquivada.")}><Archive size={19} /><span><strong>Arquivar conversa</strong><small>Você poderá encontrá-la depois</small></span><ChevronRight size={18} /></button>
+          <button type="button" onClick={() => onAnnounce("A limpeza de mensagens exige confirmação.")}><Trash2 size={19} /><span><strong>Limpar mensagens</strong><small>Remove mensagens apenas desta conversa</small></span><ChevronRight size={18} /></button>
         </section>
       </main>
     </section>
@@ -91,18 +106,39 @@ export function PrivateChatPage({ conversationId, onBack }: PrivateChatPageProps
   const conversation = conversations.find((item) => item.id === conversationId);
   const [dragOffset, setDragOffset] = useState(0);
   const [showDetails, setShowDetails] = useState(false);
-  const [recording, setRecording] = useState(false);
+  const [recordingPhase, setRecordingPhase] = useState<RecordingPhase>("idle");
   const [recordedSeconds, setRecordedSeconds] = useState(0);
+  const [chatThemeRoot, setChatThemeRoot] = useState<HTMLDivElement | null>(null);
   const recorderRef = useRef<BrowserAudioRecorder | null>(null);
   const recordingStartedAt = useRef(0);
+  const chatBackButtonRef = useRef<HTMLButtonElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const detailsBackButtonRef = useRef<HTMLButtonElement>(null);
+  const restoreMenuFocusRef = useRef(false);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => chatBackButtonRef.current?.focus({ preventScroll: true }));
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
 
   useEffect(() => () => recorderRef.current?.cancel(), []);
 
   useEffect(() => {
-    if (!recording) return;
+    if (recordingPhase !== "recording") return;
     const timer = window.setInterval(() => setRecordedSeconds((Date.now() - recordingStartedAt.current) / 1000), 250);
     return () => window.clearInterval(timer);
-  }, [recording]);
+  }, [recordingPhase]);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      if (showDetails) detailsBackButtonRef.current?.focus({ preventScroll: true });
+      else if (restoreMenuFocusRef.current) {
+        restoreMenuFocusRef.current = false;
+        menuButtonRef.current?.focus({ preventScroll: true });
+      }
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [showDetails]);
 
   const bindBackSwipe = useDrag(
     ({ first, last, movement: [movementX], velocity: [velocityX], direction: [directionX], initial: [initialX], cancel }) => {
@@ -117,14 +153,6 @@ export function PrivateChatPage({ conversationId, onBack }: PrivateChatPageProps
 
   if (!conversation) return null;
 
-  if (showDetails) {
-    return (
-      <section className="private-chat-page" aria-label={`Dados de ${conversation.name}`}>
-        <ContactDetails name={conversation.name} initials={conversation.initials} kind={conversation.kind} onBack={() => setShowDetails(false)} onAnnounce={announce} />
-      </section>
-    );
-  }
-
   const currentUser: ChatUser = { id: identity?.profile.id ?? "local-user", name: profile.fullName, status: "online" };
   const messages: ChatMessageData[] = (conversationMessages[conversationId] ?? []).map((message) => ({
     id: message.id,
@@ -137,55 +165,137 @@ export function PrivateChatPage({ conversationId, onBack }: PrivateChatPageProps
   }));
 
   async function beginVoiceRecord() {
+    if (recorderRef.current || recordingPhase !== "idle") return;
+    const recorder = new BrowserAudioRecorder();
+    recorderRef.current = recorder;
+    setRecordingPhase("starting");
     try {
-      const recorder = new BrowserAudioRecorder();
       await recorder.start();
-      recorderRef.current = recorder;
+      if (recorderRef.current !== recorder) return;
       recordingStartedAt.current = Date.now();
       setRecordedSeconds(0);
-      setRecording(true);
+      setRecordingPhase("recording");
     } catch (error) {
-      announce(error instanceof Error ? error.message : "Não foi possível acessar o microfone.");
+      const wasCurrentRecorder = recorderRef.current === recorder;
+      if (wasCurrentRecorder) {
+        recorderRef.current = null;
+        setRecordingPhase("idle");
+      }
+      if (wasCurrentRecorder && !isAbortError(error)) announce(error instanceof Error ? error.message : "Não foi possível acessar o microfone.");
     }
   }
 
   function cancelVoiceRecord() {
+    if (recordingPhase === "stopping") return;
     recorderRef.current?.cancel();
     recorderRef.current = null;
-    setRecording(false);
+    setRecordingPhase("idle");
     setRecordedSeconds(0);
   }
 
   async function sendVoiceRecord() {
     const recorder = recorderRef.current;
-    if (!recorder) return;
+    if (!recorder || recordingPhase !== "recording") return;
+    setRecordingPhase("stopping");
     try {
       const blob = await recorder.stop();
       const duration = Math.max(1, (Date.now() - recordingStartedAt.current) / 1000);
       const waveform = await createWaveform(blob).catch(() => undefined);
-      sendVoiceMessage(conversationId, { url: URL.createObjectURL(blob), duration, waveform });
+      sendVoiceMessage(conversationId, { url: createRecordedAudioUrl(blob), duration, waveform });
       announce("Áudio enviado nesta conversa.");
     } catch (error) {
-      announce(error instanceof Error ? error.message : "Não foi possível finalizar o áudio.");
+      if (!isAbortError(error)) announce(error instanceof Error ? error.message : "Não foi possível finalizar o áudio.");
     } finally {
-      recorderRef.current = null;
-      setRecording(false);
+      if (recorderRef.current === recorder) recorderRef.current = null;
+      setRecordingPhase("idle");
       setRecordedSeconds(0);
     }
   }
 
+  const gestureProps = showDetails ? {} : bindBackSwipe();
+
   return (
-    <section {...bindBackSwipe()} className="private-chat-page" aria-label={`Conversa com ${conversation.name}`} style={{ transform: `translateX(${dragOffset}px)`, transition: dragOffset ? "none" : "transform 180ms ease-out" }}>
-      <ChatProvider currentUser={currentUser} theme="lunar" dateFormat="time-only" onReactionAdd={(_messageId, emoji) => announce(`Reação ${emoji} adicionada para teste.`)} onReply={(message) => announce(`Respondendo a “${message.text ?? "mensagem"}”.`)} className="orha-private-chat">
-        <ChatHeader
-          title={conversation.name}
-          subtitle={conversation.kind === "group" ? "Grupo" : "Disponível agora"}
-          onBack={onBack}
-          avatar={<Avatar size="sm" initials={conversation.initials} contentClassName="avatar-transparent private-chat-avatar" />}
-          actions={<div className="private-chat-actions"><Dropdown.Root><Dropdown.DotsButton className="private-chat-menu-trigger" aria-label="Mais opções" /><Dropdown.Popover className="private-chat-menu"><Dropdown.Menu selectionMode="none" onAction={(key) => { if (key === "details") setShowDetails(true); if (key === "mute") announce("Notificações silenciadas para teste."); if (key === "archive") announce("Conversa arquivada para teste."); }}><Dropdown.Item id="details" icon={UserRound}>Dados do contato</Dropdown.Item><Dropdown.Item id="mute" icon={BellOff}>Silenciar notificações</Dropdown.Item><Dropdown.Item id="archive" icon={Archive}>Arquivar conversa</Dropdown.Item></Dropdown.Menu></Dropdown.Popover></Dropdown.Root></div>}
-        />
-        <ChatMessages messages={messages} />
-        <ChatComposer placeholder="Mensagem" onSend={(text) => sendMessage(conversationId, text)} onFileUpload={(files) => announce(`${files.length} anexo${files.length > 1 ? "s" : ""} preparado${files.length > 1 ? "s" : ""} para envio.`)} onVoiceRecord={() => void beginVoiceRecord()} voiceRecording={recording} voiceDurationLabel={formatDuration(recordedSeconds)} onVoiceCancel={cancelVoiceRecord} onVoiceSend={() => void sendVoiceRecord()} />
+    <section
+      {...gestureProps}
+      className="private-chat-page"
+      aria-label={showDetails ? `Dados de ${conversation.name}` : `Conversa com ${conversation.name}`}
+      style={{ transform: `translateX(${showDetails ? 0 : dragOffset}px)`, transition: dragOffset ? "none" : "transform 180ms ease-out" }}
+    >
+      <ChatProvider
+        currentUser={currentUser}
+        theme="lunar"
+        dateFormat="time-only"
+        rootRef={setChatThemeRoot}
+        onReactionAdd={(_messageId, emoji) => announce(`Reação ${emoji} adicionada.`)}
+        onReply={(message) => announce(`Respondendo a “${message.text ?? "mensagem"}”.`)}
+        className="orha-private-chat"
+      >
+        {showDetails ? (
+          <ContactDetails
+            name={conversation.name}
+            initials={conversation.initials}
+            kind={conversation.kind}
+            backButtonRef={detailsBackButtonRef}
+            onBack={() => {
+              restoreMenuFocusRef.current = true;
+              setShowDetails(false);
+            }}
+            onAnnounce={announce}
+          />
+        ) : (
+          <>
+            <ChatHeader
+              title={conversation.name}
+              subtitle={conversation.kind === "group" ? "Grupo" : "Disponível agora"}
+              onBack={onBack}
+              backLabel="Voltar para conversas"
+              backButtonRef={chatBackButtonRef}
+              avatar={<Avatar size="sm" initials={conversation.initials} contentClassName="avatar-transparent private-chat-avatar" />}
+              actions={(
+                <div className="private-chat-actions">
+                  <Dropdown.Root>
+                    <Dropdown.DotsButton
+                      ref={menuButtonRef}
+                      className="private-chat-menu-trigger"
+                      aria-label="Mais opções da conversa"
+                      style={{ width: 44, height: 44 }}
+                    />
+                    <Dropdown.Popover className="private-chat-menu" UNSTABLE_portalContainer={chatThemeRoot ?? undefined}>
+                      <Dropdown.Menu
+                        aria-label="Opções da conversa"
+                        selectionMode="none"
+                        onAction={(key) => {
+                          if (key === "details") setShowDetails(true);
+                          if (key === "mute") announce("Notificações silenciadas.");
+                          if (key === "archive") announce("Conversa arquivada.");
+                        }}
+                      >
+                        <Dropdown.Item id="details" textValue={conversation.kind === "group" ? "Dados do grupo" : "Dados do contato"} icon={UserRound}>
+                          {conversation.kind === "group" ? "Dados do grupo" : "Dados do contato"}
+                        </Dropdown.Item>
+                        <Dropdown.Item id="mute" textValue="Silenciar notificações" icon={BellOff}>Silenciar notificações</Dropdown.Item>
+                        <Dropdown.Item id="archive" textValue="Arquivar conversa" icon={Archive}>Arquivar conversa</Dropdown.Item>
+                      </Dropdown.Menu>
+                    </Dropdown.Popover>
+                  </Dropdown.Root>
+                </div>
+              )}
+            />
+            <ChatMessages messages={messages} />
+            <ChatComposer
+              placeholder="Mensagem"
+              disabled={recordingPhase === "starting"}
+              onSend={(text) => sendMessage(conversationId, text)}
+              onFileUpload={(files) => announce(`${files.length} anexo${files.length > 1 ? "s" : ""} preparado${files.length > 1 ? "s" : ""} para envio.`)}
+              onVoiceRecord={() => void beginVoiceRecord()}
+              voiceRecording={recordingPhase === "recording" || recordingPhase === "stopping"}
+              voiceActionPending={recordingPhase === "stopping"}
+              voiceDurationLabel={formatDuration(recordedSeconds)}
+              onVoiceCancel={cancelVoiceRecord}
+              onVoiceSend={() => void sendVoiceRecord()}
+            />
+          </>
+        )}
       </ChatProvider>
     </section>
   );

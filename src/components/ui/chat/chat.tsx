@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import WaveSurfer from "wavesurfer.js"
+import { useVirtualizer } from "@tanstack/react-virtual"
 import { cn } from "@/lib/utils"
 import {
   Check,
@@ -19,7 +20,6 @@ import {
   X,
   Paperclip,
   Image as ImageIcon,
-  Smile,
   Upload,
   Plus,
   Play,
@@ -42,6 +42,7 @@ import {
   useTypingIndicator,
   formatTimestamp,
 } from "./hooks"
+import { displayHostname, sanitizeFileName, sanitizeUrl, validateFile } from "./security"
 
 // â”€â”€â”€ Context â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -70,6 +71,7 @@ interface ChatProviderProps {
   children: React.ReactNode
   style?: React.CSSProperties
   className?: string
+  rootRef?: React.Ref<HTMLDivElement>
 }
 
 function ChatProvider({
@@ -86,6 +88,7 @@ function ChatProvider({
   children,
   style,
   className,
+  rootRef,
 }: ChatProviderProps) {
   const config = React.useMemo<ChatConfig>(
     () => ({
@@ -104,7 +107,7 @@ function ChatProvider({
 
   return (
     <ChatContext.Provider value={config}>
-      <div data-chat-theme={theme} style={style} className={className}>
+      <div ref={rootRef} data-chat-theme={theme} style={style} className={className}>
         {children}
       </div>
     </ChatContext.Provider>
@@ -130,6 +133,7 @@ function QuickReactionPicker({
       {QUICK_REACTIONS.map((emoji) => (
         <button
           key={emoji}
+          type="button"
           onClick={() => {
             onSelect(emoji)
             onClose()
@@ -159,15 +163,16 @@ function ChatMessageActions({ message, isOutgoing }: ChatMessageActionsProps) {
   return (
     <div
       className={cn(
-        "chat-toolbar-enter absolute -top-3 z-10 flex items-center gap-0.5 rounded-lg border border-[var(--chat-border-strong)] bg-[var(--chat-bg-sidebar)] p-0.5 opacity-0 shadow-[var(--chat-shadow-toolbar)] transition-opacity group-hover/message:opacity-100",
+        "chat-toolbar-enter pointer-events-none absolute -top-3 z-10 flex items-center gap-0.5 rounded-lg border border-[var(--chat-border-strong)] bg-[var(--chat-bg-sidebar)] p-0.5 opacity-0 shadow-[var(--chat-shadow-toolbar)] transition-opacity group-hover/message:pointer-events-auto group-hover/message:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100",
         isOutgoing ? "right-0" : "left-10"
       )}
     >
       {/* Reply */}
       <button
+        type="button"
         onClick={() => onReply?.(message)}
-        className="flex size-7 items-center justify-center rounded-md text-[var(--chat-text-secondary)] transition-colors hover:bg-[var(--chat-accent-soft)] hover:text-[var(--chat-text-primary)]"
-        aria-label="Reply"
+        className="flex size-11 items-center justify-center rounded-md text-[var(--chat-text-secondary)] transition-colors hover:bg-[var(--chat-accent-soft)] hover:text-[var(--chat-text-primary)]"
+        aria-label="Responder"
       >
         <Reply className="size-3.5" />
       </button>
@@ -175,9 +180,10 @@ function ChatMessageActions({ message, isOutgoing }: ChatMessageActionsProps) {
       {/* React â€” opens quick picker */}
       <div className="relative">
         <button
+          type="button"
           onClick={() => setShowReactions(!showReactions)}
-          className="flex size-7 items-center justify-center rounded-md text-[var(--chat-text-secondary)] transition-colors hover:bg-[var(--chat-accent-soft)] hover:text-[var(--chat-text-primary)]"
-          aria-label="Add reaction"
+          className="flex size-11 items-center justify-center rounded-md text-[var(--chat-text-secondary)] transition-colors hover:bg-[var(--chat-accent-soft)] hover:text-[var(--chat-text-primary)]"
+          aria-label="Adicionar reaÃ§Ã£o"
         >
           <SmilePlus className="size-3.5" />
         </button>
@@ -196,9 +202,10 @@ function ChatMessageActions({ message, isOutgoing }: ChatMessageActionsProps) {
       {/* More â€” dropdown */}
       <div className="relative">
         <button
+          type="button"
           onClick={() => setShowMore(!showMore)}
-          className="flex size-7 items-center justify-center rounded-md text-[var(--chat-text-secondary)] transition-colors hover:bg-[var(--chat-accent-soft)] hover:text-[var(--chat-text-primary)]"
-          aria-label="More actions"
+          className="flex size-11 items-center justify-center rounded-md text-[var(--chat-text-secondary)] transition-colors hover:bg-[var(--chat-accent-soft)] hover:text-[var(--chat-text-primary)]"
+          aria-label="Mais aÃ§Ãµes"
         >
           <MoreHorizontal className="size-3.5" />
         </button>
@@ -212,6 +219,7 @@ function ChatMessageActions({ message, isOutgoing }: ChatMessageActionsProps) {
           >
             {isOutgoing && (
               <button
+                type="button"
                 onClick={() => {
                   onEdit?.(message)
                   setShowMore(false)
@@ -219,10 +227,11 @@ function ChatMessageActions({ message, isOutgoing }: ChatMessageActionsProps) {
                 className="flex w-full items-center gap-2 px-3 py-1.5 text-[13px] text-[var(--chat-text-secondary)] transition-colors hover:bg-[var(--chat-accent-soft)] hover:text-[var(--chat-text-primary)]"
               >
                 <Pencil className="size-3.5" />
-                Edit
+                Editar
               </button>
             )}
             <button
+              type="button"
               onClick={() => {
                 onPin?.(message.id)
                 setShowMore(false)
@@ -230,10 +239,11 @@ function ChatMessageActions({ message, isOutgoing }: ChatMessageActionsProps) {
               className="flex w-full items-center gap-2 px-3 py-1.5 text-[13px] text-[var(--chat-text-secondary)] transition-colors hover:bg-[var(--chat-accent-soft)] hover:text-[var(--chat-text-primary)]"
             >
               <Pin className="size-3.5" />
-              {message.isPinned ? "Unpin" : "Pin"}
+              {message.isPinned ? "Desafixar" : "Fixar"}
             </button>
             {isOutgoing && (
               <button
+                type="button"
                 onClick={() => {
                   onDelete?.(message.id)
                   setShowMore(false)
@@ -241,7 +251,7 @@ function ChatMessageActions({ message, isOutgoing }: ChatMessageActionsProps) {
                 className="flex w-full items-center gap-2 px-3 py-1.5 text-[13px] text-[var(--chat-red)] transition-colors hover:bg-red-500/10"
               >
                 <Trash2 className="size-3.5" />
-                Delete
+                Excluir
               </button>
             )}
           </div>
@@ -311,8 +321,10 @@ interface ChatMessageProps {
 function ChatVoiceMessage({ voice, isOutgoing }: { voice: NonNullable<ChatMessageData["voice"]>; isOutgoing: boolean }) {
   const [playing, setPlaying] = React.useState(false)
   const [progress, setProgress] = React.useState(0)
+  const [waveStatus, setWaveStatus] = React.useState<"loading" | "ready" | "error">("loading")
   const waveformRef = React.useRef<HTMLDivElement>(null)
   const playerRef = React.useRef<WaveSurfer | null>(null)
+  const fallbackAudioRef = React.useRef<HTMLAudioElement>(null)
   const fallbackWave = React.useMemo(() => voice.waveform ?? [0.28, 0.52, 0.73, 0.4, 0.87, 0.59, 0.33, 0.67, 0.46, 0.78, 0.36, 0.6, 0.82, 0.49, 0.3, 0.68], [voice.waveform])
 
   const totalMins = Math.floor(voice.duration / 60)
@@ -323,13 +335,15 @@ function ChatVoiceMessage({ voice, isOutgoing }: { voice: NonNullable<ChatMessag
   const timeLabel = playing || progress > 0
     ? `${elapsedMins}:${elapsedSecs.toString().padStart(2, "0")}`
     : `${totalMins}:${totalSecs.toString().padStart(2, "0")}`
-  const playedBars = Math.round(progress * fallbackWave.length)
 
   React.useEffect(() => {
     if (!waveformRef.current) return
+    setWaveStatus("loading")
     const player = WaveSurfer.create({
       container: waveformRef.current,
       url: voice.url,
+      peaks: voice.waveform ? [voice.waveform] : undefined,
+      duration: voice.duration,
       height: 32,
       barWidth: 3,
       barGap: 2,
@@ -340,28 +354,53 @@ function ChatVoiceMessage({ voice, isOutgoing }: { voice: NonNullable<ChatMessag
       normalize: true,
     })
     playerRef.current = player
-    const offTime = player.on("timeupdate", (time) => setProgress(voice.duration ? time / voice.duration : 0))
+    const offReady = player.on("ready", () => setWaveStatus("ready"))
+    const offDecode = player.on("decode", () => setWaveStatus("ready"))
+    const offError = player.on("error", () => setWaveStatus("error"))
+    const offTime = player.on("timeupdate", (time) => {
+      const duration = player.getDuration() || voice.duration
+      setProgress(duration ? Math.min(1, time / duration) : 0)
+    })
     const offPlay = player.on("play", () => setPlaying(true))
     const offPause = player.on("pause", () => setPlaying(false))
     const offFinish = player.on("finish", () => { setPlaying(false); setProgress(0) })
     return () => {
-      offTime(); offPlay(); offPause(); offFinish()
+      offReady(); offDecode(); offError(); offTime(); offPlay(); offPause(); offFinish()
       player.destroy()
       playerRef.current = null
     }
-  }, [isOutgoing, voice.duration, voice.url])
+  }, [isOutgoing, voice.duration, voice.url, voice.waveform])
 
   const toggle = () => {
+    if (waveStatus === "error") {
+      const audio = fallbackAudioRef.current
+      if (!audio) return
+      if (audio.paused) void audio.play()
+      else audio.pause()
+      return
+    }
     void playerRef.current?.playPause()
   }
 
+  const seekTo = (nextProgress: number) => {
+    const clampedProgress = Math.min(1, Math.max(0, nextProgress))
+    if (waveStatus === "error") {
+      const audio = fallbackAudioRef.current
+      if (audio?.duration) audio.currentTime = audio.duration * clampedProgress
+    } else {
+      playerRef.current?.seekTo(clampedProgress)
+    }
+    setProgress(clampedProgress)
+  }
+
   return (
-    <div className="mt-1.5 flex items-center gap-3">
+    <div className="mt-1.5 flex min-w-[220px] items-center gap-3" role="group" aria-label="Mensagem de Ã¡udio">
       <button
+        type="button"
         onClick={toggle}
-        className="flex w-9 h-9 shrink-0 items-center justify-center rounded-full transition-colors"
+        className="flex size-11 shrink-0 items-center justify-center rounded-full transition-colors"
         style={{ background: isOutgoing ? "rgba(255,255,255,0.20)" : "var(--chat-accent)" }}
-        aria-label={playing ? "Pause voice message" : "Play voice message"}
+        aria-label={playing ? "Pausar Ã¡udio" : "Reproduzir Ã¡udio"}
       >
         {playing ? (
           <Pause className="w-4 h-4" style={{ color: "white" }} fill="white" />
@@ -369,1060 +408,9 @@ function ChatVoiceMessage({ voice, isOutgoing }: { voice: NonNullable<ChatMessag
           <Play className="w-4 h-4 ml-0.5" style={{ color: "white" }} fill="white" />
         )}
       </button>
-      <div className="relative h-8 min-w-0 flex-1" aria-label="Onda do Ã¡udio">
-        <div className="absolute inset-0 z-1 flex items-center gap-[2px] overflow-hidden" aria-hidden="true">
-          {fallbackWave.map((amplitude, index) => <i key={index} className="w-[3px] shrink-0 rounded-full transition-colors duration-100" style={{ height: `${Math.max(15, amplitude * 100)}%`, background: index < playedBars ? (isOutgoing ? "#fff" : "#3f3760") : (isOutgoing ? "rgba(255,255,255,0.38)" : "#7564a8") }} />)}
-        </div>
-        <div ref={waveformRef} className="absolute inset-0 opacity-0 pointer-events-none" />
-      </div>
-      <span className="text-[12px] shrink-0 opacity-60 tabular-nums">{timeLabel}</span>
-    </div>
-  )
-}
-
-function ChatMessage({
-  message,
-  isOutgoing,
-  position,
-  showSender = false,
-  showAvatar = false,
-  className,
-}: ChatMessageProps) {
-  const timestamp = new Date(message.timestamp)
-  const { currentUser } = useChatContext()
-  const radiusClass = getBubbleRadius(isOutgoing, position)
-  const [lightboxImage, setLightboxImage] = React.useState<string | null>(null)
-
-  return (
-    <div
-      className={cn(
-        "chat-message group/message relative flex items-end gap-2",
-        isOutgoing ? "flex-row-reverse" : "flex-row",
-        position === "first" || position === "solo" ? "mt-4" : "mt-0.5",
-        className
-      )}
-    >
-      {/* Avatar slot â€” 32px, only for incoming, only on last/solo */}
-      {!isOutgoing ? (
-        <div className="w-8 shrink-0">
-          {showAvatar && message.senderAvatar ? (
-            <img
-              src={message.senderAvatar}
-              alt={message.senderName}
-              className="size-8 rounded-full object-cover"
-            />
-          ) : showAvatar ? (
-            <div className="flex size-8 items-center justify-center rounded-full bg-[var(--chat-bubble-incoming)] text-[11px] font-semibold text-[var(--chat-text-secondary)]">
-              {message.senderName.charAt(0).toUpperCase()}
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-
-      {/* Bubble + reactions column */}
-      <div className="flex max-w-[75%] flex-col">
-        {/* Sender name â€” only first in group, incoming */}
-        {showSender && !isOutgoing && (
-          <span className="mb-0.5 ml-3 text-[14px] font-semibold leading-tight tracking-[-0.01em] text-[var(--chat-text-secondary)]">
-            {message.senderName}
-          </span>
-        )}
-
-        {/* Bubble â€” relative for hover toolbar positioning */}
-        <div className="relative">
-          {/* Hover actions toolbar */}
-          <ChatMessageActions message={message} isOutgoing={isOutgoing} />
-
-          <div
-            className={cn(
-              "chat-bubble relative px-3.5 py-2",
-              isOutgoing
-                ? "bg-[var(--chat-bubble-outgoing)] text-[var(--chat-bubble-outgoing-text)]"
-                : "bg-[var(--chat-bubble-incoming)] text-[var(--chat-bubble-incoming-text)]",
-              radiusClass
-            )}
-          >
-            {/* Quoted reply */}
-            {message.replyTo && (
-              <ChatMessageReply
-                replyTo={message.replyTo}
-                isOutgoing={isOutgoing}
-              />
-            )}
-
-            {/* Text content */}
-            {message.text && (
-              <p className="whitespace-pre-wrap break-words text-[15px] leading-[1.35] tracking-[-0.01em]">
-                {message.text}
-              </p>
-            )}
-
-            {/* Images */}
-            {message.images && message.images.length > 0 && (
-              <div className={cn("mt-1.5 flex flex-wrap gap-1.5", message.images.length === 1 ? "" : "")}>
-                {message.images.map((img, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setLightboxImage(img.url)}
-                    className="cursor-pointer rounded-lg overflow-hidden"
-                    aria-label="View image"
-                  >
-                    <img
-                      src={img.url}
-                      alt={img.alt || "Image"}
-                      width={img.width}
-                      height={img.height}
-                      className="max-h-[200px] max-w-full rounded-lg object-cover transition-opacity hover:opacity-90"
-                      loading="lazy"
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* Code block */}
-            {message.code && (
-              <div className="chat-content-card mt-1.5 overflow-hidden">
-                <div className="flex items-center justify-between bg-[var(--chat-bg-code)] px-3 py-1.5">
-                  <span className="text-[11px] font-medium text-[var(--chat-text-tertiary)]">{message.code.language}</span>
-                </div>
-                <pre className="overflow-x-auto bg-[var(--chat-bg-code)] px-3 py-2">
-                  <code className="text-[13px] leading-relaxed text-[var(--chat-text-primary)]" style={{ fontFamily: "var(--chat-font-mono)" }}>
-                    {message.code.code}
-                  </code>
-                </pre>
-              </div>
-            )}
-
-            {/* File attachments */}
-            {message.files && message.files.length > 0 && (
-              <div className="mt-1.5 flex flex-col gap-1.5">
-                {message.files.map((file, idx) => (
-                  <div key={idx} className="chat-content-card flex items-center gap-2.5 px-3 py-2">
-                    <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-[var(--chat-accent-soft)]">
-                      <Paperclip className="size-3.5 text-[var(--chat-accent)]" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[13px] font-medium text-[var(--chat-text-primary)]">{file.name}</p>
-                      <p className="text-[11px] text-[var(--chat-text-tertiary)]">{file.size < 1024 ? `${file.size} B` : file.size < 1048576 ? `${(file.size / 1024).toFixed(0)} KB` : `${(file.size / 1048576).toFixed(1)} MB`}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Link preview */}
-            {message.linkPreview && (
-              <a
-                href={message.linkPreview.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="chat-content-card mt-1.5 block hover:opacity-90 transition-opacity"
-              >
-                {message.linkPreview.image && (
-                  <img src={message.linkPreview.image} alt="" className="h-32 w-full object-cover" loading="lazy" />
-                )}
-                <div className="px-3 py-2">
-                  <p className="text-[13px] font-semibold text-[var(--chat-text-primary)]">{message.linkPreview.title}</p>
-                  <p className="mt-0.5 text-[12px] text-[var(--chat-text-secondary)]">{message.linkPreview.description}</p>
-                  <p className="mt-1 text-[11px] text-[var(--chat-accent)]">{message.linkPreview.url}</p>
-                </div>
-              </a>
-            )}
-
-            {/* Voice message */}
-            {message.voice && (
-              <ChatVoiceMessage voice={message.voice} isOutgoing={isOutgoing} />
-            )}
-
-            {/* Inline timestamp + status + edited label */}
-            <div
-              className={cn(
-                "mt-1 flex items-center gap-1",
-                isOutgoing ? "justify-end" : "justify-start"
-              )}
-            >
-              {message.isEdited && (
-                <span className="text-[10px] italic opacity-50">edited</span>
-              )}
-              <time className="text-[11px] tracking-[0.02em] opacity-60">
-                {formatTimestamp(timestamp)}
-              </time>
-              {isOutgoing && message.status && (
-                <ChatMessageStatus status={message.status} />
-              )}
-            </div>
-          </div>
-
-          {/* Pin indicator */}
-          {message.isPinned && (
-            <div className="absolute -top-1.5 -right-1.5">
-              <Pin className="size-3 rotate-45 text-[var(--chat-orange)]" />
-            </div>
-          )}
-        </div>
-
-        {/* Reactions bar */}
-        {message.reactions && message.reactions.length > 0 && (
-          <ChatMessageReactions
-            messageId={message.id}
-            reactions={message.reactions}
-            isOutgoing={isOutgoing}
-            currentUserId={currentUser.id}
-          />
-        )}
-
-        {/* Read receipts (group chat) â€” small stacked avatars */}
-        {message.readBy && message.readBy.length > 0 && (
-          <ChatReadReceipts
-            readBy={message.readBy}
-            isOutgoing={isOutgoing}
-          />
-        )}
-      </div>
-
-      {/* Image lightbox */}
-      {lightboxImage && typeof document !== "undefined" && createPortal(
-        <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm"
-          onClick={() => setLightboxImage(null)}
-        >
-          <button
-            onClick={() => setLightboxImage(null)}
-            className="absolute top-4 right-4 flex size-10 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
-            aria-label="Close lightbox"
-          >
-            <X className="size-5" />
-          </button>
-          <img
-            src={lightboxImage}
-            alt=""
-            className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain"
-            onClick={(e) => e.stopPropagation()}
-          />
-        </div>,
-        document.body
-      )}
-    </div>
-  )
-}
-
-// â”€â”€â”€ Bubble radius helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-function getBubbleRadius(
-  isOutgoing: boolean,
-  position: "solo" | "first" | "middle" | "last"
-): string {
-  if (isOutgoing) {
-    switch (position) {
-      case "solo":
-        return "rounded-[18px_18px_4px_18px]"
-      case "first":
-        return "rounded-[18px_18px_4px_18px]"
-      case "middle":
-        return "rounded-[18px_4px_4px_18px]"
-      case "last":
-        return "rounded-[18px_4px_18px_18px]"
-    }
-  } else {
-    switch (position) {
-      case "solo":
-        return "rounded-[18px_18px_18px_4px]"
-      case "first":
-        return "rounded-[18px_18px_18px_4px]"
-      case "middle":
-        return "rounded-[4px_18px_18px_4px]"
-      case "last":
-        return "rounded-[4px_18px_18px_18px]"
-    }
-  }
-}
-
-// â”€â”€â”€ ChatMessageStatus â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-function ChatMessageStatus({
-  status,
-}: {
-  status: NonNullable<ChatMessageData["status"]>
-}) {
-  switch (status) {
-    case "sending":
-      return <Clock className="size-3 animate-pulse opacity-50" />
-    case "sent":
-      return <Check className="size-3 opacity-60" />
-    case "delivered":
-      return <CheckCheck className="size-3.5 opacity-60" />
-    case "read":
-      return (
-        <CheckCheck className="chat-status-read size-3.5 text-[var(--chat-accent)]" />
-      )
-    case "failed":
-      return (
-        <AlertCircle className="size-3.5 cursor-pointer text-[var(--chat-red)]" />
-      )
-  }
-}
-
-// â”€â”€â”€ ChatMessageReactions (interactive) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-function ChatMessageReactions({
-  messageId,
-  reactions,
-  isOutgoing,
-  currentUserId,
-}: {
-  messageId: string
-  reactions: NonNullable<ChatMessageData["reactions"]>
-  isOutgoing: boolean
-  currentUserId: string
-}) {
-  const { onReactionAdd, onReactionRemove } = useChatContext()
-
-  return (
-    <div
-      className={cn(
-        "mt-1 flex flex-wrap gap-1",
-        isOutgoing ? "justify-end" : "justify-start"
-      )}
-    >
-      {reactions.map((r) => {
-        const hasReacted = r.userIds.includes(currentUserId)
-        return (
-          <button
-            key={r.emoji}
-            onClick={() => {
-              if (hasReacted) {
-                onReactionRemove?.(messageId, r.emoji)
-              } else {
-                onReactionAdd?.(messageId, r.emoji)
-              }
-            }}
-            className={cn(
-              "chat-reaction-pop flex h-[26px] items-center gap-1 rounded-full border px-2 text-xs tabular-nums transition-all hover:scale-105",
-              hasReacted
-                ? "border-[var(--chat-accent)]/30 bg-[var(--chat-accent-soft)]"
-                : "border-[var(--chat-border)] bg-[var(--chat-bg-sidebar)] hover:bg-[var(--chat-accent-soft)]"
-            )}
-            aria-label={`${r.emoji} ${r.count} reaction${r.count !== 1 ? "s" : ""}`}
-          >
-            <span className="text-sm">{r.emoji}</span>
-            <span
-              className={cn(
-                "text-[12px] font-medium",
-                hasReacted
-                  ? "text-[var(--chat-accent)]"
-                  : "text-[var(--chat-text-secondary)]"
-              )}
-            >
-              {r.count}
-            </span>
-          </button>
-        )
-      })}
-      {/* Add reaction button â€” visible on hover */}
-      <button
-        onClick={() => {
-          // Toggle first available reaction for demo; in prod this opens a picker
-          onReactionAdd?.(messageId, "\u{1F44D}")
-        }}
-        className="flex size-[26px] items-center justify-center rounded-full border border-dashed border-[var(--chat-border)] text-[var(--chat-text-tertiary)] opacity-0 transition-all hover:border-[var(--chat-accent)] hover:text-[var(--chat-accent)] group-hover/message:opacity-100"
-        aria-label="Add reaction"
-      >
-        <SmilePlus className="size-3" />
-      </button>
-    </div>
-  )
-}
-
-// â”€â”€â”€ ChatReadReceipts (group chat â€” stacked mini avatars) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-function ChatReadReceipts({
-  readBy,
-  isOutgoing,
-}: {
-  readBy: NonNullable<ChatMessageData["readBy"]>
-  isOutgoing: boolean
-}) {
-  const maxVisible = 3
-  const visible = readBy.slice(0, maxVisible)
-  const overflow = readBy.length - maxVisible
-
-  return (
-    <div
-      className={cn(
-        "mt-1 flex items-center",
-        isOutgoing ? "justify-end" : "justify-start"
-      )}
-    >
-      <div className="flex -space-x-1.5">
-        {visible.map((user) => (
-          <div
-            key={user.userId}
-            className="flex size-4 items-center justify-center rounded-full border border-[var(--chat-bg-main)] bg-[var(--chat-bubble-incoming)] text-[7px] font-bold text-[var(--chat-text-secondary)]"
-            title={user.name}
-          >
-            {user.avatar ? (
-              <img
-                src={user.avatar}
-                alt={user.name}
-                className="size-full rounded-full object-cover"
-              />
-            ) : (
-              user.name.charAt(0).toUpperCase()
-            )}
-          </div>
-        ))}
-      </div>
-      {overflow > 0 && (
-        <span className="ml-1 text-[10px] text-[var(--chat-text-tertiary)]">
-          +{overflow}
-        </span>
-      )}
-    </div>
-  )
-}
-
-// â”€â”€â”€ ChatMessageGroup â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-interface ChatMessageGroupProps {
-  group: MessageGroup
-  className?: string
-}
-
-function ChatMessageGroup({ group, className }: ChatMessageGroupProps) {
-  const len = group.messages.length
-
-  return (
-    <div
-      className={cn(
-        "chat-message-group",
-        group.isOutgoing ? "items-end" : "items-start",
-        className
-      )}
-    >
-      {group.messages.map((msg, i) => {
-        const position: "solo" | "first" | "middle" | "last" =
-          len === 1
-            ? "solo"
-            : i === 0
-              ? "first"
-              : i === len - 1
-                ? "last"
-                : "middle"
-
-        return (
-          <ChatMessage
-            key={msg.id}
-            message={msg}
-            isOutgoing={group.isOutgoing}
-            position={position}
-            showSender={i === 0}
-            showAvatar={position === "solo" || position === "last"}
-          />
-        )
-      })}
-    </div>
-  )
-}
-
-// â”€â”€â”€ ChatDateSeparator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-interface ChatDateSeparatorProps {
-  label: string
-  className?: string
-}
-
-function ChatDateSeparator({ label, className }: ChatDateSeparatorProps) {
-  return (
-    <div
-      className={cn(
-        "chat-date-separator my-6 flex items-center gap-4",
-        className
-      )}
-    >
-      <div className="h-px flex-1 bg-[var(--chat-border)]" />
-      <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--chat-text-tertiary)]">
-        {label}
-      </span>
-      <div className="h-px flex-1 bg-[var(--chat-border)]" />
-    </div>
-  )
-}
-
-// â”€â”€â”€ ChatSystemMessage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-interface ChatSystemMessageProps {
-  message: ChatMessageData
-  className?: string
-}
-
-function ChatSystemMessage({ message, className }: ChatSystemMessageProps) {
-  return (
-    <div
-      className={cn(
-        "chat-system-message my-4 flex justify-center",
-        className
-      )}
-    >
-      <span className="text-[13px] font-medium tracking-[0.01em] text-[var(--chat-text-secondary)]">
-        {message.text || message.systemEvent}
-      </span>
-    </div>
-  )
-}
-
-// â”€â”€â”€ ChatTypingIndicator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-interface ChatTypingIndicatorProps {
-  users: TypingUser[]
-  className?: string
-}
-
-function ChatTypingIndicator({ users, className }: ChatTypingIndicatorProps) {
-  if (users.length === 0) return null
-
-  const label =
-    users.length === 1
-      ? `${users[0].name} is typing`
-      : users.length === 2
-        ? `${users[0].name} and ${users[1].name} are typing`
-        : "Several people are typing"
-
-  return (
-    <div
-      className={cn(
-        "chat-message mt-4 flex items-end gap-2",
-        className
-      )}
-    >
-      {/* Avatar */}
-      <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[var(--chat-bubble-incoming)] text-[11px] font-semibold text-[var(--chat-text-secondary)]">
-        {users[0].avatar ? (
-          <img
-            src={users[0].avatar}
-            alt={users[0].name}
-            className="size-full rounded-full object-cover"
-          />
-        ) : (
-          users[0].name.charAt(0).toUpperCase()
-        )}
-      </div>
-
-      <div className="flex flex-col">
-        {/* Label */}
-        <span className="mb-0.5 ml-3 text-[12px] text-[var(--chat-text-tertiary)]">
-          {label}
-        </span>
-
-        {/* Dots bubble */}
-        <div className="flex w-16 items-center justify-center gap-1 rounded-[18px_18px_18px_4px] bg-[var(--chat-bubble-incoming)] px-4 py-3">
-          <span
-            className="chat-typing-dot size-[7px] rounded-full bg-[var(--chat-text-secondary)]"
-            style={{ animationDelay: "0ms" }}
-          />
-          <span
-            className="chat-typing-dot size-[7px] rounded-full bg-[var(--chat-text-secondary)]"
-            style={{ animationDelay: "160ms" }}
-          />
-          <span
-            className="chat-typing-dot size-[7px] rounded-full bg-[var(--chat-text-secondary)]"
-            style={{ animationDelay: "320ms" }}
-          />
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// â”€â”€â”€ ChatReplyPreview (bar above composer) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-interface ChatReplyPreviewProps {
-  replyingTo: ChatMessageData
-  onCancel: () => void
-  className?: string
-}
-
-function ChatReplyPreview({
-  replyingTo,
-  onCancel,
-  className,
-}: ChatReplyPreviewProps) {
-  return (
-    <div
-      className={cn(
-        "flex items-center gap-3 border-t border-[var(--chat-border)] bg-[var(--chat-bg-sidebar)] px-4 py-2",
-        className
-      )}
-    >
-      <div className="h-8 w-0.5 shrink-0 rounded-full bg-[var(--chat-accent)]" />
-      <div className="min-w-0 flex-1">
-        <span className="block text-[12px] font-semibold text-[var(--chat-accent)]">
-          {replyingTo.senderName}
-        </span>
-        <span className="block truncate text-[13px] text-[var(--chat-text-secondary)]">
-          {replyingTo.text}
-        </span>
-      </div>
-      <button
-        onClick={onCancel}
-        className="flex size-6 shrink-0 items-center justify-center rounded-full text-[var(--chat-text-tertiary)] transition-colors hover:bg-[var(--chat-accent-soft)] hover:text-[var(--chat-text-primary)]"
-        aria-label="Cancel reply"
-      >
-        <X className="size-3.5" />
-      </button>
-    </div>
-  )
-}
-
-// â”€â”€â”€ ChatMessages (scroll container) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-interface ChatMessagesProps {
-  messages: ChatMessageData[]
-  typingUsers?: TypingUser[]
-  className?: string
-  onLoadMore?: () => Promise<void>
-  hasMore?: boolean
-}
-
-function ChatMessages({
-  messages,
-  typingUsers = [],
-  className,
-}: ChatMessagesProps) {
-  const { currentUser, messageGroupingInterval } = useChatContext()
-  const { containerRef, scrollToBottom, isAtBottom, unseenCount } =
-    useAutoScroll(messages)
-
-  const items = React.useMemo(
-    () => groupMessages(messages, currentUser.id, messageGroupingInterval),
-    [messages, currentUser.id, messageGroupingInterval]
-  )
-
-  return (
-    <div
-      className={cn(
-        "chat-messages relative flex flex-1 flex-col overflow-hidden",
-        className
-      )}
-    >
-      {/* Scrollable area */}
-      <div
-        ref={containerRef}
-        className="flex-1 overflow-y-auto px-4 py-4"
-        role="log"
-        aria-live="polite"
-      >
-        <div className="mx-auto w-full max-w-3xl">
-          {items.map((item, i) => {
-            switch (item.type) {
-              case "date":
-                return (
-                  <ChatDateSeparator
-                    key={`date-${item.label}-${i}`}
-                    label={item.label}
-                  />
-                )
-              case "system":
-                return (
-                  <ChatSystemMessage
-                    key={item.message.id}
-                    message={item.message}
-                  />
-                )
-              case "group":
-                return (
-                  <ChatMessageGroup
-                    key={`group-${item.group.messages[0].id}`}
-                    group={item.group}
-                  />
-                )
-            }
-          })}
-
-          {/* Typing indicator at the bottom */}
-          {typingUsers.length > 0 && (
-            <ChatTypingIndicator users={typingUsers} />
-          )}
-        </div>
-      </div>
-
-      {/* Scroll-to-bottom FAB with unread badge */}
-      <button
-        onClick={() => scrollToBottom("smooth")}
-        className={cn(
-          "absolute bottom-4 right-4 z-5 flex size-10 items-center justify-center rounded-full border border-[var(--chat-border-strong)] bg-[var(--chat-bg-main)] shadow-[var(--chat-shadow-md)] transition-all duration-200",
-          isAtBottom
-            ? "pointer-events-none translate-y-2 opacity-0"
-            : "translate-y-0 opacity-100"
-        )}
-        aria-label={
-          unseenCount > 0
-            ? `${unseenCount} new messages, scroll to bottom`
-            : "Scroll to bottom"
-        }
-      >
-        <ChevronDown className="size-[18px] text-[var(--chat-text-secondary)]" />
-        {/* Unread badge */}
-        {unseenCount > 0 && (
-          <span className="absolute -top-1 -right-1 flex size-[18px] items-center justify-center rounded-full bg-[var(--chat-accent)] text-[11px] font-bold text-white tabular-nums">
-            {unseenCount > 99 ? "99+" : unseenCount}
-          </span>
-        )}
-      </button>
-    </div>
-  )
-}
-
-// â”€â”€â”€ File preview item â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-interface FilePreviewItem {
-  file: File
-  id: string
-  preview?: string // data URL for images
-  progress?: number // 0-100
-}
-
-function ChatFilePreview({
-  item,
-  onRemove,
-}: {
-  item: FilePreviewItem
-  onRemove: () => void
-}) {
-  const isImage = item.file.type.startsWith("image/")
-
-  return (
-    <div className="relative shrink-0 rounded-lg border border-[var(--chat-border-strong)] bg-[var(--chat-bg-sidebar)]">
-      {isImage && item.preview ? (
-        <div className="relative size-14 overflow-hidden rounded-lg">
-          <img src={item.preview} alt={item.file.name} className="size-full object-cover" />
-        </div>
-      ) : (
-        <div className="flex items-center gap-2 px-3 py-2">
-          <div className="flex size-8 items-center justify-center rounded-md bg-[var(--chat-accent-soft)]">
-            <Paperclip className="size-3.5 text-[var(--chat-accent)]" />
-          </div>
-          <div className="min-w-0">
-            <p className="max-w-[120px] truncate text-[12px] font-medium text-[var(--chat-text-primary)]">{item.file.name}</p>
-            <p className="text-[10px] text-[var(--chat-text-tertiary)]">{(item.file.size / 1024).toFixed(0)} KB</p>
-          </div>
-        </div>
-      )}
-      {/* Progress bar */}
-      {item.progress !== undefined && item.progress < 100 && (
-        <div className="absolute bottom-0 left-0 h-[3px] w-full bg-[var(--chat-border)]">
-          <div className="h-full bg-[var(--chat-accent)] transition-all" style={{ width: `${item.progress}%` }} />
-        </div>
-      )}
-      {/* Remove button */}
-      <button
-        onClick={onRemove}
-        className="absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full border border-[var(--chat-border-strong)] bg-[var(--chat-bg-sidebar)] text-[var(--chat-text-secondary)] shadow-sm hover:bg-[var(--chat-bg-hover)] hover:text-[var(--chat-text-primary)]"
-        aria-label="Remove file"
-      >
-        <X className="size-3" />
-      </button>
-    </div>
-  )
-}
-
-// â”€â”€â”€ ChatComposer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-interface ChatComposerProps {
-  onSend?: (text: string) => void
-  onTyping?: (isTyping: boolean) => void
-  onFileUpload?: (files: File[]) => void
-  onVoiceRecord?: () => void
-  voiceRecording?: boolean
-  voiceDurationLabel?: string
-  onVoiceCancel?: () => void
-  onVoiceSend?: () => void
-  placeholder?: string
-  disabled?: boolean
-  replyingTo?: ChatMessageData | null
-  onCancelReply?: () => void
-  className?: string
-}
-
-function ChatComposer({
-  onSend,
-  onTyping,
-  onFileUpload,
-  onVoiceRecord,
-  voiceRecording = false,
-  voiceDurationLabel = "0:00",
-  onVoiceCancel,
-  onVoiceSend,
-  placeholder = "Message",
-  disabled = false,
-  replyingTo,
-  onCancelReply,
-  className,
-}: ChatComposerProps) {
-  const [value, setValue] = React.useState("")
-  const [files, setFiles] = React.useState<FilePreviewItem[]>([])
-  const [isDragging, setIsDragging] = React.useState(false)
-  const [showAttachMenu, setShowAttachMenu] = React.useState(false)
-  const { textareaRef, resize } = useAutoResize({ maxRows: 6 })
-  const { handleKeyDown: handleTypingKeyDown, stopTyping } =
-    useTypingIndicator({ onTypingChange: onTyping })
-  const fileInputRef = React.useRef<HTMLInputElement>(null)
-  const imageInputRef = React.useRef<HTMLInputElement>(null)
-  const hasContent = value.trim().length > 0 || files.length > 0
-
-  const addFiles = React.useCallback((newFiles: FileList | File[]) => {
-    const arr = Array.from(newFiles)
-    const items: FilePreviewItem[] = arr.map((f) => ({
-      file: f,
-      id: `${f.name}-${Date.now()}-${Math.random()}`,
-      progress: undefined,
-    }))
-
-    // Generate image previews
-    items.forEach((item) => {
-      if (item.file.type.startsWith("image/")) {
-        const reader = new FileReader()
-        reader.onload = (e) => {
-          setFiles((prev) =>
-            prev.map((f) => f.id === item.id ? { ...f, preview: e.target?.result as string } : f)
-          )
-        }
-        reader.readAsDataURL(item.file)
-      }
-    })
-
-    setFiles((prev) => [...prev, ...items])
-    onFileUpload?.(arr)
-  }, [onFileUpload])
-
-  const removeFile = React.useCallback((id: string) => {
-    setFiles((prev) => prev.filter((f) => f.id !== id))
-  }, [])
-
-  const handleSend = React.useCallback(() => {
-    const trimmed = value.trim()
-    if ((!trimmed && files.length === 0) || disabled) return
-    if (trimmed) onSend?.(trimmed)
-    setValue("")
-    setFiles([])
-    stopTyping()
-    if (textareaRef.current) textareaRef.current.style.height = "auto"
-  }, [value, files, disabled, onSend, textareaRef, stopTyping])
-
-  const handleKeyDown = React.useCallback(
-    (e: React.KeyboardEvent) => {
-      handleTypingKeyDown()
-      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend() }
-      if (e.key === "Escape" && replyingTo) onCancelReply?.()
-    },
-    [handleSend, handleTypingKeyDown, replyingTo, onCancelReply]
-  )
-
-  // Paste upload
-  const handlePaste = React.useCallback(
-    (e: React.ClipboardEvent) => {
-      const items = e.clipboardData?.items
-      if (!items) return
-      const imageFiles: File[] = []
-      for (const item of Array.from(items)) {
-        if (item.type.startsWith("image/")) {
-          const file = item.getAsFile()
-          if (file) imageFiles.push(file)
-        }
-      }
-      if (imageFiles.length > 0) {
-        addFiles(imageFiles)
-        setShowAttachMenu(false)
-      }
-    },
-    [addFiles]
-  )
-
-  // Drag-and-drop handlers (on the composer container)
-  const handleDragOver = React.useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(true)
-  }, [])
-  const handleDragLeave = React.useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-  }, [])
-  const handleDrop = React.useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault()
-      setIsDragging(false)
-      if (e.dataTransfer.files.length > 0) {
-        addFiles(e.dataTransfer.files)
-        setShowAttachMenu(false)
-      }
-    },
-    [addFiles]
-  )
-
-  return (
-    <div
-      className={cn("chat-composer sticky bottom-0 z-10 relative", className)}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-    >
-      {/* Drop overlay */}
-      {isDragging && (
-        <div className="chat-drop-overlay">
-          <div className="flex flex-col items-center gap-2">
-            <Upload className="size-8 text-[var(--chat-accent)]" />
-            <span className="text-[14px] font-medium text-[var(--chat-accent)]">Drop files to upload</span>
-          </div>
-        </div>
-      )}
-
-      {/* Reply preview bar */}
-      {replyingTo && (
-        <ChatReplyPreview replyingTo={replyingTo} onCancel={() => onCancelReply?.()} />
-      )}
-
-      {/* File preview strip */}
-      {files.length > 0 && (
-        <div className="flex gap-3 overflow-x-auto border-t border-[var(--chat-border)] bg-[var(--chat-bg-composer)] px-4 pt-3 pb-2 backdrop-blur-[20px]">
-          {files.map((f) => (
-            <ChatFilePreview key={f.id} item={f} onRemove={() => removeFile(f.id)} />
-          ))}
-        </div>
-      )}
-
-      {/* Composer body â€” frosted glass */}
-      <div className="border-t border-[var(--chat-border)] bg-[var(--chat-bg-composer)] px-3 py-2 backdrop-blur-[20px] backdrop-saturate-[180%]">
-        <div className="mx-auto max-w-3xl">
-          {voiceRecording ? (
-            <div className="flex min-h-11 items-center gap-3 rounded-[22px] border border-[var(--chat-border)] bg-[var(--chat-bg-sidebar)] px-3">
-              <button type="button" onClick={onVoiceCancel} className="text-[13px] font-semibold text-[var(--chat-text-secondary)]" aria-label="Cancelar gravaÃ§Ã£o">Cancelar</button>
-              <span className="flex flex-1 items-center justify-center gap-2 text-[14px] font-semibold text-[var(--chat-text-primary)]"><span className="size-2 rounded-full bg-red-500 animate-pulse" />Gravando {voiceDurationLabel}</span>
-              <button type="button" onClick={onVoiceSend} className="flex size-8 items-center justify-center rounded-full bg-[var(--chat-accent)] text-white" aria-label="Enviar Ã¡udio"><ArrowUp className="size-4" strokeWidth={2.5} /></button>
-            </div>
-          ) : (
-            <>
-          {/* Input row */}
-          <div className="flex items-end gap-2">
-            {/* + button with attachment popout */}
-            <div className="relative">
-              <button
-                onClick={() => setShowAttachMenu(!showAttachMenu)}
-                className={cn(
-                  "flex size-9 items-center justify-center rounded-full border border-[var(--chat-border)] bg-[var(--chat-bg-sidebar)] text-[var(--chat-text-tertiary)] transition-all hover:bg-[var(--chat-accent-soft)] hover:text-[var(--chat-text-secondary)]",
-                  showAttachMenu && "rotate-45 bg-[var(--chat-accent-soft)] text-[var(--chat-accent)]"
-                )}
-                aria-label="Attachments"
-              >
-                <Plus className="size-5" />
-              </button>
-
-              {/* Popout menu */}
-              {showAttachMenu && (
-                <div className="chat-toolbar-enter absolute bottom-full left-0 mb-2 w-44 overflow-hidden rounded-xl border border-[var(--chat-border-strong)] bg-[var(--chat-bg-sidebar)] py-1 shadow-[var(--chat-shadow-toolbar)]">
-                  <button
-                    onClick={() => { fileInputRef.current?.click(); setShowAttachMenu(false) }}
-                    className="flex w-full items-center gap-2.5 px-3 py-2 text-[13px] text-[var(--chat-text-secondary)] transition-colors hover:bg-[var(--chat-accent-soft)] hover:text-[var(--chat-text-primary)]"
-                  >
-                    <Paperclip className="size-4" />
-                    Attach file
-                  </button>
-                  <button
-                    onClick={() => { imageInputRef.current?.click(); setShowAttachMenu(false) }}
-                    className="flex w-full items-center gap-2.5 px-3 py-2 text-[13px] text-[var(--chat-text-secondary)] transition-colors hover:bg-[var(--chat-accent-soft)] hover:text-[var(--chat-text-primary)]"
-                  >
-                    <ImageIcon className="size-4" />
-                    Photo or video
-                  </button>
-                  <button
-                    onClick={() => setShowAttachMenu(false)}
-                    className="flex w-full items-center gap-2.5 px-3 py-2 text-[13px] text-[var(--chat-text-secondary)] transition-colors hover:bg-[var(--chat-accent-soft)] hover:text-[var(--chat-text-primary)]"
-                  >
-                    <Smile className="size-4" />
-                    Emoji
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Hidden file inputs */}
-            <input ref={fileInputRef} type="file" multiple className="hidden" onChange={(e) => { if (e.target.files) addFiles(e.target.files); e.target.value = "" }} />
-            <input ref={imageInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { if (e.target.files) addFiles(e.target.files); e.target.value = "" }} />
-
-            <div className="relative flex flex-1 items-end rounded-[22px] border border-[var(--chat-border)] bg-[var(--chat-bg-sidebar)]">
-              <textarea
-                ref={textareaRef}
-                value={value}
-                onChange={(e) => { setValue(e.target.value); resize() }}
-                onKeyDown={handleKeyDown}
-                onPaste={handlePaste}
-                placeholder={placeholder}
-                disabled={disabled}
-                rows={1}
-                className="flex-1 resize-none bg-transparent py-[10px] pl-4 pr-12 text-[15px] leading-[22px] tracking-[-0.01em] text-[var(--chat-text-primary)] placeholder:text-[var(--chat-text-tertiary)] focus:outline-none disabled:opacity-50"
-                style={{ overflow: "hidden", maxHeight: "160px" }}
-              />
-
-              {!hasContent && onVoiceRecord ? (
-                <button
-                  onClick={onVoiceRecord}
-                  disabled={disabled}
-                  className="absolute bottom-[6px] right-[6px] flex size-8 items-center justify-center rounded-full text-[var(--chat-text-tertiary)] transition-colors hover:text-[var(--chat-accent)]"
-                  aria-label="Record voice message"
-                >
-                  <Mic className="size-4" strokeWidth={2.5} />
-                </button>
-              ) : (
-                <button
-                  onClick={handleSend}
-                  disabled={!hasContent || disabled}
-                  className={cn(
-                    "absolute bottom-[6px] right-[6px] flex size-8 items-center justify-center rounded-full transition-all duration-200",
-                    hasContent
-                      ? "bg-[var(--chat-accent)] text-white hover:scale-105 active:scale-95"
-                      : "bg-transparent text-[var(--chat-text-tertiary)]"
-                  )}
-                  aria-label="Send message"
-                >
-                  <ArrowUp className="size-4" strokeWidth={2.5} />
-                </button>
-              )}
-            </div>
-          </div>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// â”€â”€â”€ Exports â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-export {
-  ChatProvider,
-  ChatMessage,
-  ChatMessageGroup,
-  ChatDateSeparator,
-  ChatSystemMessage,
-  ChatMessages,
-  ChatComposer,
-  ChatMessageStatus,
-  ChatMessageReactions,
-  ChatMessageActions,
-  ChatMessageReply,
-  ChatTypingIndicator,
-  ChatReplyPreview,
-  ChatReadReceipts,
-}
-export type {
-  ChatProviderProps,
-  ChatMessageProps,
-  ChatMessageGroupProps,
-  ChatDateSeparatorProps,
-  ChatSystemMessageProps,
-  ChatMessagesProps,
-  ChatComposerProps,
-  ChatMessageActionsProps,
-  ChatTypingIndicatorProps,
-  ChatReplyPreviewProps,
-}
+      <div className="relative h-8 min-w-0 flex-1 overflow-hidden" aria-label="Forma de onda do Ã¡udio">
+        <div ref={waveformRef} className={cn("chat-real-waveform absolute inset-0 cursor-pointer", waveStatus === "error" && "invisible pointer-events-none")} />
+        {waveStatus === "error" && (
+          <div className="absolute inset-0 flex items-center gap-[2px] overflow-hidden" aria-label="PrÃ©via da forma de onda indisponÃ­vel">
+    ×N»ÚÚ$z{-®éÜj×U&V6÷&BÀ¢fö–6U&V6÷&F–ærÒfÇ6RÀ¢fö–6TGW&F–öäÆ&VÂÒ#£"À¢fö–6T7F–öåVæF–ærÒfÇ6RÀ¢öåfö–6T6æ6VÂÀ¢öåfö–6U6VæBÀ¢Æ6V†öÆFW"Ò$ÖW76vR"À¢F—6&ÆVBÒfÇ6RÀ¢&WÇ––æuFòÀ¢öä6æ6VÅ&WÇ’À¢6Æ74æÖRÀ§Ó¢6†D6ö×÷6W%&÷2’°¢6öç7B·fÇVRÂ6WEfÇVUÒÒ&V7BçW6U7FFR‚""¢6öç7B¶f–ÆW2Â6WDf–ÆW5ÒÒ&V7BçW6U7FFSÄf–ÆU&Wf–Wt—FVÕµÓâ…µÒ¢6öç7B¶—4G&vv–ærÂ6WD—4G&vv–æuÒÒ&V7BçW6U7FFR†fÇ6R¢6öç7B·6†÷tGF6„ÖVçRÂ6WE6†÷tGF6„ÖVçUÒÒ&V7BçW6U7FFR†fÇ6R¢6öç7B¶GF6†ÖVçDW'&÷"Â6WDGF6†ÖVçDW'&÷%ÒÒ&V7BçW6U7FFR‚""¢6öç7B²FW‡F&V&VbÂ&W6—¦RÒÒW6TWFõ&W6—¦R‡²Ö…&÷w3¢bÒ¢6öç7B²†æFÆT¶W”F÷vã¢†æFÆUG—–æt¶W”F÷vâÂ7F÷G—–ærÒĞ¢W6UG—–æt–æF–6F÷"‡²öåG—–æt6†ævS¢öåG—–ærÒ¢6öç7Bf–ÆT–çWE&VbÒ&V7BçW6U&VcÄ…DÔÄ–çWDVÆVÖVçCâ†çVÆÂ¢6öç7B–ÖvT–çWE&VbÒ&V7BçW6U&VcÄ…DÔÄ–çWDVÆVÖVçCâ†çVÆÂ¢6öç7BGF6…&ö÷E&VbÒ&V7BçW6U&VcÄ…DÔÄF—dVÆVÖVçCâ†çVÆÂ¢6öç7BGF6…G&–vvW%&VbÒ&V7BçW6U&VcÄ…DÔÄ'WGFöäVÆVÖVçCâ†çVÆÂ¢6öç7BGF6„ÖVçU&VbÒ&V7BçW6U&VcÄ…DÔÄF—dVÆVÖVçCâ†çVÆÂ¢6öç7BGF6„ÖVçT–BÒ&V7BçW6T–B‚¢6öç7B†46öçFVçBÒfÇVRçG&–Ò‚’æÆVæwF‚âÇÂf–ÆW2æÆVæwF‚â  ¢6öç7BFDf–ÆW2Ò&V7BçW6T6ÆÆ&6²‚†æWtf–ÆW3¢f–ÆTÆ—7BÂf–ÆUµÒ’Óâ°¢6öç7B6æF–FFW2Ò'&’æg&öÒ†æWtf–ÆW2¢6öç7BWfÇVFVBÒ6æF–FFW2æÖ‚†f–ÆR’Óâ‡²f–ÆRÂfÆ–FF–öã¢fÆ–FFTf–ÆR†f–ÆR’Ò’¢6öç7B'"ÒWfÇVFVBæf–ÇFW"‚†—FVÒ’Óâ—FVÒçfÆ–FF–öâçfÆ–B’æÖ‚†—FVÒ’Óâ—FVÒæf–ÆR’ç6Æ–6RƒÂ¢6öç7B&V¦V7FVBÒWfÇVFVBæf–æB‚†—FVÒ’Óâ—FVÒçfÆ–FF–öâçfÆ–B“òæf–ÆP¢6WDGF6†ÖVçDW'&÷"€¢&V¦V7FV@¢òG·6æ—F—¦Tf–ÆTæÖR‡&V¦V7FVBææÖR—Òì:6ò:’W&Ö—F–Fò÷RW†6VFRòÆ–Ö—FRFR#RÔ"æ ¢¢6æF–FFW2æÆVæwF‚â ¢ò$Vçf–RæòÜ:†–ÖòæW†÷2÷"ÖVç6vVÒâ ¢¢" ¢¢–b†'"æÆVæwF‚ÓÓÒ’&WGW&à¢6öç7B—FV×3¢f–ÆU&Wf–Wt—FVÕµÒÒ'"æÖ‚†b’Óâ‡°¢f–ÆS¢bÀ¢–C¢G¶bææÖWÒÒG´FFRææ÷r‚—ÒÒG´ÖF‚ç&æFöÒ‚—ÖÀ¢&öw&W73¢VæFVf–æVBÀ¢Ò’ ¢òòvVæW&FR–ÖvR&Wf–Ww0¢—FV×2æf÷$V6‚‚†—FVÒ’Óâ°¢–b†—FVÒæf–ÆRçG—Rç7F'G5v—F‚‚&–ÖvRò"’’°¢6öç7B&VFW"ÒæWrf–ÆU&VFW"‚¢&VFW"æöæÆöBÒ†R’Óâ°¢6WDf–ÆW2‚‡&Wb’Óà¢&WbæÖ‚†b’Óâbæ–BÓÓÒ—FVÒæ–Bò²ââæbÂ&Wf–Ws¢RçF&vWCòç&W7VÇB27G&–ærÒ¢b¢¢Ğ¢&VFW"ç&VD4FFU$Â†—FVÒæf–ÆR¢Ğ¢Ò ¢6WDf–ÆW2‚‡&Wb’Óâ²ââç&WbÂââæ—FV×5Ò¢öäf–ÆUWÆöCòâ†'"¢ÒÂ¶öäf–ÆUWÆöEÒ ¢&V7BçW6TVffV7B‚‚’Óâ°¢–b‚6†÷tGF6„ÖVçR’&WGW&à¢6öç7Bfö7W5F–ÖW"Òv–æF÷rç6WEF–ÖV÷WB‚‚’Óâ°¢GF6„ÖVçU&Vbæ7W'&VçCòçVW'•6VÆV7F÷#Ä…DÔÄ'WGFöäVÆVÖVçCâ‚%·&öÆSÒvÖVçV—FVÒuÒ"“òæfö7W2‚¢ÒÂ¢6öç7B†æFÆUö–çFW$F÷vâÒ†WfVçC¢ö–çFW$WfVçB’Óâ°¢–b†GF6…&ö÷E&Vbæ7W'&VçCòæ6öçF–ç2†WfVçBçF&vWB2æöFR’’&WGW&à¢6WE6†÷tGF6„ÖVçR†fÇ6R¢Ğ¢6öç7B†æFÆT¶W”F÷vâÒ†WfVçC¢¶W–&ö&DWfVçB’Óâ°¢–b†WfVçBæ¶W’ÓÒ$W66R"’&WGW&à¢WfVçBç&WfVçDFVfVÇB‚¢6WE6†÷tGF6„ÖVçR†fÇ6R¢GF6…G&–vvW%&Vbæ7W'&VçCòæfö7W2‚¢Ğ¢Fö7VÖVçBæFDWfVçDÆ—7FVæW"‚'ö–çFW&F÷vâ"Â†æFÆUö–çFW$F÷vâ¢Fö7VÖVçBæFDWfVçDÆ—7FVæW"‚&¶W–F÷vâ"Â†æFÆT¶W”F÷vâ¢&WGW&â‚’Óâ°¢v–æF÷ræ6ÆV%F–ÖV÷WB†fö7W5F–ÖW"¢Fö7VÖVçBç&VÖ÷fTWfVçDÆ—7FVæW"‚'ö–çFW&F÷vâ"Â†æFÆUö–çFW$F÷vâ¢Fö7VÖVçBç&VÖ÷fTWfVçDÆ—7FVæW"‚&¶W–F÷vâ"Â†æFÆT¶W”F÷vâ¢Ğ¢ÒÂ·6†÷tGF6„ÖVçUÒ ¢6öç7B†æFÆTGF6„ÖVçT¶W”F÷vâÒ&V7BçW6T6ÆÆ&6²‚†WfVçC¢&V7Bä¶W–&ö&DWfVçCÄ…DÔÄF—dVÆVÖVçCâ’Óâ°¢6öç7B—FV×2Ò'&’æg&öÒ†WfVçBæ7W'&VçEF&vWBçVW'•6VÆV7F÷$ÆÃÄ…DÔÄ'WGFöäVÆVÖVçCâ‚%·&öÆSÒvÖVçV—FVÒuÒ"’¢6öç7B7W'&VçD–æFW‚Ò—FV×2æ–æFW„öb†Fö7VÖVçBæ7F—fTVÆVÖVçB2…DÔÄ'WGFöäVÆVÖVçB¢–b†WfVçBæ¶W’ÓÓÒ$'&÷tF÷vâ"’°¢WfVçBç&WfVçDFVfVÇB‚¢—FV×5²†7W'&VçD–æFW‚²’R—FV×2æÆVæwF…Óòæfö7W2‚¢ÒVÇ6R–b†WfVçBæ¶W’ÓÓÒ$'&÷uW"’°¢WfVçBç&WfVçDFVfVÇB‚¢—FV×5²†7W'&VçD–æFW‚Ò²—FV×2æÆVæwF‚’R—FV×2æÆVæwF…Óòæfö7W2‚¢ÒVÇ6R–b†WfVçBæ¶W’ÓÓÒ$†öÖR"’°¢WfVçBç&WfVçDFVfVÇB‚¢—FV×5³Óòæfö7W2‚¢ÒVÇ6R–b†WfVçBæ¶W’ÓÓÒ$VæB"’°¢WfVçBç&WfVçDFVfVÇB‚¢—FV×2æB‚Ó“òæfö7W2‚¢Ğ¢ÒÂµÒ ¢6öç7B&VÖ÷fTf–ÆRÒ&V7BçW6T6ÆÆ&6²‚†–C¢7G&–ær’Óâ°¢6WDf–ÆW2‚‡&Wb’Óâ&Wbæf–ÇFW"‚†b’Óâbæ–BÓÒ–B’¢ÒÂµÒ ¢6öç7B†æFÆU6VæBÒ&V7BçW6T6ÆÆ&6²‚‚’Óâ°¢6öç7BG&–ÖÖVBÒfÇVRçG&–Ò‚¢–b‚‚G&–ÖÖVBbbf–ÆW2æÆVæwF‚ÓÓÒ’ÇÂF—6&ÆVB’&WGW&à¢–b‡G&–ÖÖVB’öå6VæCòâ‡G&–ÖÖVB¢6WEfÇVR‚""¢6WDf–ÆW2…µÒ¢7F÷G—–ær‚¢–b‡FW‡F&V&Vbæ7W'&VçB’FW‡F&V&Vbæ7W'&VçBç7G–ÆRæ†V–v‡BÒ&WFò ¢ÒÂ·fÇVRÂf–ÆW2ÂF—6&ÆVBÂöå6VæBÂFW‡F&V&VbÂ7F÷G—–æuÒ ¢6öç7B†æFÆT¶W”F÷vâÒ&V7BçW6T6ÆÆ&6²€¢†S¢&V7Bä¶W–&ö&DWfVçB’Óâ°¢†æFÆUG—–æt¶W”F÷vâ‚¢–b†Ræ¶W’ÓÓÒ$VçFW""bbRç6†–gD¶W’’²Rç&WfVçDFVfVÇB‚“²†æFÆU6VæB‚’Ğ¢–b†Ræ¶W’ÓÓÒ$W66R"bb&WÇ––æuFò’öä6æ6VÅ&WÇ“òâ‚¢ÒÀ¢¶†æFÆU6VæBÂ†æFÆUG—–æt¶W”F÷vâÂ&WÇ––æuFòÂöä6æ6VÅ&WÇ•Ğ¢ ¢òò7FRWÆö@¢6öç7B†æFÆU7FRÒ&V7BçW6T6ÆÆ&6²€¢†S¢&V7Bä6Æ—&ö&DWfVçB’Óâ°¢6öç7B—FV×2ÒRæ6Æ—&ö&DFFòæ—FV×0¢–b‚—FV×2’&WGW&à¢6öç7B–ÖvTf–ÆW3¢f–ÆUµÒÒµĞ¢f÷"†6öç7B—FVÒöb'&’æg&öÒ†—FV×2’’°¢–b†—FVÒçG—Rç7F'G5v—F‚‚&–ÖvRò"’’°¢6öç7Bf–ÆRÒ—FVÒævWD4f–ÆR‚¢–b†f–ÆR’–ÖvTf–ÆW2çW6‚†f–ÆR¢Ğ¢Ğ¢–b†–ÖvTf–ÆW2æÆVæwF‚â’°¢FDf–ÆW2†–ÖvTf–ÆW2¢6WE6†÷tGF6„ÖVçR†fÇ6R¢Ğ¢ÒÀ¢¶FDf–ÆW5Ğ¢ ¢òòG&rÖæBÖG&÷†æFÆW'2†öâF†R6ö×÷6W"6öçF–æW"¢6öç7B†æFÆTG&t÷fW"Ò&V7BçW6T6ÆÆ&6²‚†S¢&V7BäG&tWfVçB’Óâ°¢Rç&WfVçDFVfVÇB‚¢6WD—4G&vv–ær‡G'VR¢ÒÂµÒ¢6öç7B†æFÆTG&tÆVfRÒ&V7BçW6T6ÆÆ&6²‚†S¢&V7BäG&tWfVçB’Óâ°¢Rç&WfVçDFVfVÇB‚¢6WD—4G&vv–ær†fÇ6R¢ÒÂµÒ¢6öç7B†æFÆTG&÷Ò&V7BçW6T6ÆÆ&6²€¢†S¢&V7BäG&tWfVçB’Óâ°¢Rç&WfVçDFVfVÇB‚¢6WD—4G&vv–ær†fÇ6R¢–b†RæFFG&ç6fW"æf–ÆW2æÆVæwF‚â’°¢FDf–ÆW2†RæFFG&ç6fW"æf–ÆW2¢6WE6†÷tGF6„ÖVçR†fÇ6R¢Ğ¢ÒÀ¢¶FDf–ÆW5Ğ¢ ¢&WGW&â€¢ÆF—`¢6Æ74æÖS×¶6â‚&6†BÖ6ö×÷6W"7F–6·’&÷GFöÒÓ¢Ó&VÆF—fR"Â6Æ74æÖR—Ğ¢öäG&t÷fW#×¶†æFÆTG&t÷fW'Ğ¢öäG&tÆVfS×¶†æFÆTG&tÆVfWĞ¢öäG&÷×¶†æFÆTG&÷Ğ¢à¢²ò¢G&÷÷fW&Æ’¢÷Ğ¢¶—4G&vv–ærbb€¢ÆF—b6Æ74æÖSÒ&6†BÖG&÷Ö÷fW&Æ’#à¢ÆF—b6Æ74æÖSÒ&fÆW‚fÆW‚Ö6öÂ—FV×2Ö6VçFW"vÓ"#à¢ÅWÆöB6Æ74æÖSÒ'6—¦RÓ‚FW‡BÕ·f"‚ÒÖ6†BÖ66VçB•Ò"óà¢Ç7â6Æ74æÖSÒ'FW‡BÕ³G…ÒföçBÖÖVF—VÒFW‡BÕ·f"‚ÒÖ6†BÖ66VçB•Ò#äG&÷f–ÆW2FòWÆöCÂ÷7ãà¢ÂöF—cà¢ÂöF—cà¢—Ğ ¢²ò¢&WÇ’&Wf–Wr&"¢÷Ğ¢·&WÇ––æuFòbb€¢Ä6†E&WÇ•&Wf–Wr&WÇ––æuFó×·&WÇ––æuF÷Òöä6æ6VÃ×²‚’Óâöä6æ6VÅ&WÇ“òâ‚—Òóà¢—Ğ ¢¶GF6†ÖVçDW'&÷"bb€¢ÆF—b&öÆSÒ&ÆW'B"6Æ74æÖSÒ&&÷&FW"×B&÷&FW"Õ·f"‚ÒÖ6†BÖ&÷&FW"•Ò&rÕ·f"‚ÒÖ6†BÖ&rÖ6ö×÷6W"•Ò‚ÓB’Ó"FW‡BÕ³7…ÒföçBÖÖVF—VÒFW‡BÕ·f"‚ÒÖ6†B×&VB•Ò#à¢¶GF6†ÖVçDW'&÷'Ğ¢ÂöF—cà¢—Ğ ¢²ò¢f–ÆR&Wf–Wr7G&—¢÷Ğ¢¶f–ÆW2æÆVæwF‚âbb€¢ÆF—b6Æ74æÖSÒ&fÆW‚vÓ2÷fW&fÆ÷r×‚ÖWFò&÷&FW"×B&÷&FW"Õ·f"‚ÒÖ6†BÖ&÷&FW"•Ò&rÕ·f"‚ÒÖ6†BÖ&rÖ6ö×÷6W"•Ò‚ÓBBÓ2"Ó"&6¶G&÷Ö&ÇW"Õ³#…Ò#à¢¶f–ÆW2æÖ‚†b’Óâ€¢Ä6†Df–ÆU&Wf–Wr¶W“×¶bæ–GÒ—FVÓ×¶gÒöå&VÖ÷fS×²‚’Óâ&VÖ÷fTf–ÆR†bæ–B—Òóà¢’—Ğ¢ÂöF—cà¢—Ğ ¢²ò¢6ö×÷6W"&öG’(	Bg&÷7FVBvÆ72¢÷Ğ¢ÆF—b6Æ74æÖSÒ&&÷&FW"×B&÷&FW"Õ·f"‚ÒÖ6†BÖ&÷&FW"•Ò&rÕ·f"‚ÒÖ6†BÖ&rÖ6ö×÷6W"•Ò‚Ó2’Ó"&6¶G&÷Ö&ÇW"Õ³#…Ò&6¶G&÷×6GW&FRÕ³ƒUÒ#à¢ÆF—b6Æ74æÖSÒ&×‚ÖWFòÖ‚×rÓ7†Â#à¢·fö–6U&V6÷&F–ærò€¢ÆF—b6Æ74æÖSÒ&fÆW‚Ö–âÖ‚Ó—FV×2Ö6VçFW"vÓ2&÷VæFVBÕ³#'…Ò&÷&FW"&÷&FW"Õ·f"‚ÒÖ6†BÖ&÷&FW"•Ò&rÕ·f"‚ÒÖ6†BÖ&r×6–FV&"•Ò‚Ó2#à¢Æ'WGFöâG—SÒ&'WGFöâ"öä6Æ–6³×¶öåfö–6T6æ6VÇÒF—6&ÆVC×·fö–6T7F–öåVæF–æwÒ6Æ74æÖSÒ&Ö–âÖ‚Ó‚ÓFW‡BÕ³7…ÒföçB×6VÖ–&öÆBFW‡BÕ·f"‚ÒÖ6†B×FW‡B×6V6öæF'’•ÒF—6&ÆVC¦÷6—G’ÓS"&–ÖÆ&VÃÒ$6æ6VÆ"w&f:|:6ò#ä6æ6VÆ#Âö'WGFöãà¢Ç7â6Æ74æÖSÒ&fÆW‚fÆW‚Ó—FV×2Ö6VçFW"§W7F–g’Ö6VçFW"vÓ"FW‡BÕ³G…ÒföçB×6VÖ–&öÆBFW‡BÕ·f"‚ÒÖ6†B×FW‡B×&–Ö'’•Ò#ãÇ7â6Æ74æÖSÒ'6—¦RÓ"&÷VæFVBÖgVÆÂ&r×&VBÓSæ–ÖFR×VÇ6R"óç·fö–6T7F–öåVæF–ærò$Vçf–æFò:VF–ş(
+b"¢w&fæFòG·fö–6TGW&F–öäÆ&VÇÖÓÂ÷7ãà¢Æ'WGFöâG—SÒ&'WGFöâ"öä6Æ–6³×¶öåfö–6U6VæGÒF—6&ÆVC×·fö–6T7F–öåVæF–æwÒ6Æ74æÖSÒ&fÆW‚6—¦RÓ—FV×2Ö6VçFW"§W7F–g’Ö6VçFW"&÷VæFVBÖgVÆÂ&rÕ·f"‚ÒÖ6†BÖ66VçB•ÒFW‡B×v†—FRF—6&ÆVC¦÷6—G’ÓS"&–ÖÆ&VÃÒ$Vçf–":VF–ò#ãÄ'&÷uW6Æ74æÖSÒ'6—¦RÓB"7G&ö¶Uv–GFƒ×³"ãWÒóãÂö'WGFöãà¢ÂöF—cà¢’¢€¢Ãà¢²ò¢–çWB&÷r¢÷Ğ¢ÆF—b6Æ74æÖSÒ&fÆW‚—FV×2ÖVæBvÓ"#à¢²ò¢²'WGFöâv—F‚GF6†ÖVçB÷÷WB¢÷Ğ¢ÆF—b&Vc×¶GF6…&ö÷E&VgÒ6Æ74æÖSÒ'&VÆF—fR#à¢Æ'WGFöà¢&Vc×¶GF6…G&–vvW%&VgĞ¢G—SÒ&'WGFöâ ¢öä6Æ–6³×²‚’Óâ6WE6†÷tGF6„ÖVçR‚6†÷tGF6„ÖVçR—Ğ¢6Æ74æÖS×¶6â€¢&fÆW‚6—¦RÓ—FV×2Ö6VçFW"§W7F–g’Ö6VçFW"&÷VæFVBÖgVÆÂ&÷&FW"&÷&FW"Õ·f"‚ÒÖ6†BÖ&÷&FW"•Ò&rÕ·f"‚ÒÖ6†BÖ&r×6–FV&"•ÒFW‡BÕ·f"‚ÒÖ6†B×FW‡B×FW'F–'’•ÒG&ç6—F–öâÖÆÂ†÷fW#¦&rÕ·f"‚ÒÖ6†BÖ66VçB×6ögB•Ò†÷fW#§FW‡BÕ·f"‚ÒÖ6†B×FW‡B×6V6öæF'’•Ò"À¢6†÷tGF6„ÖVçRbb'&÷FFRÓCR&rÕ·f"‚ÒÖ6†BÖ66VçB×6ögB•ÒFW‡BÕ·f"‚ÒÖ6†BÖ66VçB•Ò ¢—Ğ¢&–ÖÆ&VÃ×·6†÷tGF6„ÖVçRò$fV6†"÷:|;VW2FRæW†ò"¢$'&—"÷:|;VW2FRæW†ò'Ğ¢&–Ö†7÷WÒ&ÖVçR ¢&–ÖW‡æFVC×·6†÷tGF6„ÖVçWĞ¢&–Ö6öçG&öÇ3×·6†÷tGF6„ÖVçRòGF6„ÖVçT–B¢VæFVf–æVGĞ¢à¢ÅÇW26Æ74æÖSÒ'6—¦RÓR"óà¢Âö'WGFöãà ¢²ò¢÷÷WBÖVçR¢÷Ğ¢·6†÷tGF6„ÖVçRbb€¢ÆF—b&Vc×¶GF6„ÖVçU&VgÒ–C×¶GF6„ÖVçT–GÒ&öÆSÒ&ÖVçR"&–ÖÆ&VÃÒ$÷:|;VW2FRæW†ò"öä¶W”F÷vã×¶†æFÆTGF6„ÖVçT¶W”F÷vçÒ6Æ74æÖSÒ&6†B×FööÆ&"ÖVçFW"'6öÇWFR&÷GFöÒÖgVÆÂÆVgBÓ¢Ó#Ö"Ó"rÓC‚÷fW&fÆ÷rÖ†–FFVâ&÷VæFVB×†Â&÷&FW"&÷&FW"Õ·f"‚ÒÖ6†BÖ&÷&FW"×7G&öær•Ò&rÕ·f"‚ÒÖ6†BÖ&r×6–FV&"•Ò’Ó6†F÷rÕ·f"‚ÒÖ6†B×6†F÷r×FööÆ&"•Ò#à¢Æ'WGFöà¢G—SÒ&'WGFöâ ¢&öÆSÒ&ÖVçV—FVÒ ¢öä6Æ–6³×²‚’Óâ°¢f–ÆT–çWE&Vbæ7W'&VçCòæ6Æ–6²‚¢6WE6†÷tGF6„ÖVçR†fÇ6R¢v–æF÷rç&WVW7Dæ–ÖF–öäg&ÖR‚‚’ÓâGF6…G&–vvW%&Vbæ7W'&VçCòæfö7W2‚’¢×Ğ¢6Æ74æÖSÒ&fÆW‚Ö–âÖ‚ÓrÖgVÆÂ—FV×2Ö6VçFW"vÓ"ãR‚Ó2’Ó"FW‡BÕ³7…ÒFW‡BÕ·f"‚ÒÖ6†B×FW‡B×6V6öæF'’•ÒG&ç6—F–öâÖ6öÆ÷'2†÷fW#¦&rÕ·f"‚ÒÖ6†BÖ66VçB×6ögB•Ò†÷fW#§FW‡BÕ·f"‚ÒÖ6†B×FW‡B×&–Ö'’•Ò ¢à¢ÅW&6Æ—6Æ74æÖSÒ'6—¦RÓB"óà¢æW†"'V—fğ¢Âö'WGFöãà¢Æ'WGFöà¢G—SÒ&'WGFöâ ¢&öÆSÒ&ÖVçV—FVÒ ¢öä6Æ–6³×²‚’Óâ°¢–ÖvT–çWE&Vbæ7W'&VçCòæ6Æ–6²‚¢6WE6†÷tGF6„ÖVçR†fÇ6R¢v–æF÷rç&WVW7Dæ–ÖF–öäg&ÖR‚‚’ÓâGF6…G&–vvW%&Vbæ7W'&VçCòæfö7W2‚’¢×Ğ¢6Æ74æÖSÒ&fÆW‚Ö–âÖ‚ÓrÖgVÆÂ—FV×2Ö6VçFW"vÓ"ãR‚Ó2’Ó"FW‡BÕ³7…ÒFW‡BÕ·f"‚ÒÖ6†B×FW‡B×6V6öæF'’•ÒG&ç6—F–öâÖ6öÆ÷'2†÷fW#¦&rÕ·f"‚ÒÖ6†BÖ66VçB×6ögB•Ò†÷fW#§FW‡BÕ·f"‚ÒÖ6†B×FW‡B×&–Ö'’•Ò ¢à¢Ä–ÖvT–6öâ6Æ74æÖSÒ'6—¦RÓB"óà¢f÷Fò÷Rl:ÖFVğ¢Âö'WGFöãà¢ÂöF—cà¢—Ğ¢ÂöF—cà ¢²ò¢†–FFVâf–ÆR–çWG2¢÷Ğ¢Æ–çWB&Vc×¶f–ÆT–çWE&VgÒG—SÒ&f–ÆR"×VÇF—ÆR6Æ74æÖSÒ&†–FFVâ"öä6†ævS×²†R’Óâ²–b†RçF&vWBæf–ÆW2’FDf–ÆW2†RçF&vWBæf–ÆW2“²RçF&vWBçfÇVRÒ""×Òóà¢Æ–çWB&Vc×¶–ÖvT–çWE&VgÒG—SÒ&f–ÆR"66WCÒ&–ÖvRò¢"×VÇF—ÆR6Æ74æÖSÒ&†–FFVâ"öä6†ævS×²†R’Óâ²–b†RçF&vWBæf–ÆW2’FDf–ÆW2†RçF&vWBæf–ÆW2“²RçF&vWBçfÇVRÒ""×Òóà ¢ÆF—b6Æ74æÖSÒ'&VÆF—fRfÆW‚fÆW‚Ó—FV×2ÖVæB&÷VæFVBÕ³#'…Ò&÷&FW"&÷&FW"Õ·f"‚ÒÖ6†BÖ&÷&FW"•Ò&rÕ·f"‚ÒÖ6†BÖ&r×6–FV&"•Ò#à¢ÇFW‡F&V¢&Vc×·FW‡F&V&VgĞ¢fÇVS×·fÇVWĞ¢öä6†ævS×²†R’Óâ²6WEfÇVR†RçF&vWBçfÇVR“²&W6—¦R‚’×Ğ¢öä¶W”F÷vã×¶†æFÆT¶W”F÷vçĞ¢öå7FS×¶†æFÆU7FWĞ¢Æ6V†öÆFW#×·Æ6V†öÆFW'Ğ¢F—6&ÆVC×¶F—6&ÆVGĞ¢&÷w3×³Ğ¢6Æ74æÖSÒ&fÆW‚Ó&W6—¦RÖæöæR&r×G&ç7&VçB’Õ³…ÒÂÓB"Ó"FW‡BÕ³g…ÒÆVF–ærÕ³#'…ÒG&6¶–ærÕ²ÓãVÕÒFW‡BÕ·f"‚ÒÖ6†B×FW‡B×&–Ö'’•ÒÆ6V†öÆFW#§FW‡BÕ·f"‚ÒÖ6†B×FW‡B×FW'F–'’•Òfö7W3¦÷WFÆ–æRÖæöæRF—6&ÆVC¦÷6—G’ÓS ¢7G–ÆS×·²÷fW&fÆ÷s¢&†–FFVâ"ÂÖ„†V–v‡C¢#c‚"×Ğ¢óà ¢²†46öçFVçBbböåfö–6U&V6÷&Bò€¢Æ'WGFöà¢G—SÒ&'WGFöâ ¢öä6Æ–6³×¶öåfö–6U&V6÷&GĞ¢F—6&ÆVC×¶F—6&ÆVGĞ¢6Æ74æÖSÒ&'6öÇWFR&÷GFöÒÓ&–v‡BÓfÆW‚6—¦RÓ—FV×2Ö6VçFW"§W7F–g’Ö6VçFW"&÷VæFVBÖgVÆÂFW‡BÕ·f"‚ÒÖ6†B×FW‡B×FW'F–'’•ÒG&ç6—F–öâÖ6öÆ÷'2†÷fW#§FW‡BÕ·f"‚ÒÖ6†BÖ66VçB•Ò ¢&–ÖÆ&VÃÒ$w&f"ÖVç6vVÒFR:VF–ò ¢à¢ÄÖ–26Æ74æÖSÒ'6—¦RÓB"7G&ö¶Uv–GFƒ×³"ãWÒóà¢Âö'WGFöãà¢’¢€¢Æ'WGFöà¢G—SÒ&'WGFöâ ¢öä6Æ–6³×¶†æFÆU6VæGĞ¢F—6&ÆVC×²†46öçFVçBÇÂF—6&ÆVGĞ¢6Æ74æÖS×¶6â€¢&'6öÇWFR&÷GFöÒÓ&–v‡BÓfÆW‚6—¦RÓ—FV×2Ö6VçFW"§W7F–g’Ö6VçFW"&÷VæFVBÖgVÆÂG&ç6—F–öâÖÆÂGW&F–öâÓ#"À¢†46öçFVç@¢ò&&rÕ·f"‚ÒÖ6†BÖ66VçB•ÒFW‡B×v†—FR†÷fW#§66ÆRÓR7F—fS§66ÆRÓ“R ¢¢&&r×G&ç7&VçBFW‡BÕ·f"‚ÒÖ6†B×FW‡B×FW'F–'’•Ò ¢—Ğ¢&–ÖÆ&VÃÒ$Vçf–"ÖVç6vVÒ ¢à¢Ä'&÷uW6Æ74æÖSÒ'6—¦RÓB"7G&ö¶Uv–GFƒ×³"ãWÒóà¢Âö'WGFöãà¢—Ğ¢ÂöF—cà¢ÂöF—cà¢Âóà¢—Ğ¢ÂöF—cà¢ÂöF—cà¢ÂöF—cà¢§Ğ ¢òò)H)H)HW‡÷'G2)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H  ¦W‡÷'B°¢6†E&÷f–FW"À¢6†DÖW76vRÀ¢6†DÖW76vTw&÷WÀ¢6†DFFU6W&F÷"À¢6†E7—7FVÔÖW76vRÀ¢6†DÖW76vW2À¢6†D6ö×÷6W"À¢6†DÖW76vU7FGW2À¢6†DÖW76vU&V7F–öç2À¢6†DÖW76vT7F–öç2À¢6†DÖW76vU&WÇ’À¢6†EG—–æt–æF–6F÷"À¢6†E&WÇ•&Wf–WrÀ¢6†E&VE&V6V—G2À§Ğ¦W‡÷'BG—R°¢6†E&÷f–FW%&÷2À¢6†DÖW76vU&÷2À¢6†DÖW76vTw&÷W&÷2À¢6†DFFU6W&F÷%&÷2À¢6†E7—7FVÔÖW76vU&÷2À¢6†DÖW76vW5&÷2À¢6†D6ö×÷6W%&÷2À¢6†DÖW76vT7F–öç5&÷2À¢6†EG—–æt–æF–6F÷%&÷2À¢6†E&WÇ•&Wf–Wu&÷2À§Ğ

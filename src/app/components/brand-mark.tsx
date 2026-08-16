@@ -1,10 +1,8 @@
 type BrandMarkProps = {
-  variant?: "primary" | "soft";
   className?: string;
 };
 
 export function BrandMark({
-  variant = "primary",
   className = "",
 }: BrandMarkProps) {
   const assetBase = import.meta.env.BASE_URL;
@@ -12,11 +10,9 @@ export function BrandMark({
   return (
     <img
       className={`brand-mark ${className}`}
-      src={
-        variant === "primary"
-          ? `${assetBase}brand/orha-splash-primary.jpg`
-          : `${assetBase}brand/orha-splash-soft.jpg`
-      }
+      src={`${assetBase}brand/orha-mark-transparent.png`}
+      width="697"
+      height="177"
       alt="ORHA"
       draggable={false}
     />

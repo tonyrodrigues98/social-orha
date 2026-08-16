@@ -46,11 +46,11 @@ O registry atual do Drawer depende de `@godui/godui-theme`. O alias foi registra
 
 `@supabase/supabase-js` usa somente a Project URL e a publishable key no cliente. A secret key e `service_role` nunca pertencem a variáveis `VITE_*`. A CLI foi inicializada no repositório e vinculada ao projeto remoto, sem aplicar migrations nesta etapa.
 
-`vite-plugin-pwa` gera o Web App Manifest e o service worker por `generateSW`. Os dois JPGs fornecidos foram preservados como assets de splash; um ícone oficial quadrado ainda será necessário antes da distribuição final nas lojas/telas iniciais.
+`vite-plugin-pwa` gera o Web App Manifest e o service worker por `generateSW`. Os dois JPGs fornecidos foram preservados como fonte histórica; a splash usa a marca transparente aprovada. Ícones 192×192, 512×512 e Apple Touch 180×180 foram derivados desse ativo, declarados no manifesto e incluídos no precache. A atualização do service worker usa prompt explícito para não interromper formulários.
 
 ### chatcn
 
-O manifesto oficial usa `css` como string, enquanto o schema atual do shadcn exige um objeto. A CLI recusou o manifesto. Os sete arquivos e o CSS foram então copiados sem alteração a partir do repositório/registry oficial. Esta exceção está documentada para que uma futura atualização tente novamente a CLI antes de repetir a adaptação.
+O manifesto oficial usa `css` como string, enquanto o schema atual do shadcn exige um objeto. A CLI recusou o manifesto. Os sete arquivos e o CSS foram incorporados a partir do repositório/registry oficial e depois adaptados localmente para o produto: idioma pt-BR, anexos acessíveis, gravação MediaRecorder, WaveSurfer visível, virtualização condicional, paginação e fluxo de foco. Uma atualização futura deve comparar o upstream em dry-run/diff e reaplicar conscientemente esse delta, nunca sobrescrevê-lo às cegas.
 
 ### Untitled UI
 
@@ -82,3 +82,17 @@ A CLI oficial foi executada com `--all --type base --yes`. O path final foi norm
 2. Rode `npm run check:catalog`, typecheck, testes e build.
 3. Para GodUI/chatcn/shadcn, use `--dry-run` e `--diff` antes de sobrescrever código local.
 4. Não inicialize PostHog, Umami ou serviços de busca sem configuração, consentimento e uma decisão explícita de backend.
+
+## Uso real na base atual
+
+- GodUI: Tab Bar global e Drawer local; o Drawer compõe React Aria para modalidade, foco, Escape e isolamento do fundo.
+- Untitled UI: botões, inputs, textareas, selects, toggles, checkboxes, avatar, dropdown e gatilhos de arquivo.
+- React Aria: tabs de Conversas, overlays, foco, seleção, semântica e comportamento de teclado.
+- chatcn: única base de conversa privada e composer.
+- MediaRecorder + WaveSurfer: gravação real, reprodução, seek e waveform; Vidstack e react-media-recorder permanecem em quarentena.
+- Embla: carrosséis de pessoas e favoritos; Swiper permanece reservado para requisito avançado.
+- Yet Another React Lightbox: galeria fullscreen do perfil.
+- TanStack Virtual: histórico do chat somente quando o volume justifica.
+- Orama: busca local do drawer; Meilisearch e Typesense continuam atrás de futuros adapters.
+
+O fluxo de mídia do perfil e as decisões de não ativar Uppy/crop sem Storage e pipeline reais estão em `docs/PROFILE-MEDIA-FLOW.md`.

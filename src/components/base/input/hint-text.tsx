@@ -11,10 +11,11 @@ interface HintTextProps extends AriaTextProps {
     children: ReactNode;
 }
 
-export const HintText = ({ isInvalid, className, size = "md", ...props }: HintTextProps) => {
+export const HintText = ({ isInvalid, className, size = "md", role, ...props }: HintTextProps) => {
     return (
         <AriaText
             {...props}
+            role={role ?? (isInvalid ? "alert" : undefined)}
             slot={isInvalid ? "errorMessage" : "description"}
             className={cx(
                 "text-sm text-tertiary",
