@@ -2163,6 +2163,18 @@ button {
   font-size: 16px !important;
 }
 
+/* React Aria portals render under <body>, outside .native-app-shell. Keep only
+   editable controls in ORHA modal surfaces on the same no-zoom iOS contract. */
+.orha-modal-overlay :where(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="image"]):not([type="hidden"]),
+  textarea,
+  select,
+  [contenteditable]:not([contenteditable="false"])
+) {
+  -webkit-text-size-adjust: 100%;
+  font-size: 16px !important;
+}
+
 @media (max-height: 720px) {
   .auth-welcome-art { min-height: 190px; }
   .auth-content, .onboarding-content { padding-top: 14px; }

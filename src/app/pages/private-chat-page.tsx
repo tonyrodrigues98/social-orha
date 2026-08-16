@@ -109,12 +109,14 @@ export function PrivateChatPage({ conversationId, onBack }: PrivateChatPageProps
   const [recordingPhase, setRecordingPhase] = useState<RecordingPhase>("idle");
   const [recordedSeconds, setRecordedSeconds] = useState(0);
   const [chatThemeRoot, setChatThemeRoot] = useState<HTMLDivElement | null>(null);
+  const [chatMenuOpen, setChatMenuOpen] = useState(false);
   const recorderRef = useRef<BrowserAudioRecorder | null>(null);
   const recordingStartedAt = useRef(0);
   const chatBackButtonRef = useRef<HTMLButtonElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const detailsBackButtonRef = useRef<HTMLButtonElement>(null);
   const restoreMenuFocusRef = useRef(false);
+  const swipeEligibleRef = useRef(false);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => chatBackButtonRef.current?.focus({ preventScroll: true }));
@@ -141,14 +143,23 @@ export function PrivateChatPage({ conversationId, onBack }: PrivateChatPageProps
   }, [showDetails]);
 
   const bindBackSwipe = useDrag(
-    ({ first, last, movement: [movementX], velocity: [velocityX], direction: [directionX], initial: [initialX], cancel }) => {
-      if (first && initialX > 28) { cancel(); return; }
+    ({ event, first, last, movement: [movementX], velocity: [velocityX], direction: [directionX], initial: [initialX] }) => {
+      if (first) {
+        const target = event.target;
+        const startedOnControl = target instanceof Element && Boolean(target.closest("button, a, input, textarea, select, [role='menuitem'], [role='menu']"));
+        swipeEligibleRef.current = initialX <= 28 && !startedOnControl;
+      }
+      if (!swipeEligibleRef.current) {
+        if (last) swipeEligibleRef.current = false;
+        return;
+      }
       const offset = Math.min(Math.max(movementX, 0), 140);
       if (!last) { setDragOffset(offset); return; }
+      swipeEligibleRef.current = false;
       setDragOffset(0);
       if (offset > 88 || (velocityX > 0.45 && directionX > 0)) onBack();
     },
-    { axis: "x", filterTaps: true, threshold: 8 },
+    { axis: "x", filterTaps: true, threshold: 8, pointer: { capture: false } },
   );
 
   const currentUser = useMemo<ChatUser>(() => ({
@@ -223,7 +234,20 @@ export function PrivateChatPage({ conversationId, onBack }: PrivateChatPageProps
     }
   }
 
-  const gestureProps = showDetails ? {} : bindBackSwipe();
+  const openContactDetails = () => {
+    setChatMenuOpen(false);
+    setShowDetails(true);
+  };
+  const muteConversation = () => {
+    setChatMenuOpen(false);
+    announce("Notificações silenciadas.");
+  };
+  const archiveConversation = () => {
+    setChatMenuOpen(false);
+    announce("Conversa arquivada.");
+  };
+
+  const gestureProps = showDetails || chatMenuOpen ? {} : bindBackSwipe();
 
   return (
     <section
@@ -264,7 +288,7 @@ export function PrivateChatPage({ conversationId, onBack }: PrivateChatPageProps
               avatar={<Avatar size="sm" initials={conversation.initials} contentClassName="avatar-transparent private-chat-avatar" />}
               actions={(
                 <div className="private-chat-actions">
-                  <Dropdown.Root>
+                  <Dropdown.Root isOpen={chatMenuOpen} onOpenChange={setChatMenuOpen}>
                     <Dropdown.DotsButton
                       ref={menuButtonRef}
                       className="private-chat-menu-trigger"
@@ -275,17 +299,31 @@ export function PrivateChatPage({ conversationId, onBack }: PrivateChatPageProps
                       <Dropdown.Menu
                         aria-label="Opções da conversa"
                         selectionMode="none"
-                        onAction={(key) => {
-                          if (key === "details") setShowDetails(true);
-                          if (key === "mute") announce("Notificações silenciadas.");
-                          if (key === "archive") announce("Conversa arquivada.");
-                        }}
                       >
-                        <Dropdown.Item id="details" textValue={conversation.kind === "group" ? "Dados do grupo" : "Dados do contato"} icon={UserRound}>
+                        <Dropdown.Item
+                          id="details"
+                          textValue={conversation.kind === "group" ? "Dados do grupo" : "Dados do contato"}
+                          icon={UserRound}
+                          onAction={openContactDetails}
+                        >
                           {conversation.kind === "group" ? "Dados do grupo" : "Dados do contato"}
                         </Dropdown.Item>
-                        <Dropdown.Item id="mute" textValue="Silenciar notificações" icon={BellOff}>Silenciar notificações</Dropdown.Item>
-                        <Dropdown.Item id="archive" textValue="Arquivar conversa" icon={Archive}>Arquivar conversa</Dropdown.Item>
+                        <Dropdown.Item
+                          id="mute"
+                          textValue="Silenciar notificações"
+                          icon={BellOff}
+                          onAction={muteConversation}
+                        >
+                          Silenciar notificações
+                        </Dropdown.Item>
+                        <Dropdown.Item
+                          id="archive"
+                          textValue="Arquivar conversa"
+                          icon={Archive}
+                          onAction={archiveConversation}
+                        >
+                          Arquivar conversa
+                        </Dropdown.Item>
                       </Dropdown.Menu>
                     </Dropdown.Popover>
                   </Dropdown.Root>

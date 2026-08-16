@@ -68,7 +68,7 @@ const Drawer = React.forwardRef<HTMLDivElement, DrawerProps>(
         isOpen={open}
         isDismissable
         onOpenChange={onOpenChange}
-        className={`fixed inset-0 opacity-100 ${shouldReduceMotion ? "" : "transition-opacity duration-300 data-[entering]:opacity-0 data-[exiting]:opacity-0"}`}
+        className={`orha-modal-overlay fixed inset-0 opacity-100 ${shouldReduceMotion ? "" : "transition-opacity duration-300 data-[entering]:opacity-0 data-[exiting]:opacity-0"}`}
         style={{ zIndex: 1000 }}
       >
         {({ isEntering, isExiting }) => (

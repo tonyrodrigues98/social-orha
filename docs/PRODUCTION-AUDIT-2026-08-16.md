@@ -116,7 +116,7 @@ Localmente:
 - `npm run check:catalog`: 41 itens, 56 pacotes/fontes, 5 pacotes em quarentena sem import runtime.
 - `npm run typecheck`: passou.
 - `npm run lint`: passou sem erros ou avisos.
-- `npm test`: 10 arquivos, 30 testes passaram.
+- `npm test`: 11 arquivos, 32 testes passaram.
 - `npm ls --depth=0`: passou, sem missing/invalid/extraneous direto.
 - `git diff --check`: passou.
 - Build do cliente: 5.710 módulos e chunks gerados; o `closeBundle` local foi impedido exclusivamente pelo sandbox Windows ao fazer `lstat C:\Users\CPU`.
@@ -125,7 +125,7 @@ No GitHub Actions/Ubuntu:
 
 - `npm ci`: passou.
 - `npm audit --omit=dev --audit-level=high`: passou.
-- typecheck, lint, 30 testes e catálogo: passaram.
+- typecheck, lint, testes e catálogo: passaram.
 - build PWA/Workbox completo: passou.
 - upload e deploy Pages: passaram.
 
@@ -140,11 +140,15 @@ No GitHub Actions/Ubuntu:
 - cadastro vazio anuncia três erros e move foco para e-mail;
 - manifesto final usa `scope`, `start_url` e `id` em `/social-orha/`;
 - atualização PWA exibiu o prompt, preservou a tela e só ativou os novos assets após “Atualizar”.
+- login real concluído com uma conta fornecida pelo responsável do projeto; a sessão permaneceu autenticada após reload;
+- Início, Comunidade, Explorar, Conversas e Perfil foram percorridos em sessão autenticada a 390×844, sem alterar dados da conta;
+- menu de três pontos do chat foi validado com ponteiro e teclado, dados do contato abriram sem transparência/sobreposição e o swipe de borda retornou à lista;
+- campos editáveis dentro do portal do Drawer foram confirmados com 16 px, sem reintroduzir zoom no iOS.
 
 ## J. Limitações e pendências externas
 
 - Não houve Safari/iPhone físico; a matriz foi emulada. Gestos, teclado e microfone ainda exigem uma rodada em dispositivo real.
-- Não foi criada uma conta externa de teste. Portanto, chat, perfil, onboarding autenticado e permissões foram cobertos por fonte, testes e build, mas não por uma sessão visual autenticada nesta auditoria.
+- A sessão autenticada foi testada com a conta fornecida pelo responsável. Não havia mensagem de áudio persistida nessa conta, portanto o WaveSurfer foi coberto por implementação/testes, mas a reprodução de um áudio remoto persistido ainda requer nova amostra.
 - A migration `20260816130000_security_privacy_hardening.sql` está versionada e testada, porém não foi aplicada ao Supabase remoto: a CLI vinculada não possui access token nesta sessão. As constraints `NOT VALID` também exigem auditoria/validação posterior dos registros legados.
 - A URL Pages está versionada em `supabase/config.toml`, mas o allow-list remoto de Auth deve ser conferido no Dashboard depois da aplicação controlada.
 
