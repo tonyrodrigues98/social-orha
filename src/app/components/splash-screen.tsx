@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { BrandMark } from "./brand-mark";
 
 type SplashScreenProps = {
@@ -14,16 +14,18 @@ type SplashScreenProps = {
  * splash to be mounted later in the auth flow.
  */
 export function SplashScreen({ ready = false, onFinished }: SplashScreenProps) {
-  const mountedAt = useRef<number | null>(null);
+  const mountedAt = useRef(0);
   const finishNotified = useRef(false);
   const exitTimer = useRef<number | undefined>(undefined);
   const finishTimer = useRef<number | undefined>(undefined);
   const [leaving, setLeaving] = useState(false);
 
+  useLayoutEffect(() => {
+    mountedAt.current = performance.now();
+  }, []);
+
   useEffect(() => {
     if (!ready || leaving || finishNotified.current) return;
-
-    mountedAt.current ??= performance.now();
 
     const remainingBeforeExit = Math.max(0, 2600 - (performance.now() - mountedAt.current));
     exitTimer.current = window.setTimeout(() => {

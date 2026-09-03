@@ -7,7 +7,7 @@ Pesquisa e instalação verificadas em 11 de agosto de 2026. As versões exatas 
 | Grupo | Implementação |
 |---|---|
 | Kits de código | GodUI Drawer e Tab Bar, todos os componentes base gratuitos do Untitled UI, chatcn completo e infraestrutura shadcn |
-| UI e interação | Radix, React Aria, react-modal-sheet, Vaul, Embla, Swiper, Lightbox, TanStack Virtual, Motion e use-gesture |
+| UI e interação | Radix, React Aria, react-modal-sheet, Vaul, Embla, Swiper, Lightbox, TanStack Virtual, TanStack Query, TanStack Router, Motion e use-gesture |
 | Mídia | Vidstack, Media Chrome, wavesurfer, react-media-recorder, MediaRecorder nativo, react-easy-crop e Cropper.js |
 | Editor e chat | Tiptap + mentions, Lexical, emoji-picker-react, Emoji Mart e chatcn |
 | Upload | Uppy core/React/XHR, react-dropzone e FilePond |
@@ -16,7 +16,7 @@ Pesquisa e instalação verificadas em 11 de agosto de 2026. As versões exatas 
 | Recomendação/analytics | SDK Gorse, PostHog JS, cliente Node Umami e porta local de analytics |
 | Runtime do protótipo | Supabase JS + CLI e `vite-plugin-pwa` |
 
-O catálogo tipado contém as 41 entradas, seus pacotes e o estado `integrated`, `installed`, `quarantined`, `client-ready` ou `external`.
+O catálogo tipado contém as entradas instaladas, seus pacotes e o estado `integrated`, `installed`, `quarantined`, `client-ready` ou `external`. O script `check:catalog` valida a cobertura sem depender de uma contagem manual.
 
 ## Serviços versus bibliotecas
 
@@ -28,8 +28,11 @@ MediaRecorder é uma Web API e, portanto, não possui pacote npm. Ela foi implem
 
 ## Incompatibilidades confirmadas
 
-- `@vidstack/react@0.6.15` declara peer de `@types/react` 18.
+- A linha `latest` de `@vidstack/react` ainda aponta para 0.6.15 e React 18, mas a linha oficial `next@1.15.6` declara React 18 ou 19. A base usa 1.15.6 e mantém o pacote fora do runtime até existir um fluxo de vídeo aprovado.
 - `@emoji-mart/react@1.1.1` declara peer de React até 18.
+- O peer executável de Emoji Mart (`emoji-mart@5.6.0`) está instalado. A incompatibilidade restante é exclusivamente o range React 18 declarado por `@emoji-mart/react`; React 19 não foi rebaixado e o adapter continua em quarentena, com `legacy-peer-deps=true` restrito e documentado no `.npmrc`.
+- `@meilisearch/instant-meilisearch@0.31.3` exige `meilisearch@^0.57`; o cliente foi alinhado à versão compatível mais recente desse range, em vez de manter uma combinação inválida.
+- Os peers obrigatórios de Algolia Autocomplete, Tiptap mentions e Lexical/Yjs estão declarados diretamente. `ajv@8` também é direto no ambiente de build para impedir a deduplicação inválida do formatter usado pelo Workbox.
 - Vaul é mantido apenas como referência/POC, conforme o risco descrito no relatório.
 - `react-media-recorder` é alternativa de comparação; o default arquitetural é a Web API atrás de adapter.
 - TypeScript foi fixado em 5.9.3. O `latest` atual (7.0) ainda conflita com o peer range do `typescript-eslint` e diverge do stack documentado pelo Untitled UI.
@@ -46,7 +49,9 @@ O registry atual do Drawer depende de `@godui/godui-theme`. O alias foi registra
 
 `@supabase/supabase-js` usa somente a Project URL e a publishable key no cliente. A secret key e `service_role` nunca pertencem a variáveis `VITE_*`. A CLI foi inicializada no repositório e vinculada ao projeto remoto, sem aplicar migrations nesta etapa.
 
-`vite-plugin-pwa` gera o Web App Manifest e o service worker por `generateSW`. Os dois JPGs fornecidos foram preservados como fonte histórica; a splash usa a marca transparente aprovada. Ícones 192×192, 512×512 e Apple Touch 180×180 foram derivados desse ativo, declarados no manifesto e incluídos no precache. A atualização do service worker usa prompt explícito para não interromper formulários.
+`vite-plugin-pwa` gera o Web App Manifest e o service worker por `generateSW`. Os dois JPGs fornecidos foram preservados como fonte histórica; a splash usa a marca transparente aprovada. Ícones 192×192, 512×512 e Apple Touch 180×180 foram derivados desse ativo, declarados no manifesto e incluídos no precache. A atualização do service worker usa prompt explícito e um adapter de rascunho transitório: somente campos autenticados seguros são mantidos em `sessionStorage`, isolados por usuário/rota e consumidos após o reload. O browser connectivity adapter expõe um limite offline honesto; ele não transforma cache de shell em dados sociais offline.
+
+`@tanstack/react-router` fornece o browser history e os guards de Auth/onboarding. O GitHub Pages recebe `public/404.html`, que devolve deep links ao entrypoint antes do React iniciar; a URL original é restaurada com `history.replaceState`. Hash routing foi descartado porque o Supabase Auth precisa do fragmento em callbacks de sessão e recuperação.
 
 ### chatcn
 
@@ -67,7 +72,10 @@ A CLI oficial foi executada com `--all --type base --yes`. O path final foi norm
 - Untitled UI installation/stack: <https://www.untitledui.com/react/docs/installation>
 - chatcn: <https://chatcn-iota.vercel.app/>
 - TanStack Virtual: <https://tanstack.com/virtual/latest/docs/installation>
+- TanStack Query: <https://tanstack.com/query/latest/docs/framework/react/overview>
+- TanStack Router: <https://tanstack.com/router/latest/docs/framework/react/overview>
 - Uppy React/headless: <https://uppy.io/docs/react/>
+- react-easy-crop: <https://github.com/ValentinH/react-easy-crop>
 - Meilisearch JavaScript: <https://www.meilisearch.com/docs/getting_started/sdks/javascript>
 - Gorse TypeScript SDK: <https://gorse.io/docs/api/typescript-sdk>
 - Umami Node client: <https://docs.umami.is/docs/api/node-client>
@@ -93,6 +101,10 @@ A CLI oficial foi executada com `--all --type base --yes`. O path final foi norm
 - Embla: carrosséis de pessoas e favoritos; Swiper permanece reservado para requisito avançado.
 - Yet Another React Lightbox: galeria fullscreen do perfil.
 - TanStack Virtual: histórico do chat somente quando o volume justifica.
+- TanStack Query: cache e mutações da identidade, configurações, favoritos e mídia persistida no Supabase.
+- TanStack Router: URLs reais para Auth, onboarding, abas e conversas; guards de sessão, 404 interna e recuperação de deep links no GitHub Pages.
+- react-easy-crop + Canvas: enquadramento real de avatar/capa e conversão WebP antes do upload.
 - Orama: busca local do drawer; Meilisearch e Typesense continuam atrás de futuros adapters.
+- React Aria/Untitled Combobox + TanStack Query: seleção de favoritos por catálogos públicos reais, com debounce, cancelamento, estados assíncronos, limite e reordenação; provedores externos ficam normalizados na Edge Function `catalog-search`.
 
-O fluxo de mídia do perfil e as decisões de não ativar Uppy/crop sem Storage e pipeline reais estão em `docs/PROFILE-MEDIA-FLOW.md`.
+O fluxo de mídia do perfil e a decisão de usar o adapter autenticado do Supabase Storage em vez de Uppy XHR estão em `docs/PROFILE-MEDIA-FLOW.md`. O mapeamento de identidade, detalhes, privacidade, configurações, favoritos e retomada do onboarding está em `docs/PROFILE-PERSISTENCE.md`.

@@ -2,6 +2,7 @@ export const APP_LAUNCH_COLOR = "#ffffff";
 export const PWA_REGISTER_TYPE = "prompt" as const;
 
 export const PWA_ASSET_PATHS = [
+  "404.html",
   "brand/orha-mark-transparent.png",
   "brand/orha-splash-primary.jpg",
   "brand/orha-splash-soft.jpg",

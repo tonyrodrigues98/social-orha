@@ -1,22 +1,36 @@
 # Fluxo de mídia do perfil
 
-Decisão registrada em 2026-08-16 para o protótipo nativo-first do ORHA.
+Decisão atualizada em 2026-08-16 para o ORHA nativo-first.
 
-## Implementado agora
+## Fluxo persistente
 
-- **Yet Another React Lightbox** é o visualizador da galeria. Ele já fazia parte do catálogo instalado e fornece portal, foco, teclado, gestos, navegação, rótulos e estados de carregamento sem recriar um lightbox manual. Referência oficial: <https://yet-another-react-lightbox.com/documentation>.
-- A seleção local aceita JPEG, PNG, WebP e AVIF, com limite de 10 MB por arquivo e nove fotos na galeria.
-- Arquivos são decodificados antes de `setCoverImage` ou `addGalleryImages`; MIME, tamanho ou extensão declarada não são tratados como prova suficiente de uma imagem utilizável.
-- Imagens visíveis reservam dimensões, registram as dimensões naturais para o lightbox e exibem um estado de erro textual quando o carregamento falha.
+1. A tela valida quantidade, MIME, limite de 10 MB e até 12.000 pixels por lado antes de iniciar qualquer processamento.
+2. `react-easy-crop` fornece o enquadramento de avatar e capa; a galeria preserva a imagem inteira.
+3. O processor decodifica a imagem, respeita orientação quando o navegador oferece `createImageBitmap`, reduz sem ampliar e gera WebP por Canvas.
+4. `reserve_profile_media` cria um registro `pending` e devolve bucket/caminho autorizados pelo servidor.
+5. O adapter envia o arquivo processado ao bucket privado `profile-media` usando a sessão Supabase.
+6. A Edge Function `media-verify` baixa o objeto com `service_role`, compara tamanho, assinatura real, MIME e dimensões e somente então chama `finalize_validated_profile_media`, que não é executável pelo navegador.
+7. A leitura usa URLs assinadas; TanStack Query renova a consulta antes da expiração, tenta novamente em 30 segundos quando somente uma assinatura falha e atualiza o estado autoritativo após upload/remoção.
 
-## Decisões de integração
+Falhas de upload ou verificação pedem `remove_profile_media`, que muda o registro para `deleting`. O navegador não apaga o objeto referenciado; `media-cleanup-worker`, autenticado como worker, remove o Storage e somente depois chama `complete_profile_media_cleanup`. Se nem o agendamento puder ser concluído, reservas `pending` com mais de uma hora continuam descobertas pela mesma fila. Depois que `finalize_validated_profile_media` confirma o commit, uma falha transitória ao emitir a URL assinada não transforma o upload concluído em falha nem induz o usuário a duplicá-lo. URLs criadas com `URL.createObjectURL` existem somente durante validação/crop e são revogadas; nunca são armazenadas como estado final do perfil.
 
-### Uppy
+Ao substituir avatar/capa, a promoção server-side muda a mídia anterior para `deleting`. O worker privilegiado repete `list_profile_media_cleanup`/`complete_profile_media_cleanup` até convergir; o navegador não recebe permissão para executar esse contrato operacional.
 
-`@uppy/core`, `@uppy/react` e `@uppy/xhr-upload` permanecem instalados, mas o transporte XHR **não foi ativado**. Ainda não há bucket do Supabase Storage, política RLS de objetos, endpoint autorizado, limite de quota ou contrato de persistência de mídia provisionados. Apontar o XHR para um destino improvisado criaria um upload aparentemente funcional sem isolamento por usuário.
+## Bibliotecas escolhidas
 
-Quando o Storage for provisionado, o Uppy deve entrar atrás de um adapter de mídia com autenticação da sessão, caminho por `user_id`, políticas de leitura/escrita, validação no servidor e limpeza de uploads órfãos.
+- **Yet Another React Lightbox** continua sendo o visualizador fullscreen da galeria, com portal, foco, teclado e gestos. Referência: <https://yet-another-react-lightbox.com/documentation>.
+- **react-easy-crop** fornece a área de recorte, enquanto o processor local transforma o resultado em um arquivo persistível. Referência: <https://github.com/ValentinH/react-easy-crop>.
+- **TanStack Query** mantém identidade, preferências e mídia sincronizadas após cada mutação. Referência: <https://tanstack.com/query/latest/docs/framework/react/overview>.
+- **Supabase Storage** permanece privado e entrega mídia por URLs assinadas. Referência: <https://supabase.com/docs/guides/storage/serving/downloads>.
 
-### react-easy-crop
+## Por que Uppy XHR não foi conectado
 
-O crop não foi exposto nesta etapa. `react-easy-crop` entrega a área de recorte, mas um resultado durável exige também pipeline de canvas/blob, correção de orientação, redução de imagens grandes no iPhone, escolha de formato/qualidade, modal com foco contido e persistência no Storage. Sem esses contratos, o usuário editaria uma imagem que desapareceria ao recarregar. A biblioteca continua como candidata para o editor completo depois do adapter de Storage. Referência oficial: <https://github.com/ValentinH/react-easy-crop>.
+`@uppy/core`, `@uppy/react` e `@uppy/xhr-upload` continuam instalados. O fluxo atual, porém, trabalha com no máximo nove imagens já processadas e arquivos de até 10 MB, além de depender de uma reserva/finalização transacional própria. O SDK oficial do Supabase Storage cobre esse transporte diretamente e preserva a sessão e o contrato de bucket sem um endpoint XHR paralelo.
+
+Uppy pode ser adotado quando houver upload retomável, lotes maiores, providers externos ou uma UX de fila que justifique seu estado adicional. Conectar `XHRUpload` agora duplicaria autenticação e tratamento de erros sem melhorar o contrato existente.
+
+## Provisionamento
+
+O frontend contém os adapters e testes com cliente/Storage injetáveis. A migration que cria tabela, RPCs, bucket e políticas precisa ser aplicada e validada no projeto Supabase antes de considerar o upload disponível em produção. A presença do código não comprova que o ambiente remoto já recebeu esse provisionamento.
+
+As validações no navegador protegem a experiência, mas não são a fronteira de segurança. `media-verify` agora confere os bytes, formato, tamanho e dimensões antes da promoção. Decodificação integral, antivírus e moderação visual continuam sendo camadas adicionais a provisionar quando a política de produção exigir; a inspeção atual não deve ser descrita como substituta dessas camadas.

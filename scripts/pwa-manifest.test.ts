@@ -56,6 +56,7 @@ describe("ORHA PWA manifest", () => {
   it("pre-caches every launch and install asset", () => {
     expect(PWA_ASSET_PATHS).toEqual(
       expect.arrayContaining([
+        "404.html",
         "brand/orha-icon-192.png",
         "brand/orha-icon-512.png",
         "brand/orha-apple-touch-icon.png",

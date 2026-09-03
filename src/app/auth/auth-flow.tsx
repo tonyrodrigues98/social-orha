@@ -3,7 +3,6 @@ import { ArrowLeft, CheckCircle2, Mail } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { Controller, useForm } from "react-hook-form";
 import { Button } from "@/components/base/buttons/button";
-import { SocialButton } from "@/components/base/buttons/social-button";
 import { Checkbox } from "@/components/base/checkbox/checkbox";
 import {
   resendSignUpConfirmation,
@@ -16,7 +15,8 @@ import { getAuthErrorMessage } from "@/infrastructure/supabase/auth-errors";
 import { AuthError, ControlledInput } from "./auth-fields";
 import { useAuth } from "./auth-context";
 
-type AuthScreen = "sign_in" | "sign_up" | "forgot" | "check_email";
+export type AuthFlowRouteScreen = "sign_in" | "sign_up" | "forgot";
+type AuthScreen = AuthFlowRouteScreen | "check_email";
 type EmailForm = { email: string };
 type SignInForm = EmailForm & { password: string };
 type SignUpForm = SignInForm & {
@@ -29,6 +29,10 @@ type ResetPasswordForm = { password: string; confirmPassword: string };
 type AuthFlowProps = {
   /** Starts the post-auth acknowledgement once Supabase has accepted a login. */
   onSignedIn?: () => void;
+  /** Route-owned entry screen; defaults to the login route. */
+  initialScreen?: AuthFlowRouteScreen;
+  /** Keeps login, registration and recovery in the browser history. */
+  onNavigate?: (screen: AuthFlowRouteScreen) => void;
 };
 
 function AccessBrandMark() {
@@ -90,16 +94,28 @@ function AuthFrame({
   );
 }
 
-export function AuthFlow({ onSignedIn }: AuthFlowProps) {
-  const [screen, setScreen] = useState<AuthScreen>("sign_in");
+export function AuthFlow({
+  onSignedIn,
+  initialScreen = "sign_in",
+  onNavigate,
+}: AuthFlowProps) {
+  const [screen, setScreen] = useState<AuthScreen>(initialScreen);
   const [pendingEmail, setPendingEmail] = useState("");
+
+  function showRoute(next: AuthFlowRouteScreen) {
+    if (onNavigate) {
+      onNavigate(next);
+      return;
+    }
+    setScreen(next);
+  }
 
   if (screen === "sign_in") {
     return (
       <SignInScreen
         key="sign-in"
-        onForgot={() => setScreen("forgot")}
-        onCreateAccount={() => setScreen("sign_up")}
+        onForgot={() => showRoute("forgot")}
+        onCreateAccount={() => showRoute("sign_up")}
         onSignedIn={onSignedIn}
       />
     );
@@ -109,7 +125,8 @@ export function AuthFlow({ onSignedIn }: AuthFlowProps) {
     return (
       <SignUpScreen
         key="sign-up"
-        onBack={() => setScreen("sign_in")}
+        onBack={() => showRoute("sign_in")}
+        onSignedIn={onSignedIn}
         onVerification={(email) => {
           setPendingEmail(email);
           setScreen("check_email");
@@ -122,7 +139,7 @@ export function AuthFlow({ onSignedIn }: AuthFlowProps) {
     return (
       <ForgotPasswordScreen
         key="forgot"
-        onBack={() => setScreen("sign_in")}
+        onBack={() => showRoute("sign_in")}
         onSent={(email) => {
           setPendingEmail(email);
           setScreen("check_email");
@@ -135,7 +152,7 @@ export function AuthFlow({ onSignedIn }: AuthFlowProps) {
     <CheckEmailScreen
       key="check-email"
       email={pendingEmail}
-      onBack={() => setScreen("sign_in")}
+      onBack={() => showRoute("sign_in")}
     />
   );
 }
@@ -153,7 +170,6 @@ function SignInScreen({
     defaultValues: { email: "", password: "" },
   });
   const [error, setError] = useState<string | null>(null);
-  const [googleNotice, setGoogleNotice] = useState(false);
 
   const submit = form.handleSubmit(async (values) => {
     setError(null);
@@ -215,24 +231,6 @@ function SignInScreen({
         >
           Entrar
         </Button>
-        <div className="access-divider" aria-hidden="true">
-          <span />
-          ou continue com
-          <span />
-        </div>
-        <SocialButton
-          social="google"
-          theme="brand"
-          className="access-google-button"
-          onClick={() => setGoogleNotice(true)}
-        >
-          Continuar com Google
-        </SocialButton>
-        {googleNotice ? (
-          <p className="access-notice" role="status">
-            A autenticação com Google será ativada em breve.
-          </p>
-        ) : null}
       </form>
       <p className="access-switch-page">
         Ainda não faz parte?
@@ -247,9 +245,11 @@ function SignInScreen({
 function SignUpScreen({
   onBack,
   onVerification,
+  onSignedIn,
 }: {
   onBack: () => void;
   onVerification: (email: string) => void;
+  onSignedIn?: () => void;
 }) {
   const form = useForm<SignUpForm>({
     defaultValues: {
@@ -286,7 +286,11 @@ function SignUpScreen({
         password: values.password,
       });
       if (result.error) throw result.error;
-      if (!result.data.session) onVerification(values.email.trim());
+      if (result.data.session) {
+        onSignedIn?.();
+      } else {
+        onVerification(values.email.trim());
+      }
     } catch (submitError) {
       setError(getAuthErrorMessage(submitError));
     }

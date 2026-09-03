@@ -1,17 +1,39 @@
 import { Bell, Search } from "lucide-react";
 import { Avatar } from "@/components/base/avatar/avatar";
-import { usePrototype } from "../prototype-context";
+import { useNotificationCenter } from "@/domains/notifications";
+import { useAuth } from "../auth/auth-context";
+import { useAppUi } from "../ui-state-context";
 import { BrandMark } from "./brand-mark";
 
 type NativeHeaderProps = {
   title?: string;
   subtitle?: string;
   showBrand?: boolean;
+  notificationUnreadCount?: number;
 };
 
-export function NativeHeader({ title, subtitle, showBrand = false }: NativeHeaderProps) {
-  const { profile, navigate, openDrawer, notificationsUnread } = usePrototype();
-  const initials = profile.fullName
+function NotificationButton({ unreadCount, onOpen }: { unreadCount: number; onOpen: () => void }) {
+  return (
+    <button type="button" className={`icon-button ${unreadCount > 0 ? "has-indicator" : ""}`} aria-label="Notificações" onClick={onOpen}>
+      <Bell size={20} strokeWidth={1.9} />
+    </button>
+  );
+}
+
+function LiveNotificationButton({ onOpen }: { onOpen: () => void }) {
+  const notifications = useNotificationCenter({ unreadOnly: true });
+  return <NotificationButton unreadCount={notifications.unreadCount} onOpen={onOpen} />;
+}
+
+export function NativeHeader({
+  title,
+  subtitle,
+  showBrand = false,
+  notificationUnreadCount,
+}: NativeHeaderProps) {
+  const { navigate, openDrawer } = useAppUi();
+  const { identity } = useAuth();
+  const initials = (identity?.profile.full_name ?? "ORHA")
     .split(/\s+/)
     .slice(0, 2)
     .map((part) => part[0])
@@ -27,9 +49,14 @@ export function NativeHeader({ title, subtitle, showBrand = false }: NativeHeade
         <button type="button" className="icon-button" aria-label="Pesquisar" onClick={() => openDrawer({ type: "search" })}>
           <Search size={20} strokeWidth={1.9} />
         </button>
-        <button type="button" className={`icon-button ${notificationsUnread ? "has-indicator" : ""}`} aria-label="Notificações" onClick={() => openDrawer({ type: "notifications" })}>
-          <Bell size={20} strokeWidth={1.9} />
-        </button>
+        {notificationUnreadCount === undefined ? (
+          <LiveNotificationButton onOpen={() => openDrawer({ type: "notifications" })} />
+        ) : (
+          <NotificationButton
+            unreadCount={notificationUnreadCount}
+            onOpen={() => openDrawer({ type: "notifications" })}
+          />
+        )}
         <button type="button" className="header-profile-trigger" aria-label="Abrir perfil" onClick={() => navigate("perfil")}>
           <Avatar size="sm" initials={initials} alt="Seu perfil" contentClassName="avatar-neutral" />
         </button>

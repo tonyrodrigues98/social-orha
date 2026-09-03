@@ -11,6 +11,29 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="ORHA" />
+    <script>
+      (() => {
+        const landing = new URL(window.location.href);
+        const recoveredRoute = landing.searchParams.get("__orha_route");
+        if (
+          !recoveredRoute ||
+          !recoveredRoute.startsWith("/") ||
+          recoveredRoute.startsWith("//") ||
+          recoveredRoute.includes("\\")
+        ) {
+          return;
+        }
+
+        const basePath = new URL("%BASE_URL%", window.location.origin).pathname.replace(/\/$/, "");
+        const restored = new URL(`${basePath}${recoveredRoute}`, window.location.origin);
+        if (restored.origin !== window.location.origin) return;
+        window.history.replaceState(
+          window.history.state,
+          "",
+          `${restored.pathname}${restored.search}${restored.hash}`,
+        );
+      })();
+    </script>
     <link
       rel="apple-touch-icon"
       sizes="180x180"
@@ -27,10 +50,6 @@
       as="image"
       href="%BASE_URL%brand/orha-mark-transparent.png"
       fetchpriority="high"
-    />
-    <meta
-      name="description"
-      content="ORHA — uma rede social cristã para conhecer pessoas e pertencer a comunidades."
     />
     <style>
       :root {

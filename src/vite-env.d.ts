@@ -4,6 +4,9 @@
 interface ImportMetaEnv {
   readonly VITE_SUPABASE_URL?: string;
   readonly VITE_SUPABASE_PUBLISHABLE_KEY?: string;
+  readonly VITE_ORHA_SUPPORT_EMAIL?: string;
+  readonly VITE_ORHA_BASE_PATH?: string;
+  readonly VITE_ORHA_PUBLIC_ORIGIN?: string;
 }
 
 interface ImportMeta {

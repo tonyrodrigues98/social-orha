@@ -31,6 +31,8 @@ export interface ChatMessageData {
   reactions?: { emoji: string; userIds: string[]; count: number }[]
   isEdited?: boolean
   isPinned?: boolean
+  isForwarded?: boolean
+  deletedAt?: Date | number
   isSystem?: boolean
   systemEvent?: string
 
@@ -49,6 +51,8 @@ export interface ChatConfig {
   onReply?: (message: ChatMessageData) => void
   onEdit?: (message: ChatMessageData) => void
   onDelete?: (messageId: string) => void
+  onForward?: (message: ChatMessageData) => void
+  onReport?: (message: ChatMessageData) => void
   onPin?: (messageId: string) => void
 }
 

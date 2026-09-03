@@ -17,6 +17,8 @@ import {
   Pin,
   Pencil,
   Trash2,
+  Forward,
+  Flag,
   X,
   Paperclip,
   Image as ImageIcon,
@@ -67,6 +69,8 @@ interface ChatProviderProps {
   onReply?: (message: ChatMessageData) => void
   onEdit?: (message: ChatMessageData) => void
   onDelete?: (messageId: string) => void
+  onForward?: (message: ChatMessageData) => void
+  onReport?: (message: ChatMessageData) => void
   onPin?: (messageId: string) => void
   children: React.ReactNode
   style?: React.CSSProperties
@@ -84,6 +88,8 @@ function ChatProvider({
   onReply,
   onEdit,
   onDelete,
+  onForward,
+  onReport,
   onPin,
   children,
   style,
@@ -100,9 +106,11 @@ function ChatProvider({
       onReply,
       onEdit,
       onDelete,
+      onForward,
+      onReport,
       onPin,
     }),
-    [currentUser, dateFormat, messageGroupingInterval, onReactionAdd, onReactionRemove, onReply, onEdit, onDelete, onPin]
+    [currentUser, dateFormat, messageGroupingInterval, onReactionAdd, onReactionRemove, onReply, onEdit, onDelete, onForward, onReport, onPin]
   )
 
   return (
@@ -116,7 +124,7 @@ function ChatProvider({
 
 // ─── Quick emoji picker (6 common reactions) ──────────────────────────────────
 
-const QUICK_REACTIONS = ["\u{1F44D}", "\u{2764}\u{FE0F}", "\u{1F602}", "\u{1F62E}", "\u{1F64F}", "\u{1F525}"]
+const QUICK_REACTIONS = ["\u{1F44D}", "\u{2764}\u{FE0F}", "\u{1F64F}", "\u{1F932}", "\u{1F49C}"]
 
 function QuickReactionPicker({
   onSelect,
@@ -156,18 +164,21 @@ interface ChatMessageActionsProps {
 }
 
 function ChatMessageActions({ message, isOutgoing }: ChatMessageActionsProps) {
-  const { onReply, onReactionAdd, onEdit, onDelete, onPin } = useChatContext()
+  const { onReply, onReactionAdd, onEdit, onDelete, onForward, onReport, onPin } = useChatContext()
   const [showReactions, setShowReactions] = React.useState(false)
   const [showMore, setShowMore] = React.useState(false)
 
   return (
     <div
+      data-message-id={message.id}
+      tabIndex={-1}
       className={cn(
         "chat-toolbar-enter pointer-events-none absolute -top-3 z-10 flex items-center gap-0.5 rounded-lg border border-[var(--chat-border-strong)] bg-[var(--chat-bg-sidebar)] p-0.5 opacity-0 shadow-[var(--chat-shadow-toolbar)] transition-opacity group-hover/message:pointer-events-auto group-hover/message:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100",
         isOutgoing ? "right-0" : "left-10"
       )}
     >
       {/* Reply */}
+      {onReply && (
       <button
         type="button"
         onClick={() => onReply?.(message)}
@@ -176,9 +187,10 @@ function ChatMessageActions({ message, isOutgoing }: ChatMessageActionsProps) {
       >
         <Reply className="size-3.5" />
       </button>
+      )}
 
       {/* React — opens quick picker */}
-      <div className="relative">
+      {onReactionAdd && <div className="relative">
         <button
           type="button"
           onClick={() => setShowReactions(!showReactions)}
@@ -197,10 +209,10 @@ function ChatMessageActions({ message, isOutgoing }: ChatMessageActionsProps) {
             />
           </div>
         )}
-      </div>
+      </div>}
 
       {/* More — dropdown */}
-      <div className="relative">
+      {(onForward || (!isOutgoing && onReport) || (isOutgoing && (onEdit || onDelete)) || onPin) && <div className="relative">
         <button
           type="button"
           onClick={() => setShowMore(!showMore)}
@@ -212,12 +224,12 @@ function ChatMessageActions({ message, isOutgoing }: ChatMessageActionsProps) {
         {showMore && (
           <div
             className={cn(
-              "chat-toolbar-enter absolute top-full z-20 mt-1 w-40 overflow-hidden rounded-lg border border-[var(--chat-border-strong)] bg-[var(--chat-bg-sidebar)] py-1 shadow-[var(--chat-shadow-toolbar)]",
+              "chat-toolbar-enter absolute top-full z-20 mt-1 w-48 overflow-hidden rounded-lg border border-[var(--chat-border-strong)] bg-[var(--chat-bg-sidebar)] py-1 shadow-[var(--chat-shadow-toolbar)]",
               isOutgoing ? "right-0" : "left-0"
             )}
             onMouseLeave={() => setShowMore(false)}
           >
-            {isOutgoing && (
+            {isOutgoing && onEdit && (
               <button
                 type="button"
                 onClick={() => {
@@ -230,7 +242,29 @@ function ChatMessageActions({ message, isOutgoing }: ChatMessageActionsProps) {
                 Editar
               </button>
             )}
-            <button
+            {onForward && <button
+              type="button"
+              onClick={() => {
+                onForward(message)
+                setShowMore(false)
+              }}
+              className="flex min-h-11 w-full items-center gap-2 px-3 py-2 text-[13px] text-[var(--chat-text-secondary)] transition-colors hover:bg-[var(--chat-accent-soft)] hover:text-[var(--chat-text-primary)]"
+            >
+              <Forward className="size-3.5" />
+              Encaminhar
+            </button>}
+            {!isOutgoing && onReport && <button
+              type="button"
+              onClick={() => {
+                onReport(message)
+                setShowMore(false)
+              }}
+              className="flex min-h-11 w-full items-center gap-2 px-3 py-2 text-[13px] text-[var(--chat-red)] transition-colors hover:bg-red-500/10"
+            >
+              <Flag className="size-3.5" />
+              Denunciar mensagem
+            </button>}
+            {onPin && <button
               type="button"
               onClick={() => {
                 onPin?.(message.id)
@@ -240,8 +274,8 @@ function ChatMessageActions({ message, isOutgoing }: ChatMessageActionsProps) {
             >
               <Pin className="size-3.5" />
               {message.isPinned ? "Desafixar" : "Fixar"}
-            </button>
-            {isOutgoing && (
+            </button>}
+            {isOutgoing && onDelete && (
               <button
                 type="button"
                 onClick={() => {
@@ -256,7 +290,7 @@ function ChatMessageActions({ message, isOutgoing }: ChatMessageActionsProps) {
             )}
           </div>
         )}
-      </div>
+      </div>}
     </div>
   )
 }
@@ -508,7 +542,7 @@ function ChatMessage({
         {/* Bubble — relative for hover toolbar positioning */}
         <div className="relative">
           {/* Hover actions toolbar */}
-          <ChatMessageActions message={message} isOutgoing={isOutgoing} />
+          {!message.deletedAt && <ChatMessageActions message={message} isOutgoing={isOutgoing} />}
 
           <div
             className={cn(
@@ -519,6 +553,13 @@ function ChatMessage({
               radiusClass
             )}
           >
+            {message.isForwarded && !message.deletedAt && (
+              <p className="mb-1 text-[11px] font-medium opacity-65">Encaminhada</p>
+            )}
+
+            {message.deletedAt ? (
+              <p className="text-[14px] italic opacity-65">Mensagem excluída</p>
+            ) : <>
             {/* Quoted reply */}
             {message.replyTo && (
               <ChatMessageReply
@@ -625,6 +666,7 @@ function ChatMessage({
             {message.voice && (
               <ChatVoiceMessage voice={message.voice} isOutgoing={isOutgoing} />
             )}
+            </>}
 
             {/* Inline timestamp + status + edited label */}
             <div
@@ -654,7 +696,7 @@ function ChatMessage({
         </div>
 
         {/* Reactions bar */}
-        {message.reactions && message.reactions.length > 0 && (
+        {!message.deletedAt && message.reactions && message.reactions.length > 0 && (
           <ChatMessageReactions
             messageId={message.id}
             reactions={message.reactions}
@@ -675,13 +717,16 @@ function ChatMessage({
       {/* Image lightbox */}
       {lightboxImage && typeof document !== "undefined" && createPortal(
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Imagem ampliada"
           className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm"
           onClick={() => setLightboxImage(null)}
         >
           <button
             onClick={() => setLightboxImage(null)}
-            className="absolute top-4 right-4 flex size-10 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
-            aria-label="Close lightbox"
+            className="absolute top-4 right-4 flex size-11 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
+            aria-label="Fechar imagem"
           >
             <X className="size-5" />
           </button>
@@ -736,6 +781,11 @@ function ChatMessageStatus({
 }: {
   status: NonNullable<ChatMessageData["status"]>
 }) {
+  const label = status === "sending" ? "Enviando"
+    : status === "sent" ? "Enviada"
+      : status === "delivered" ? "Entregue"
+        : status === "read" ? "Lida" : "Falha no envio"
+  const icon = (() => {
   switch (status) {
     case "sending":
       return <Clock className="size-3 animate-pulse opacity-50" />
@@ -752,6 +802,8 @@ function ChatMessageStatus({
         <AlertCircle className="size-3.5 cursor-pointer text-[var(--chat-red)]" />
       )
   }
+  })()
+  return <span role="img" aria-label={label} title={label}>{icon}</span>
 }
 
 // ─── ChatMessageReactions (interactive) ───────────────────────────────────────
@@ -975,13 +1027,15 @@ function ChatTypingIndicator({ users, className }: ChatTypingIndicatorProps) {
 
   const label =
     users.length === 1
-      ? `${users[0].name} is typing`
+      ? `${users[0].name} está digitando`
       : users.length === 2
-        ? `${users[0].name} and ${users[1].name} are typing`
-        : "Several people are typing"
+        ? `${users[0].name} e ${users[1].name} estão digitando`
+        : "Várias pessoas estão digitando"
 
   return (
     <div
+      role="status"
+      aria-live="polite"
       className={cn(
         "chat-message mt-4 flex items-end gap-2",
         className
@@ -1281,8 +1335,8 @@ function ChatFilePreview({
 
 interface ChatComposerProps {
   onSend?: (text: string) => void
+  onSubmit?: (input: { text: string; files: File[] }) => void
   onTyping?: (isTyping: boolean) => void
-  onFileUpload?: (files: File[]) => void
   onVoiceRecord?: () => void
   voiceRecording?: boolean
   voiceDurationLabel?: string
@@ -1298,8 +1352,8 @@ interface ChatComposerProps {
 
 function ChatComposer({
   onSend,
+  onSubmit,
   onTyping,
-  onFileUpload,
   onVoiceRecord,
   voiceRecording = false,
   voiceDurationLabel = "0:00",
@@ -1320,8 +1374,8 @@ function ChatComposer({
   const { textareaRef, resize } = useAutoResize({ maxRows: 6 })
   const { handleKeyDown: handleTypingKeyDown, stopTyping } =
     useTypingIndicator({ onTypingChange: onTyping })
-  const fileInputRef = React.useRef<HTMLInputElement>(null)
   const imageInputRef = React.useRef<HTMLInputElement>(null)
+  const audioInputRef = React.useRef<HTMLInputElement>(null)
   const attachRootRef = React.useRef<HTMLDivElement>(null)
   const attachTriggerRef = React.useRef<HTMLButtonElement>(null)
   const attachMenuRef = React.useRef<HTMLDivElement>(null)
@@ -1331,13 +1385,13 @@ function ChatComposer({
   const addFiles = React.useCallback((newFiles: FileList | File[]) => {
     const candidates = Array.from(newFiles)
     const evaluated = candidates.map((file) => ({ file, validation: validateFile(file) }))
-    const arr = evaluated.filter((item) => item.validation.valid).map((item) => item.file).slice(0, 10)
+    const arr = evaluated.filter((item) => item.validation.valid).map((item) => item.file).slice(0, 1)
     const rejected = evaluated.find((item) => !item.validation.valid)?.file
     setAttachmentError(
       rejected
         ? `${sanitizeFileName(rejected.name)} não é permitido ou excede o limite de 25 MB.`
-        : candidates.length > 10
-          ? "Envie no máximo 10 anexos por mensagem."
+        : candidates.length > 1
+          ? "Envie somente uma imagem ou um áudio por mensagem."
           : ""
     )
     if (arr.length === 0) return
@@ -1360,9 +1414,8 @@ function ChatComposer({
       }
     })
 
-    setFiles((prev) => [...prev, ...items])
-    onFileUpload?.(arr)
-  }, [onFileUpload])
+    setFiles(items)
+  }, [])
 
   React.useEffect(() => {
     if (!showAttachMenu) return
@@ -1413,12 +1466,13 @@ function ChatComposer({
   const handleSend = React.useCallback(() => {
     const trimmed = value.trim()
     if ((!trimmed && files.length === 0) || disabled) return
-    if (trimmed) onSend?.(trimmed)
+    if (onSubmit) onSubmit({ text: trimmed, files: files.map((item) => item.file) })
+    else if (trimmed) onSend?.(trimmed)
     setValue("")
     setFiles([])
     stopTyping()
     if (textareaRef.current) textareaRef.current.style.height = "auto"
-  }, [value, files, disabled, onSend, textareaRef, stopTyping])
+  }, [value, files, disabled, onSend, onSubmit, textareaRef, stopTyping])
 
   const handleKeyDown = React.useCallback(
     (e: React.KeyboardEvent) => {
@@ -1482,7 +1536,7 @@ function ChatComposer({
         <div className="chat-drop-overlay">
           <div className="flex flex-col items-center gap-2">
             <Upload className="size-8 text-[var(--chat-accent)]" />
-            <span className="text-[14px] font-medium text-[var(--chat-accent)]">Drop files to upload</span>
+            <span className="text-[14px] font-medium text-[var(--chat-accent)]">Solte uma imagem ou um áudio para anexar</span>
           </div>
         </div>
       )}
@@ -1545,19 +1599,6 @@ function ChatComposer({
                     type="button"
                     role="menuitem"
                     onClick={() => {
-                      fileInputRef.current?.click()
-                      setShowAttachMenu(false)
-                      window.requestAnimationFrame(() => attachTriggerRef.current?.focus())
-                    }}
-                    className="flex min-h-11 w-full items-center gap-2.5 px-3 py-2 text-[13px] text-[var(--chat-text-secondary)] transition-colors hover:bg-[var(--chat-accent-soft)] hover:text-[var(--chat-text-primary)]"
-                  >
-                    <Paperclip className="size-4" />
-                    Anexar arquivo
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
                       imageInputRef.current?.click()
                       setShowAttachMenu(false)
                       window.requestAnimationFrame(() => attachTriggerRef.current?.focus())
@@ -1565,15 +1606,28 @@ function ChatComposer({
                     className="flex min-h-11 w-full items-center gap-2.5 px-3 py-2 text-[13px] text-[var(--chat-text-secondary)] transition-colors hover:bg-[var(--chat-accent-soft)] hover:text-[var(--chat-text-primary)]"
                   >
                     <ImageIcon className="size-4" />
-                    Foto ou vídeo
+                    Foto
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      audioInputRef.current?.click()
+                      setShowAttachMenu(false)
+                      window.requestAnimationFrame(() => attachTriggerRef.current?.focus())
+                    }}
+                    className="flex min-h-11 w-full items-center gap-2.5 px-3 py-2 text-[13px] text-[var(--chat-text-secondary)] transition-colors hover:bg-[var(--chat-accent-soft)] hover:text-[var(--chat-text-primary)]"
+                  >
+                    <Mic className="size-4" />
+                    Áudio
                   </button>
                 </div>
               )}
             </div>
 
             {/* Hidden file inputs */}
-            <input ref={fileInputRef} type="file" multiple className="hidden" onChange={(e) => { if (e.target.files) addFiles(e.target.files); e.target.value = "" }} />
-            <input ref={imageInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { if (e.target.files) addFiles(e.target.files); e.target.value = "" }} />
+            <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/avif" className="hidden" onChange={(e) => { if (e.target.files) addFiles(e.target.files); e.target.value = "" }} />
+            <input ref={audioInputRef} type="file" accept="audio/webm,audio/mp4,audio/mpeg,audio/ogg,audio/wav" className="hidden" onChange={(e) => { if (e.target.files) addFiles(e.target.files); e.target.value = "" }} />
 
             <div className="relative flex flex-1 items-end rounded-[22px] border border-[var(--chat-border)] bg-[var(--chat-bg-sidebar)]">
               <textarea

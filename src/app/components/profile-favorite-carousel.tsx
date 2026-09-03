@@ -1,6 +1,6 @@
 import useEmblaCarousel from "embla-carousel-react";
 import { Plus, type LucideIcon } from "lucide-react";
-import type { FavoriteCategory } from "../prototype-context";
+import type { FavoriteCategory } from "@/domain/profile-data";
 
 type ProfileFavoriteCarouselProps = {
   category: FavoriteCategory;

@@ -7,6 +7,24 @@ export type AppRole =
 
 export type ProfileVisibility = "public" | "friends" | "private";
 
+export type ProfileAccountStatus =
+  | "active"
+  | "restricted"
+  | "suspended"
+  | "banned";
+
+export type ProfileModerationState = {
+  profile_id: string;
+  /** Effective server status after expiry reconciliation. */
+  status: ProfileAccountStatus;
+  recorded_status: ProfileAccountStatus;
+  access_enabled: boolean;
+  public_reason: string | null;
+  restricted_until: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type Profile = {
   id: string;
   full_name: string | null;
@@ -44,6 +62,7 @@ export type ProfileDetails = {
 export type ProfilePrivacy = {
   profile_id: string;
   profile_visibility: ProfileVisibility;
+  age_visibility: ProfileVisibility;
   location_visibility: ProfileVisibility;
   favorites_visibility: ProfileVisibility;
   gallery_visibility: ProfileVisibility;
@@ -54,6 +73,7 @@ export type UserIdentity = {
   profile: Profile;
   details: ProfileDetails;
   privacy: ProfilePrivacy;
+  moderationState: ProfileModerationState;
   role: AppRole;
 };
 

@@ -1,9 +1,15 @@
-import { ChevronRight, Church, MessageCircleMore, Plus, UsersRound } from "lucide-react";
+import { ChevronRight, MessageCircleMore, Plus, UsersRound } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
+import { useCommunities, usePosts } from "@/domains/social";
 import { NativeHeader } from "../components/native-header";
-import { usePrototype } from "../prototype-context";
+import { buildCommunityPath } from "../router-policy";
+import { useAppUi } from "../ui-state-context";
 
 export function CommunityPage() {
-  const { communities: testCommunities, openDrawer } = usePrototype();
+  const { openDrawer } = useAppUi();
+  const routeNavigate = useNavigate();
+  const communitiesQuery = useCommunities();
+  const postsQuery = usePosts();
   return (
     <div className="page">
       <NativeHeader title="Comunidade" subtitle="Encontre gente que entende você" />
@@ -19,15 +25,51 @@ export function CommunityPage() {
         <section className="content-section">
           <div className="section-heading">
             <div><span className="section-overline">EM ALTA</span><h2>Conversas acontecendo agora</h2></div>
+            <button type="button" className="text-button" onClick={() => openDrawer({ type: "create-post" })}>Publicar</button>
           </div>
-          <div className="topic-grid">
-            <button type="button" className="topic-card violet" onClick={() => openDrawer({ type: "topic", topic: "Vida e propósito" })}>
-              <MessageCircleMore size={21} /><strong>Vida e propósito</strong><small>128 conversando</small>
-            </button>
-            <button type="button" className="topic-card green" onClick={() => openDrawer({ type: "topic", topic: "Fé no cotidiano" })}>
-              <Church size={21} /><strong>Fé no cotidiano</strong><small>86 conversando</small>
-            </button>
-          </div>
+          {postsQuery.status === "loading" ? (
+            <p className="prototype-empty" role="status">Carregando conversas…</p>
+          ) : postsQuery.status === "error" ? (
+            <p className="prototype-empty" role="alert">Não foi possível carregar as conversas agora.</p>
+          ) : postsQuery.items.length ? (
+            <>
+              <div className="topic-grid">
+                {postsQuery.items.map((post, index) => (
+                  <button
+                    type="button"
+                    className={`topic-card ${index % 2 === 0 ? "violet" : "green"}`}
+                    key={post.id}
+                    onClick={() => openDrawer({
+                      type: "topic",
+                      topic: post.body,
+                      postId: post.id,
+                      communityId: post.communityId ?? undefined,
+                      reactionCount: post.reactionCount,
+                      viewerReaction: post.viewerReaction,
+                    })}
+                  >
+                    <MessageCircleMore size={21} />
+                    <strong>{post.body}</strong>
+                    <small>
+                      {post.commentCount} {post.commentCount === 1 ? "comentário" : "comentários"}
+                      {" · "}
+                      {post.reactionCount} {post.reactionCount === 1 ? "reação" : "reações"}
+                    </small>
+                  </button>
+                ))}
+              </div>
+              {postsQuery.hasMore ? (
+                <button
+                  type="button"
+                  className="text-button"
+                  disabled={postsQuery.isLoadingMore}
+                  onClick={() => void postsQuery.loadMore()}
+                >
+                  {postsQuery.isLoadingMore ? "Carregando…" : "Carregar mais conversas"}
+                </button>
+              ) : null}
+            </>
+          ) : <p className="prototype-empty">Nenhuma conversa publicada ainda.</p>}
         </section>
 
         <section className="content-section">
@@ -35,15 +77,33 @@ export function CommunityPage() {
             <div><span className="section-overline">PARA VOCÊ</span><h2>Comunidades sugeridas</h2></div>
           </div>
           <div className="community-list elevated-list">
-            {testCommunities.map((community) => (
-              <button type="button" className="community-row" key={community.name} onClick={() => openDrawer({ type: "community", communityName: community.name })}>
-                <span className="community-monogram" style={{ background: community.accent }}>
-                  {community.name.slice(0, 2).toUpperCase()}
-                </span>
-                <span className="community-copy"><strong>{community.name}</strong><small>{community.topic}</small></span>
-                <ChevronRight size={18} aria-hidden />
-              </button>
-            ))}
+            {communitiesQuery.status === "loading" ? (
+              <p className="prototype-empty" role="status">Carregando comunidades…</p>
+            ) : communitiesQuery.status === "error" ? (
+              <p className="prototype-empty" role="alert">Não foi possível carregar comunidades agora.</p>
+            ) : communitiesQuery.items.length ? (
+              <>
+                {communitiesQuery.items.map((community) => (
+                  <button type="button" className="community-row" key={community.id} onClick={() => void routeNavigate({ to: buildCommunityPath(community.id) })}>
+                    <span className="community-monogram">
+                      {community.name.slice(0, 2).toUpperCase()}
+                    </span>
+                    <span className="community-copy"><strong>{community.name}</strong><small>{community.description || `${community.memberCount} ${community.memberCount === 1 ? "membro" : "membros"}`}</small></span>
+                    <ChevronRight size={18} aria-hidden />
+                  </button>
+                ))}
+                {communitiesQuery.hasMore ? (
+                  <button
+                    type="button"
+                    className="text-button"
+                    disabled={communitiesQuery.isLoadingMore}
+                    onClick={() => void communitiesQuery.loadMore()}
+                  >
+                    {communitiesQuery.isLoadingMore ? "Carregando…" : "Carregar mais comunidades"}
+                  </button>
+                ) : null}
+              </>
+            ) : <p className="prototype-empty">Nenhuma comunidade disponível agora.</p>}
           </div>
         </section>
       </main>

@@ -1,15 +1,30 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef } from "react";
+import {
+  useCanGoBack,
+  useNavigate,
+  useRouter,
+  useRouterState,
+} from "@tanstack/react-router";
 import { motion, useReducedMotion } from "motion/react";
 import { revokeAllRecordedAudioUrls } from "@/infrastructure/media/browser-audio-recorder";
 import { BottomNavigation } from "./components/bottom-navigation";
-import { PrototypeDrawer } from "./components/prototype-drawer";
+import { AppDrawer } from "./components/app-drawer";
 import { CommunityPage } from "./pages/community-page";
 import { ConversationsPage } from "./pages/conversations-page";
 import { ExplorePage } from "./pages/explore-page";
 import { HomePage } from "./pages/home-page";
 import { ProfilePage } from "./pages/profile-page";
-import { PrototypeProvider } from "./prototype-context";
+import { AppUiProvider, type AppUiNavigation } from "./ui-state-context";
+import {
+  ROUTE_PATHS,
+  SECTION_PATHS,
+  getConversationIdFromPathname,
+  getSectionFromPathname,
+  normalizeRouterBasePath,
+} from "./router-policy";
 import type { AppSection } from "./types";
+
+const ROUTER_BASE_PATH = normalizeRouterBasePath(import.meta.env.BASE_URL);
 
 const loadPrivateChatPage = () => import("./pages/private-chat-page");
 const PrivateChatPage = lazy(() => loadPrivateChatPage().then((module) => ({ default: module.PrivateChatPage })));
@@ -39,9 +54,14 @@ function ChatLoadingSurface() {
 
 export function AuthenticatedApp() {
   const reduceMotion = useReducedMotion();
-  const [section, setSection] = useState<AppSection>("inicio");
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const router = useRouter();
+  const canGoBack = useCanGoBack();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const section = getSectionFromPathname(pathname, ROUTER_BASE_PATH);
+  const activeConversationId = getConversationIdFromPathname(pathname, ROUTER_BASE_PATH);
   const returnFocusRef = useRef<HTMLElement | null>(null);
+  const previousConversationId = useRef<string | null>(activeConversationId);
 
   useEffect(() => {
     if (activeConversationId) return;
@@ -55,21 +75,45 @@ export function AuthenticatedApp() {
 
   useEffect(() => revokeAllRecordedAudioUrls, []);
 
+  useEffect(() => {
+    const hadOpenConversation = previousConversationId.current !== null;
+    previousConversationId.current = activeConversationId;
+    if (!hadOpenConversation || activeConversationId) return;
+    window.requestAnimationFrame(() => returnFocusRef.current?.focus({ preventScroll: true }));
+  }, [activeConversationId]);
+
+  const navigateApp = useCallback((destination: AppUiNavigation) => {
+    if (typeof destination === "string") {
+      void navigate({ to: SECTION_PATHS[destination] });
+      return;
+    }
+    void navigate({
+      to: ROUTE_PATHS.report,
+      params: { targetType: destination.targetType, targetId: destination.targetId },
+    });
+  }, [navigate]);
+
   const openChat = useCallback((conversationId: string) => {
     returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    setActiveConversationId(conversationId);
-  }, []);
+    void navigate({
+      to: ROUTE_PATHS.conversation,
+      params: { conversationId },
+    });
+  }, [navigate]);
 
   const closeChat = useCallback(() => {
-    setActiveConversationId(null);
-    window.requestAnimationFrame(() => returnFocusRef.current?.focus({ preventScroll: true }));
-  }, []);
+    if (canGoBack) {
+      router.history.back();
+      return;
+    }
+    void navigate({ to: ROUTE_PATHS.conversations, replace: true });
+  }, [canGoBack, navigate, router.history]);
 
   const ActivePage = pages[section];
   const chatIsOpen = activeConversationId !== null;
 
   return (
-    <PrototypeProvider navigate={setSection} openChat={openChat}>
+    <AppUiProvider navigate={navigateApp} openConversation={openChat}>
       <div className={`app-viewport ${chatIsOpen ? "chat-viewport" : ""}`} style={{ background: "#fff" }}>
         <motion.div
           key={section}
@@ -100,8 +144,8 @@ export function AuthenticatedApp() {
           </motion.div>
         ) : null}
       </div>
-      {!chatIsOpen ? <BottomNavigation value={section} onChange={setSection} /> : null}
-      <PrototypeDrawer />
-    </PrototypeProvider>
+      {!chatIsOpen ? <BottomNavigation value={section} onChange={navigateApp} /> : null}
+      <AppDrawer />
+    </AppUiProvider>
   );
 }

@@ -34,6 +34,12 @@ jobs:
         run: npm run typecheck
       - name: Lint
         run: npm run lint
+      - name: Audit production debt
+        run: npm run audit:production-debt
+      - name: Audit secrets
+        run: npm run audit:secrets
+      - name: Audit text encoding
+        run: npm run audit:text-encoding
       - name: Test
         run: npm run test
       - name: Check library catalog
@@ -43,6 +49,8 @@ jobs:
         env:
           VITE_SUPABASE_URL: https://iuaczhkfmwpyhtpdmuyt.supabase.co
           VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_xNd5Om5FT_OLrckCe4H6CA_SIwUbceB
+          VITE_ORHA_BASE_PATH: /social-orha/
+          VITE_ORHA_PUBLIC_ORIGIN: https://tonyrodrigues98.github.io
       - name: Configure Pages
         uses: actions/configure-pages@v6
       - name: Upload artifact
@@ -50,8 +58,49 @@ jobs:
         with:
           path: dist
 
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22.12.0
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium webkit
+      - name: Run production-grade E2E against staging
+        run: npm run test:e2e:production
+        env:
+          ORHA_STAGING_SUPABASE_URL: ${{ vars.ORHA_STAGING_SUPABASE_URL }}
+          ORHA_STAGING_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.ORHA_STAGING_SUPABASE_PUBLISHABLE_KEY }}
+          ORHA_E2E_SUPABASE_HOST: ${{ vars.ORHA_E2E_SUPABASE_HOST }}
+          ORHA_E2E_USER_A_EMAIL: ${{ secrets.ORHA_E2E_USER_A_EMAIL }}
+          ORHA_E2E_USER_A_PASSWORD: ${{ secrets.ORHA_E2E_USER_A_PASSWORD }}
+          ORHA_E2E_USER_A_PROFILE_TEXT: ${{ secrets.ORHA_E2E_USER_A_PROFILE_TEXT }}
+          ORHA_E2E_USER_A_ROTATED_PASSWORD: ${{ secrets.ORHA_E2E_USER_A_ROTATED_PASSWORD }}
+          ORHA_E2E_USER_B_EMAIL: ${{ secrets.ORHA_E2E_USER_B_EMAIL }}
+          ORHA_E2E_USER_B_PASSWORD: ${{ secrets.ORHA_E2E_USER_B_PASSWORD }}
+          ORHA_E2E_USER_B_PROFILE_TEXT: ${{ secrets.ORHA_E2E_USER_B_PROFILE_TEXT }}
+          ORHA_E2E_ADMIN_EMAIL: ${{ secrets.ORHA_E2E_ADMIN_EMAIL }}
+          ORHA_E2E_ADMIN_PASSWORD: ${{ secrets.ORHA_E2E_ADMIN_PASSWORD }}
+          ORHA_E2E_ADMIN_PROFILE_TEXT: ${{ secrets.ORHA_E2E_ADMIN_PROFILE_TEXT }}
+          ORHA_E2E_MODERATOR_EMAIL: ${{ secrets.ORHA_E2E_MODERATOR_EMAIL }}
+          ORHA_E2E_MODERATOR_PASSWORD: ${{ secrets.ORHA_E2E_MODERATOR_PASSWORD }}
+          ORHA_E2E_MODERATOR_PROFILE_TEXT: ${{ secrets.ORHA_E2E_MODERATOR_PROFILE_TEXT }}
+          ORHA_E2E_SERVICE_ROLE_KEY: ${{ secrets.ORHA_E2E_SERVICE_ROLE_KEY }}
+          ORHA_E2E_EMAIL_DOMAIN: ${{ secrets.ORHA_E2E_EMAIL_DOMAIN }}
+          ORHA_E2E_SMTP_DELIVERY_VERIFIED: ${{ secrets.ORHA_E2E_SMTP_DELIVERY_VERIFIED }}
+          VITE_ORHA_BASE_PATH: /social-orha/
+          VITE_ORHA_PUBLIC_ORIGIN: http://127.0.0.1:4173
+
   deploy:
-    needs: build
+    needs: [build, e2e]
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -60,3 +109,31 @@ jobs:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v5
+
+  pages-smoke:
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22.12.0
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium webkit
+      - name: Wait for deployed Pages URL
+        run: curl --fail --retry 10 --retry-all-errors --retry-delay 6 https://tonyrodrigues98.github.io/social-orha/
+      - name: Smoke-test the deployed artifact
+        run: npm run test:e2e:public
+        env:
+          ORHA_E2E_BASE_URL: https://tonyrodrigues98.github.io/social-orha/
+      - name: Audit direct-route host capability
+        run: npm run audit:host
+        env:
+          ORHA_HOST_URL: https://tonyrodrigues98.github.io/social-orha/

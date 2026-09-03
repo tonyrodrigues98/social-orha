@@ -8,7 +8,17 @@ export default tseslint.config(
   {
     // Untitled's copied registry is vendor-owned. Locally maintained GodUI and
     // chatcn adaptations stay linted because they contain ORHA runtime logic.
-    ignores: ["dist", "node_modules", "src/components/base/**", "src/components/foundations/**"],
+    ignores: [
+      "dist",
+      "node_modules",
+      "playwright-report",
+      "test-results",
+      "blob-report",
+      ".tmp*/**",
+      ".npm-*/**",
+      "src/components/base/**",
+      "src/components/foundations/**",
+    ],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,

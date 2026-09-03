@@ -4,8 +4,8 @@ import { installedPackageNames, libraryCatalog, quarantinedPackageNames } from "
 
 describe("library catalog", () => {
   it("keeps every researched candidate represented", () => {
-    expect(libraryCatalog).toHaveLength(41);
-    expect(new Set(libraryCatalog.map((entry) => entry.name)).size).toBe(41);
+    expect(libraryCatalog).toHaveLength(43);
+    expect(new Set(libraryCatalog.map((entry) => entry.name)).size).toBe(libraryCatalog.length);
   });
 
   it("associates packages with every npm entry", () => {
@@ -17,9 +17,9 @@ describe("library catalog", () => {
   it("keeps risky alternatives explicitly quarantined", () => {
     expect(quarantinedPackageNames).toEqual(expect.arrayContaining([
       "@emoji-mart/react",
-      "@vidstack/react",
       "react-media-recorder",
       "vaul",
     ]));
+    expect(libraryCatalog.find((entry) => entry.name === "Vidstack")?.status).toBe("installed");
   });
 });

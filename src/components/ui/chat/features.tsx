@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { FocusScope } from "react-aria"
 import { cn } from "@/lib/utils"
 import {
   X,
@@ -29,6 +30,8 @@ interface ChatForwardDialogProps {
   conversations: Conversation[]
   onForward: (targetIds: string[]) => void
   onCancel: () => void
+  pending?: boolean
+  error?: string | null
   className?: string
 }
 
@@ -37,10 +40,23 @@ function ChatForwardDialog({
   conversations,
   onForward,
   onCancel,
+  pending = false,
+  error = null,
   className,
 }: ChatForwardDialogProps) {
   const [query, setQuery] = React.useState("")
   const [selected, setSelected] = React.useState<Set<string>>(new Set())
+  const titleId = React.useId()
+
+  React.useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || pending) return
+      event.preventDefault()
+      onCancel()
+    }
+    document.addEventListener("keydown", handleKeyDown)
+    return () => document.removeEventListener("keydown", handleKeyDown)
+  }, [onCancel, pending])
 
   const filtered = conversations.filter((c) =>
     c.title.toLowerCase().includes(query.toLowerCase())
@@ -56,12 +72,13 @@ function ChatForwardDialog({
   }
 
   return (
-    <div className={cn("fixed inset-0 z-50 flex items-center justify-center bg-black/50", className)}>
-      <div className="w-full max-w-sm overflow-hidden rounded-xl border border-[var(--chat-border-strong)] bg-[var(--chat-bg-sidebar)] shadow-[var(--chat-shadow-lg)]">
+    <div className={cn("fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4", className)} onPointerDown={(event) => { if (event.target === event.currentTarget && !pending) onCancel() }}>
+      <FocusScope contain restoreFocus autoFocus>
+      <div role="dialog" aria-modal="true" aria-labelledby={titleId} className="w-full max-w-sm overflow-hidden rounded-xl border border-[var(--chat-border-strong)] bg-[var(--chat-bg-sidebar)] shadow-[var(--chat-shadow-lg)]">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[var(--chat-border)] px-4 py-3">
-          <span className="text-[14px] font-semibold text-[var(--chat-text-primary)]">Forward message</span>
-          <button onClick={onCancel} className="text-[var(--chat-text-tertiary)] hover:text-[var(--chat-text-primary)]">
+          <h2 id={titleId} className="text-[14px] font-semibold text-[var(--chat-text-primary)]">Encaminhar mensagem</h2>
+          <button type="button" onClick={onCancel} disabled={pending} aria-label="Fechar" className="flex size-11 items-center justify-center rounded-full text-[var(--chat-text-tertiary)] hover:bg-[var(--chat-accent-soft)] hover:text-[var(--chat-text-primary)] disabled:opacity-50">
             <X className="size-4" />
           </button>
         </div>
@@ -80,8 +97,9 @@ function ChatForwardDialog({
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search conversations..."
-              className="flex-1 bg-transparent text-[13px] text-[var(--chat-text-primary)] placeholder:text-[var(--chat-text-tertiary)] outline-none"
+              placeholder="Pesquisar conversas"
+              aria-label="Pesquisar conversas"
+              className="flex-1 bg-transparent text-[16px] text-[var(--chat-text-primary)] placeholder:text-[var(--chat-text-tertiary)] outline-none"
             />
           </div>
         </div>
@@ -91,7 +109,9 @@ function ChatForwardDialog({
           {filtered.map((c) => (
             <button
               key={c.id}
+              type="button"
               onClick={() => toggle(c.id)}
+              aria-pressed={selected.has(c.id)}
               className={cn(
                 "flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors",
                 selected.has(c.id) ? "bg-[var(--chat-accent-soft)]" : "hover:bg-[var(--chat-accent-soft)]"
@@ -106,20 +126,23 @@ function ChatForwardDialog({
           ))}
         </div>
 
+        {error && <p role="alert" className="border-t border-[var(--chat-border)] px-4 py-2 text-[13px] text-[var(--chat-red)]">{error}</p>}
+
         {/* Actions */}
         <div className="flex items-center justify-end gap-2 border-t border-[var(--chat-border)] px-4 py-3">
-          <button onClick={onCancel} className="rounded-lg px-3 py-1.5 text-[13px] font-medium text-[var(--chat-text-secondary)] hover:bg-[var(--chat-accent-soft)]">
-            Cancel
+          <button type="button" onClick={onCancel} disabled={pending} className="min-h-11 rounded-lg px-3 py-2 text-[13px] font-medium text-[var(--chat-text-secondary)] hover:bg-[var(--chat-accent-soft)] disabled:opacity-50">
+            Cancelar
           </button>
           <button
             onClick={() => onForward(Array.from(selected))}
-            disabled={selected.size === 0}
-            className="rounded-lg bg-[var(--chat-accent)] px-3 py-1.5 text-[13px] font-medium text-white disabled:opacity-40"
+            disabled={selected.size === 0 || pending}
+            className="min-h-11 rounded-lg bg-[var(--chat-accent)] px-3 py-2 text-[13px] font-medium text-white disabled:opacity-40"
           >
-            Forward{selected.size > 0 ? ` (${selected.size})` : ""}
+            {pending ? "Encaminhando…" : `Encaminhar${selected.size > 0 ? ` (${selected.size})` : ""}`}
           </button>
         </div>
       </div>
+      </FocusScope>
     </div>
   )
 }
@@ -417,11 +440,13 @@ interface ChatSearchProps {
 
 function ChatSearch({ onSearch, onSelect, onClose, className }: ChatSearchProps) {
   const [query, setQuery] = React.useState("")
-  const [searchState, setSearchState] = React.useState<{ query: string; results: SearchResult[] }>({ query: "", results: [] })
+  const [searchState, setSearchState] = React.useState<{ query: string; results: SearchResult[]; error: string | null }>({ query: "", results: [], error: null })
   const inputRef = React.useRef<HTMLInputElement>(null)
   const normalizedQuery = query.trim()
   const results = normalizedQuery && searchState.query === normalizedQuery ? searchState.results : []
+  const searchError = normalizedQuery && searchState.query === normalizedQuery ? searchState.error : null
   const searchPending = Boolean(normalizedQuery && searchState.query !== normalizedQuery)
+  const titleId = React.useId()
 
   React.useEffect(() => {
     inputRef.current?.focus()
@@ -433,9 +458,9 @@ function ChatSearch({ onSearch, onSelect, onClose, className }: ChatSearchProps)
     const timeout = setTimeout(async () => {
       try {
         const nextResults = await onSearch(normalizedQuery)
-        if (!cancelled) setSearchState({ query: normalizedQuery, results: nextResults })
+        if (!cancelled) setSearchState({ query: normalizedQuery, results: nextResults, error: null })
       } catch {
-        if (!cancelled) setSearchState({ query: normalizedQuery, results: [] })
+        if (!cancelled) setSearchState({ query: normalizedQuery, results: [], error: "Não foi possível pesquisar agora." })
       }
     }, 200)
     return () => {
@@ -451,8 +476,10 @@ function ChatSearch({ onSearch, onSelect, onClose, className }: ChatSearchProps)
   }, [onClose])
 
   return (
-    <div className={cn("fixed inset-0 z-50 flex items-start justify-center pt-[15vh] bg-black/50", className)}>
-      <div className="w-full max-w-lg overflow-hidden rounded-xl border border-[var(--chat-border-strong)] bg-[var(--chat-bg-sidebar)] shadow-[var(--chat-shadow-lg)]">
+    <div className={cn("fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4 pt-[15vh]", className)} onPointerDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
+      <FocusScope contain restoreFocus autoFocus>
+      <div role="dialog" aria-modal="true" aria-labelledby={titleId} className="w-full max-w-lg overflow-hidden rounded-xl border border-[var(--chat-border-strong)] bg-[var(--chat-bg-sidebar)] shadow-[var(--chat-shadow-lg)]">
+        <h2 id={titleId} className="sr-only">Pesquisar mensagens</h2>
         {/* Search input */}
         <div className="flex items-center gap-3 border-b border-[var(--chat-border)] px-4 py-3">
           <Search className="size-4 text-[var(--chat-text-tertiary)]" />
@@ -465,11 +492,13 @@ function ChatSearch({ onSearch, onSelect, onClose, className }: ChatSearchProps)
             aria-label="Pesquisar mensagens"
             className="flex-1 bg-transparent text-[16px] text-[var(--chat-text-primary)] placeholder:text-[var(--chat-text-tertiary)] outline-none"
           />
-          <kbd className="rounded border border-[var(--chat-border)] px-1.5 py-0.5 text-[10px] text-[var(--chat-text-tertiary)]">ESC</kbd>
+          <button type="button" onClick={onClose} aria-label="Fechar pesquisa" className="flex size-11 items-center justify-center rounded-full text-[var(--chat-text-tertiary)] hover:bg-[var(--chat-accent-soft)]"><X className="size-4" /></button>
         </div>
 
         {/* Results */}
-        <div className="max-h-80 overflow-y-auto">
+        <div className="max-h-80 overflow-y-auto" aria-busy={searchPending}>
+          {searchPending && <div role="status" className="flex h-16 items-center justify-center text-[13px] text-[var(--chat-text-tertiary)]">Pesquisando…</div>}
+          {searchError && <div role="alert" className="flex h-20 items-center justify-center px-4 text-center text-[13px] text-[var(--chat-red)]">{searchError}</div>}
           {results.map((r) => (
             <button
               type="button"
@@ -489,13 +518,14 @@ function ChatSearch({ onSearch, onSelect, onClose, className }: ChatSearchProps)
               <p className="truncate text-[13px] text-[var(--chat-text-secondary)]">{r.snippet}</p>
             </button>
           ))}
-          {normalizedQuery && !searchPending && results.length === 0 && (
+          {normalizedQuery && !searchPending && !searchError && results.length === 0 && (
             <div className="flex h-20 items-center justify-center text-[13px] text-[var(--chat-text-tertiary)]">
               Nenhum resultado encontrado
             </div>
           )}
         </div>
       </div>
+      </FocusScope>
     </div>
   )
 }

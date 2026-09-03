@@ -60,6 +60,17 @@ const BLOCKED_EXTENSIONS = new Set([
 ])
 
 const DEFAULT_MAX_FILE_SIZE = 25 * 1024 * 1024 // 25MB
+const ALLOWED_CHAT_MEDIA_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/avif",
+  "audio/webm",
+  "audio/mp4",
+  "audio/mpeg",
+  "audio/ogg",
+  "audio/wav",
+])
 
 export interface FileValidationResult {
   valid: boolean
@@ -71,6 +82,10 @@ export function validateFile(
   opts?: { maxSize?: number }
 ): FileValidationResult {
   const maxSize = opts?.maxSize ?? DEFAULT_MAX_FILE_SIZE
+
+  if (!ALLOWED_CHAT_MEDIA_TYPES.has(file.type.toLocaleLowerCase("en-US").split(";", 1)[0]?.trim() ?? "")) {
+    return { valid: false, error: "Only verified image and audio formats are allowed" }
+  }
 
   // Check extension
   const parts = file.name.split(".")
@@ -114,4 +129,3 @@ export function formatReactionCount(count: number): string {
   if (count > 999) return "999+"
   return String(count)
 }
-

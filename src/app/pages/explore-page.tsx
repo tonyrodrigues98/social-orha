@@ -1,10 +1,9 @@
-import { Clapperboard, Gamepad2, PawPrint, ShoppingBag, Smile, UsersRound } from "lucide-react";
+import { Clapperboard, Gamepad2, PawPrint, ShoppingBag, Smile } from "lucide-react";
 import { NativeHeader } from "../components/native-header";
-import { usePrototype } from "../prototype-context";
+import { ExploreDiscovery } from "../explore/explore-discovery";
 
-const destinations = [
+const futureDestinations = [
   { name: "Cinema", detail: "Filmes e estreias", icon: Clapperboard, className: "coral" },
-  { name: "Pessoas", detail: "Novas conexões", icon: UsersRound, className: "violet" },
   { name: "Pet", detail: "O mundo animal", icon: PawPrint, className: "green" },
   { name: "Loja", detail: "Produtos e ideias", icon: ShoppingBag, className: "amber" },
   { name: "Avatar", detail: "Crie seu estilo", icon: Smile, className: "blue" },
@@ -12,7 +11,6 @@ const destinations = [
 ];
 
 export function ExplorePage() {
-  const { openDrawer } = usePrototype();
   return (
     <div className="page">
       <NativeHeader title="Explorar" subtitle="Tudo que pode fazer parte do seu mundo" />
@@ -25,22 +23,26 @@ export function ExplorePage() {
           <Clapperboard className="feature-art-icon" size={66} strokeWidth={1.1} />
         </section>
 
-        <section className="content-section">
-          <div className="section-heading"><div><span className="section-overline">DESTINOS</span><h2>O que você quer encontrar?</h2></div></div>
+        <ExploreDiscovery />
+
+        <section className="content-section" aria-labelledby="future-destinations-heading">
+          <div className="section-heading">
+            <div>
+              <span className="section-overline">PRÓXIMOS DESTINOS</span>
+              <h2 id="future-destinations-heading">O catálogo continuará crescendo</h2>
+            </div>
+          </div>
           <div className="destination-grid">
-            {destinations.map(({ name, detail, icon: Icon, className }) => (
-              <button type="button" className={`destination-card ${className}`} key={name} onClick={() => openDrawer({ type: "explore", destination: name })}>
-                <Icon size={25} />
-                <span><strong>{name}</strong><small>{detail}</small></span>
-              </button>
+            {futureDestinations.map(({ name, detail, icon: Icon, className }) => (
+              <article className={`destination-card ${className}`} key={name}>
+                <Icon size={25} aria-hidden />
+                <span>
+                  <strong>{name}</strong>
+                  <small>{detail} · Em planejamento</small>
+                </span>
+              </article>
             ))}
           </div>
-        </section>
-
-        <section className="discovery-note">
-          <span>EM BREVE</span>
-          <strong>Novas experiências chegam aqui primeiro.</strong>
-          <p>Explorar crescerá como o catálogo vivo da ORHA.</p>
         </section>
       </main>
     </div>

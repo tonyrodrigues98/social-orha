@@ -8,16 +8,34 @@ import { TextArea } from "@/components/base/textarea/textarea";
 import { BrandMark } from "@/app/components/brand-mark";
 import type { ProfileDetails } from "@/domain/identity";
 import {
+  hobbyOptions,
+  interestOptions,
+  personalityOptions,
+  seasonOptions,
+  socialEnergyOptions as energyOptions,
+  weekendOptions,
+} from "@/domain/profile-details";
+import { favoriteCategories } from "@/domain/favorite-catalog";
+import {
+  favoriteCollectionsFromDetails,
+  type FavoriteCollections,
+} from "@/domain/profile-data";
+import {
   brazilianStates,
   getCitiesForState,
 } from "@/infrastructure/location/brazil-locations";
 import {
   isUsernameAvailable,
-  updateOwnDetails,
-  updateOwnProfile,
 } from "@/infrastructure/supabase/identity-repository";
 import { ControlledInput } from "@/app/auth/auth-fields";
 import { useAuth } from "@/app/auth/auth-context";
+import {
+  useOwnIdentityQuery,
+  useUpdateOwnDetailsMutation,
+  useUpdateOwnFavoritesMutation,
+  useUpdateOwnProfileMutation,
+} from "@/app/profile/profile-queries";
+import { FavoriteCatalogPicker } from "@/app/favorites/favorite-catalog-picker";
 
 type IdentityForm = { fullName: string; username: string; birthDate: string };
 type LocationForm = {
@@ -25,14 +43,6 @@ type LocationForm = {
   city: string;
   bio: string;
   church: string;
-};
-type FavoritesForm = {
-  movies: string;
-  series: string;
-  songs: string;
-  artists: string;
-  books: string;
-  games: string;
 };
 type PersonalityValues = Pick<
   ProfileDetails,
@@ -52,68 +62,10 @@ type OptionalStepProps<TValues> = {
   onSkip: () => Promise<void>;
 };
 
-const personalityOptions = [
-  "Acolhedor",
-  "Criativo",
-  "Observador",
-  "Comunicativo",
-  "Tranquilo",
-  "Aventureiro",
-  "Sensível",
-  "Bem-humorado",
-];
-const seasonOptions = ["Verão", "Outono", "Inverno", "Primavera"];
-const energyOptions = ["Mais reservado", "Equilibrado", "Muito sociável"];
-const weekendOptions = [
-  "Descansar",
-  "Sair com amigos",
-  "Igreja",
-  "Cinema",
-  "Natureza",
-  "Cozinhar",
-  "Jogar",
-  "Conhecer lugares",
-];
-const interestOptions = [
-  "Fé",
-  "Música",
-  "Cinema",
-  "Livros",
-  "Viagens",
-  "Fotografia",
-  "Tecnologia",
-  "Esportes",
-  "Arte",
-  "Gastronomia",
-  "Pets",
-  "Voluntariado",
-];
-const hobbyOptions = [
-  "Leitura",
-  "Academia",
-  "Caminhada",
-  "Instrumentos",
-  "Canto",
-  "Jogos",
-  "Fotografia",
-  "Culinária",
-  "Dança",
-  "Jardinagem",
-];
-
 function maxAdultDate() {
   const date = new Date();
   date.setFullYear(date.getFullYear() - 18);
   return date.toISOString().slice(0, 10);
-}
-
-function valuesFromCommaList(value: string): { label: string }[] {
-  return value
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean)
-    .slice(0, 5)
-    .map((label) => ({ label }));
 }
 
 function OnboardingHeader({
@@ -213,7 +165,7 @@ function ChoiceChips({
   onChange,
   max,
 }: {
-  options: string[];
+  options: readonly string[];
   values: string[];
   onChange: (values: string[]) => void;
   max?: number;
@@ -264,16 +216,21 @@ function ChoiceGroup({
 
 export function OnboardingFlow({ onFinished }: { onFinished?: () => void }) {
   const { user, identity, refreshIdentity } = useAuth();
+  const userId = user?.id ?? "";
+  const identityQuery = useOwnIdentityQuery(userId, identity ?? undefined);
+  const updateProfileMutation = useUpdateOwnProfileMutation(userId);
+  const updateDetailsMutation = useUpdateOwnDetailsMutation(userId);
+  const updateFavoritesMutation = useUpdateOwnFavoritesMutation(userId);
+  const currentIdentity = identityQuery.data ?? identity;
   const initialStep = Math.min(
     6,
-    Math.max(1, (identity?.profile.onboarding_step ?? 0) + 1),
+    Math.max(1, (currentIdentity?.profile.onboarding_step ?? 0) + 1),
   );
   const [step, setStep] = useState(initialStep);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  if (!user || !identity) return null;
-  const userId = user.id;
+  if (!user || !currentIdentity) return null;
 
   async function saveStep(
     nextStep: number,
@@ -283,7 +240,7 @@ export function OnboardingFlow({ onFinished }: { onFinished?: () => void }) {
     setError(null);
     try {
       if (operation) await operation();
-      await updateOwnProfile(userId, { onboarding_step: nextStep });
+      await updateProfileMutation.mutateAsync({ onboarding_step: nextStep });
       setStep(Math.min(6, nextStep + 1));
     } catch {
       setError("Não foi possível salvar esta etapa. Tente novamente.");
@@ -296,7 +253,7 @@ export function OnboardingFlow({ onFinished }: { onFinished?: () => void }) {
     setSaving(true);
     setError(null);
     try {
-      await updateOwnProfile(userId, {
+      await updateProfileMutation.mutateAsync({
         onboarding_step: 6,
         onboarding_completed_at: new Date().toISOString(),
       });
@@ -313,7 +270,7 @@ export function OnboardingFlow({ onFinished }: { onFinished?: () => void }) {
   if (step === 1)
     return (
       <IdentityStep
-        profile={identity.profile}
+        profile={currentIdentity.profile}
         saving={saving}
         error={error}
         onSubmit={async (values) => {
@@ -325,8 +282,8 @@ export function OnboardingFlow({ onFinished }: { onFinished?: () => void }) {
               setError("Este @username já está em uso ou não é válido.");
               return;
             }
-            await updateOwnProfile(userId, {
-              full_name: values.fullName,
+            await updateProfileMutation.mutateAsync({
+              full_name: values.fullName.trim(),
               username: values.username,
               birth_date: values.birthDate,
               onboarding_step: 1,
@@ -344,7 +301,7 @@ export function OnboardingFlow({ onFinished }: { onFinished?: () => void }) {
   if (step === 2)
     return (
       <LocationStep
-        profile={identity.profile}
+        profile={currentIdentity.profile}
         saving={saving}
         error={error}
         onBack={() => setStep(1)}
@@ -359,11 +316,11 @@ export function OnboardingFlow({ onFinished }: { onFinished?: () => void }) {
             return;
           }
           try {
-            await updateOwnProfile(userId, {
+            await updateProfileMutation.mutateAsync({
               state_code: values.stateCode,
               city: values.city,
               bio: values.bio,
-              church: values.church || null,
+              church: values.church.trim() || null,
               onboarding_step: improve ? 2 : 6,
               onboarding_completed_at: improve
                 ? null
@@ -386,12 +343,12 @@ export function OnboardingFlow({ onFinished }: { onFinished?: () => void }) {
   if (step === 3)
     return (
       <PersonalityStep
-        details={identity.details}
+        details={currentIdentity.details}
         saving={saving}
         error={error}
         onBack={() => setStep(2)}
         onContinue={(values) =>
-          saveStep(3, () => updateOwnDetails(userId, values))
+          saveStep(3, () => updateDetailsMutation.mutateAsync(values))
         }
         onSkip={() => saveStep(3)}
       />
@@ -399,12 +356,12 @@ export function OnboardingFlow({ onFinished }: { onFinished?: () => void }) {
   if (step === 4)
     return (
       <InterestsStep
-        details={identity.details}
+        details={currentIdentity.details}
         saving={saving}
         error={error}
         onBack={() => setStep(3)}
         onContinue={(values) =>
-          saveStep(4, () => updateOwnDetails(userId, values))
+          saveStep(4, () => updateDetailsMutation.mutateAsync(values))
         }
         onSkip={() => saveStep(4)}
       />
@@ -412,18 +369,19 @@ export function OnboardingFlow({ onFinished }: { onFinished?: () => void }) {
   if (step === 5)
     return (
       <PlacesStep
-        details={identity.details}
+        details={currentIdentity.details}
         saving={saving}
         error={error}
         onBack={() => setStep(4)}
         onContinue={(values) =>
-          saveStep(5, () => updateOwnDetails(userId, values))
+          saveStep(5, () => updateDetailsMutation.mutateAsync(values))
         }
         onSkip={() => saveStep(5)}
       />
     );
   return (
     <FavoritesStep
+      details={currentIdentity.details}
       saving={saving}
       error={error}
       onBack={() => setStep(5)}
@@ -431,14 +389,7 @@ export function OnboardingFlow({ onFinished }: { onFinished?: () => void }) {
         setSaving(true);
         setError(null);
         try {
-          await updateOwnDetails(userId, {
-            favorite_movies: valuesFromCommaList(values.movies),
-            favorite_series: valuesFromCommaList(values.series),
-            favorite_songs: valuesFromCommaList(values.songs),
-            favorite_artists: valuesFromCommaList(values.artists),
-            favorite_books: valuesFromCommaList(values.books),
-            favorite_games: valuesFromCommaList(values.games),
-          });
+          await updateFavoritesMutation.mutateAsync(values);
           await finishOnboarding();
         } catch {
           setError("Não foi possível salvar seus favoritos.");
@@ -490,7 +441,8 @@ function IdentityStep({
           autoComplete="name"
           rules={{
             required: "Informe seu nome completo.",
-            minLength: { value: 2, message: "Informe seu nome completo." },
+            validate: (value) => value.trim().length >= 2 || "Informe seu nome completo.",
+            maxLength: { value: 100, message: "Use até 100 caracteres." },
           }}
         />
         <ControlledInput
@@ -696,6 +648,9 @@ function LocationStep({
           name="church"
           label="Igreja (opcional)"
           placeholder="Se quiser compartilhar"
+          rules={{
+            maxLength: { value: 160, message: "Use até 160 caracteres." },
+          }}
         />
         {error ? (
           <div className="auth-error" role="alert">
@@ -967,54 +922,47 @@ function PlacesStep({
 }
 
 function FavoritesStep({
+  details,
   saving,
   error,
   onBack,
   onSubmit,
   onSkip,
 }: {
+  details: ProfileDetails;
   saving: boolean;
   error: string | null;
   onBack: () => void;
-  onSubmit: (values: FavoritesForm) => Promise<void>;
+  onSubmit: (values: FavoriteCollections) => Promise<void>;
   onSkip: () => Promise<void>;
 }) {
-  const form = useForm<FavoritesForm>({
-    defaultValues: {
-      movies: "",
-      series: "",
-      songs: "",
-      artists: "",
-      books: "",
-      games: "",
-    },
-  });
-  const fields: [keyof FavoritesForm, string, string][] = [
-    ["movies", "Filmes", "Interestelar, À Prova de Fogo"],
-    ["series", "Séries", "The Chosen"],
-    ["songs", "Músicas", "Até cinco músicas"],
-    ["artists", "Artistas", "Até cinco artistas"],
-    ["books", "Livros", "Até cinco livros"],
-    ["games", "Jogos", "Até cinco jogos"],
-  ];
+  const [favorites, setFavorites] = useState<FavoriteCollections>(() => (
+    favoriteCollectionsFromDetails(details)
+  ));
   return (
     <OnboardingPage step={6} onBack={onBack}>
       <StepHeading
         eyebrow="SEUS FAVORITOS"
         title="O que você levaria com você?"
-        description="Adicione até cinco por categoria, separados por vírgulas. A busca por APIs entra na próxima evolução."
+        description="Pesquise nos catálogos e escolha até cinco por categoria. Você pode remover ou ajustar a ordem antes de concluir."
       />
       <form
         className="auth-form favorites-form"
-        onSubmit={form.handleSubmit(onSubmit)}
+        onSubmit={(event) => {
+          event.preventDefault();
+          void onSubmit(favorites);
+        }}
       >
-        {fields.map(([name, label, placeholder]) => (
-          <ControlledInput
-            key={name}
-            control={form.control}
-            name={name}
-            label={label}
-            placeholder={placeholder}
+        {favoriteCategories.map((category) => (
+          <FavoriteCatalogPicker
+            key={category}
+            category={category}
+            items={favorites[category]}
+            isDisabled={saving}
+            onChange={(items) => setFavorites((current) => ({
+              ...current,
+              [category]: items,
+            }))}
           />
         ))}
         {error ? (

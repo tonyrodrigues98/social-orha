@@ -8,9 +8,12 @@ import {
 } from "react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import type { UserIdentity } from "@/domain/identity";
+import { revokeAllRecordedAudioUrls } from "@/infrastructure/media/browser-audio-recorder";
 import { getSupabaseClient } from "@/infrastructure/supabase/client";
 import { loadUserIdentity } from "@/infrastructure/supabase/identity-repository";
+import { appQueryClient } from "../query-client";
 import { AuthContext, type AuthContextValue, type AuthStatus } from "./auth-context";
+import { clearRuntimeOnAuthPrincipalChange } from "./session-runtime-cleanup";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>("initializing");
@@ -43,6 +46,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const applySession = useCallback(
     (event: AuthChangeEvent, nextSession: Session | null) => {
+      const nextUserId = nextSession?.user.id ?? null;
+      clearRuntimeOnAuthPrincipalChange(
+        currentUserId.current,
+        nextUserId,
+        {
+          clearQueryCache: () => appQueryClient.clear(),
+          revokeObjectUrls: revokeAllRecordedAudioUrls,
+          removeRealtimeChannels: () => getSupabaseClient().removeAllChannels(),
+        },
+      );
       setSession(nextSession);
 
       if (!nextSession) {
