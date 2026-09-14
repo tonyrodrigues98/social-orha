@@ -1,0 +1,304 @@
+# ORHA — lacunas para um produto público em massa
+
+Data da verificação: 2026-09-14  
+Branch auditada: `codex/production-launch`  
+Commit auditado: `fa8e346`  
+Staging auditado: `bgeauxljwjbtbwpbzpoo`  
+Produção Supabase: `iuaczhkfmwpyhtpdmuyt`  
+
+## Veredito
+
+A ORHA não é mais somente um protótipo na branch de lançamento: existe uma base de produção ampla, integrada ao Supabase, com rotas reais, repositories reais, schema social, RLS, Storage, Realtime e uma suíte de testes relevante. O staging possui 15 migrations aplicadas, 38 tabelas públicas com RLS, cinco buckets privados, 14 tabelas publicadas no Realtime, lint hospedado sem erros, gate estrutural 18/18 e matriz RLS transacional aprovada.
+
+Mesmo assim, a ORHA **ainda não atende à Definition of Done para lançamento em massa**. Os bloqueadores não são cosméticos: nenhuma Edge Function está implantada; o deploy público ainda executa a `main` legada com `PrototypeProvider` e seeds; deep links retornam HTTP 404; a jornada E2E real não pode iniciar por falta de ambiente/secrets; existem vulnerabilidades de dependências e os serviços externos obrigatórios de Auth, e-mail, domínio e operação ainda não foram comprovados. Os dois erros de ambiguidade SQL encontrados durante a auditoria já foram corrigidos pela migration `20260914070000` e o lint remoto foi repetido sem erros.
+
+Portanto, a classificação correta é:
+
+- **Código candidato a lançamento:** avançado, compilável e sem mocks de runtime na branch auditada.
+- **Staging de dados:** estruturalmente consistente, com RLS e lint validados, mas ainda sem workers implantados.
+- **Produção:** não promovida.
+- **Produto público atual:** protótipo legado, não equivalente à branch candidata.
+- **Pronto para as massas:** não.
+
+## Evidência verificável reunida
+
+### O que existe de verdade
+
+| Área | Evidência | Estado |
+|---|---|---|
+| Runtime sem provider de protótipo | `src/app/app-runtime-providers.tsx` instancia adapters reais; `src/app/app-runtime-adapters.ts` liga Explore, Social, Notifications, Trust e Messaging ao Supabase | Implementado na branch |
+| Rotas recuperáveis | `src/app/router.tsx` e `src/app/router-policy.ts` definem Auth, onboarding, cinco áreas principais, conversas, comunidades, perfil público, notificações, configurações, denúncia e moderação | Implementado na branch |
+| Auth por e-mail | `src/infrastructure/supabase/email-auth.ts` contém cadastro, login, logout, resend, recovery e troca de senha; `src/app/auth/auth-provider.tsx` observa a sessão real | Implementado; entrega externa não comprovada |
+| Onboarding persistente | `src/app/onboarding/onboarding-flow.tsx` retoma `onboarding_step` e persiste identidade, localidade, detalhes e favoritos | Implementado; fechamento E2E pendente |
+| Domínios sociais | `src/domains/social/repository.ts` e `src/infrastructure/supabase/social/social-repository.ts` implementam perfis, amizades, comunidades, memberships, posts, comentários e reações | Implementado |
+| Comunidade administrativa | `src/infrastructure/supabase/community-management-repository.ts` e `src/app/community/community-manager-drawer.tsx` cobrem edição, regras, roles, banimento, branding e arquivamento | Implementado; mídia depende de Edge |
+| Mensageria persistente | `src/domains/messaging/contracts.ts` e `src/infrastructure/supabase/messaging/*` cobrem pedidos, grupos, texto, imagem, áudio, reply, reaction, forward, delete, receipts, busca, preferências e Realtime | Implementado; fluxo integral ainda não comprovado |
+| Waveform e gravação | `src/app/pages/private-chat-page.tsx`, `src/infrastructure/media/browser-audio-recorder.ts` e `src/components/ui/chat/*` usam gravação real, waveform e primitives do chat | Implementado; upload remoto depende de Edge |
+| Perfil e mídia | `src/app/pages/profile-page.tsx`, `src/app/profile/*`, `src/application/profile-media/*` e `src/infrastructure/supabase/profile-media-repository.ts` cobrem crop, avatar, capa, galeria, privacidade e favoritos | Implementado; verificação remota depende de Edge |
+| Home real | `src/app/pages/home-page.tsx` e `src/infrastructure/supabase/home/home-dashboard-repository.ts` usam resumo server-side, sem conteúdo falso | Implementado |
+| Explore real | `src/app/explore/*` e `src/infrastructure/supabase/explore/*` usam busca server-side de perfis, comunidades, interesses e posts | Implementado; destinos futuros estão claramente marcados como planejamento |
+| Confiança e moderação | `src/domains/trust/*`, `src/infrastructure/supabase/trust/*`, `src/app/pages/report-page.tsx` e `src/app/pages/admin-moderation-page.tsx` cobrem bloqueio, denúncia, contexto limitado, sanção e auditoria | Implementado; operação E2E pendente |
+| PWA e native-first | `vite.config.ts`, `scripts/pwa-manifest.ts`, `src/app/pwa-runtime.ts`, `src/styles/index.css` e `public/brand/*` | Build PWA aprovado |
+| Base de bibliotecas | `src/infrastructure/libraries/library-catalog.ts`, `docs/LIBRARY-INVENTORY.md`, `components.json` e `package.json` | 43 itens, 66 pacotes/fontes conferidos, cinco pacotes em quarentena sem imports de runtime |
+
+### Estado remoto comprovado do staging
+
+As leituras autenticadas da CLI confirmaram:
+
+- 15 migrations locais/remotas alinhadas, de `20260811040000` a `20260914070000`;
+- 38 tabelas públicas e as mesmas 38 com RLS;
+- cinco buckets privados: `profile-media`, `community-media`, `chat-media`, `report-evidence` e `account-exports`;
+- 14 tabelas na publication `supabase_realtime`;
+- PostgreSQL 17.6;
+- `scripts/supabase-validate.sql`: 18/18 verificações aprovadas;
+- `scripts/supabase-rls-integration.sql`: matriz completa aprovada com rollback e sem fixtures residuais.
+
+Fontes versionadas: `scripts/remote-inventory.sql`, `scripts/supabase-validate.sql`, `scripts/supabase-rls-integration.sql`, `supabase/migrations/*` e `docs/ORHA_PRODUCTION_EXECUTION_STATE.md`.
+
+### Gates locais executados nesta auditoria
+
+| Gate | Resultado |
+|---|---|
+| `npm run typecheck` | Aprovado fora do sandbox |
+| `npm run lint` | Aprovado |
+| `npm test` | 67 arquivos e 290 testes aprovados |
+| `npm run build` | Aprovado; 5.956 módulos, manifest e service worker gerados, precache de 86 entradas |
+| `npm run check:catalog` | Aprovado |
+| `npm run audit:production-debt` | Aprovado; zero mock, seed, TODO e localStorage; ocorrências legadas explicitamente allowlisted |
+| `npm run audit:secrets` | Aprovado |
+| `npm run audit:text-encoding` | Aprovado |
+| `npm run test:e2e:production` | Bloqueado no preflight por ambiente/secrets ausentes; nenhuma jornada foi falsamente marcada como aprovada |
+| `npm audit --omit=dev --audit-level=high` | Reprovado: seis vulnerabilidades, incluindo uma crítica |
+| `npx supabase db lint --linked --level warning` | Reprovado: dois erros SQL e um aviso |
+
+## Bloqueadores P0 — precisam ser eliminados antes de qualquer promoção
+
+### P0.1 Corrigir os dois defeitos SQL de runtime — concluído em staging
+
+O lint do PostgreSQL remoto encontrou:
+
+1. `private.ensure_direct_conversation`: `conversation_id` é ambíguo entre variável PL/pgSQL e coluna. A função é usada no aceite de pedido de conversa e pode impedir a criação/reativação da conversa direta.
+2. `public.mark_notifications_read`: `actor_id` é ambíguo entre variável e coluna. A função pode impedir marcar uma ou todas as notificações como lidas.
+
+Evidência: `supabase/migrations/20260816170000_social_launch_schema.sql`, funções `private.ensure_direct_conversation` e `public.mark_notifications_read`; resultado de `npx supabase db lint --linked --level warning` em 2026-09-14.
+
+Critério de aceite:
+
+- criar migration forward-only, sem editar uma migration já aplicada;
+- qualificar variáveis e colunas sem reduzir autorização;
+- adicionar teste SQL de execução, não apenas teste textual;
+- aplicar no staging;
+- `supabase db lint` sem erros;
+- repetir aceite de conversa, marcação individual e marcação total de notificações com dois usuários reais.
+
+### P0.2 Implantar e operar as cinco Edge Functions
+
+`npx supabase functions list` retornou `[]` tanto no staging quanto na produção. Estão versionadas, mas não implantadas:
+
+- `supabase/functions/account-export`;
+- `supabase/functions/account-lifecycle-worker`;
+- `supabase/functions/media-cleanup-worker`;
+- `supabase/functions/media-verify`;
+- `supabase/functions/catalog-search`.
+
+Sem elas, upload confiável, catálogo de favoritos, exportação, exclusão final de conta e limpeza física não fecham de ponta a ponta. Os botões existem, mas alguns caminhos necessariamente terminam em erro remoto.
+
+Critério de aceite:
+
+- provisionar `ORHA_CRON_SECRET` e `ORHA_ALLOWED_ORIGINS` em staging;
+- implantar as cinco funções com `verify_jwt` conforme `supabase/config.toml`;
+- configurar Cron/Vault para lifecycle e cleanup;
+- executar check/test Deno em ambiente com Deno 2;
+- provar reserva → upload → verificação → associação → URL assinada → remoção → cleanup;
+- provar exportação e exclusão com reconciliação idempotente;
+- confirmar ausência de tokens, paths privados e conteúdo em logs.
+
+### P0.3 Tirar o protótipo da URL pública
+
+O workflow publica somente pushes da `main` (`.github/workflows/deploy-pages.yml`). A URL pública está no commit `b9ab9ca`, enquanto a fundação candidata está dois commits à frente na branch auditada. A inspeção do Git em `main` encontrou:
+
+- `src/app/authenticated-app.tsx` importando `PrototypeProvider`;
+- `src/app/pages/home-page.tsx` importando `prototype-data`;
+- `src/app/prototype-context.tsx` usando seeds de pessoas, comunidades e conversas.
+
+Logo, o sucesso do workflow público atual não comprova o produto novo.
+
+Critério de aceite:
+
+- somente após todos os gates de staging, promover a cadeia validada à produção;
+- executar o workflow candidato com E2E obrigatório;
+- revisar e mesclar a branch na `main`;
+- confirmar que o bundle implantado corresponde ao commit/release aprovado;
+- procurar novamente `PrototypeProvider`, `prototype-data`, mock e seed no commit implantado.
+
+### P0.4 Desbloquear e executar o E2E real multiusuário
+
+O preflight bloqueou por ausência de 16 valores operacionais, incluindo URL/key/host de staging, contas A/B/admin, credenciais, service role exclusiva do runner, domínio catch-all e confirmação SMTP. A suíte existe em 13 specs e 21 testes declarados, mas código de teste não é evidência de jornada aprovada.
+
+Evidência: `.env.e2e.example`, `scripts/require-production-e2e-secrets.ts`, `playwright.config.ts`, `e2e/*` e `.github/workflows/deploy-pages.yml`.
+
+Critério de aceite:
+
+- provisionar contas isoladas sem dados pessoais;
+- configurar secrets/variables no ambiente protegido do GitHub;
+- executar Auth, amizade, comunidade, conversa, perfil/mídia, trust/moderação, conta, offline e PWA;
+- manter zero `skip`, zero interceptação e zero sessão injetada;
+- repetir falhas até todas as jornadas ficarem verdes;
+- preservar evidência de falha sem vazar sessão.
+
+### P0.5 Remover vulnerabilidades de dependências que quebram o CI
+
+O audit atual encontrou seis vulnerabilidades: uma crítica em `maplibre-gl`, três altas (`@tiptap/core`, `fast-uri`, `js-yaml`) e duas moderadas (`hono`, `qs`). O workflow executa `npm audit --omit=dev --audit-level=high`, portanto o candidato não deve ser promovido enquanto esse gate falhar.
+
+Critério de aceite:
+
+- executar search-before-build e identificar se cada pacote vulnerável é usado no runtime;
+- atualizar versões compatíveis e lockfile ou remover dependências órfãs;
+- retestar catálogo, typecheck, lint, 290+ testes, build e E2E;
+- obter `npm audit --omit=dev --audit-level=high` verde.
+
+## Bloqueadores P1 — produto completo e operável
+
+### P1.1 Auth externo e entrega real de e-mail
+
+`src/infrastructure/supabase/email-auth.ts` não implementa `signInWithOAuth`; Google não existe no frontend. `supabase/config.toml` contém somente exemplos comentados de OAuth. O estado remoto de SMTP, templates, Site URL, redirect allowlist, CAPTCHA e proteção contra bots não está comprovado.
+
+Próxima fatia vertical:
+
+1. configurar SMTP transacional real, remetente e domínio autenticado;
+2. validar cadastro, confirmação, reenvio, recovery e mudança de senha recebendo e-mail real;
+3. ajustar Site URL/redirects para staging, preview e domínio definitivo;
+4. implementar Google com callback seguro quando client ID/secret existirem;
+5. configurar CAPTCHA/rate limits de Auth adequados ao lançamento;
+6. testar sessão expirada, conta restrita, troca de usuário e limpeza de cache.
+
+### P1.2 Host com deep links HTTP 200 e domínio definitivo
+
+Verificação HTTP em 2026-09-14:
+
+- raiz `https://tonyrodrigues98.github.io/social-orha/`: 200;
+- `/social-orha/auth/login`: 404;
+- `/social-orha/conversas/<uuid>`: 404.
+
+O `public/404.html` pode recuperar a navegação depois do 404, mas não satisfaz deep link, crawler, OAuth nem gate de host. O projeto já possui `scripts/host-capability-audit.ts` para impedir falso positivo.
+
+Próxima fatia vertical:
+
+- selecionar host com rewrite SPA real;
+- configurar domínio, HTTPS, canonical, OG, PWA `id/scope/start_url` e callbacks Auth;
+- exigir HTTP 200 no root e em todas as rotas diretas;
+- executar smoke após deploy e rollback testado.
+
+### P1.3 Produção Supabase e recuperação operacional
+
+O staging está pronto para continuar os gates; produção permanece sem a cadeia social. Existe snapshot lógico pré-promoção documentado, mas não há PITR/backup físico confirmado.
+
+Próxima fatia vertical:
+
+- corrigir P0 e congelar hashes;
+- repetir inventário e snapshot da produção imediatamente antes da promoção;
+- obter backup/PITR proporcional ao risco ou registrar decisão operacional explícita;
+- aplicar migrations na ordem com validação após cada fase;
+- regenerar tipos a partir do remoto;
+- implantar Functions/secrets/Cron;
+- executar smoke remoto e plano de rollback.
+
+### P1.4 Termos, privacidade, suporte e operação legal
+
+`src/app/pages/settings-info-pages.tsx` declara que identificação jurídica do operador, controlador, endereço, foro e canal formal de privacidade não foram fornecidos. O canal de suporte também aparece como não configurado quando `VITE_ORHA_SUPPORT_EMAIL` está vazio.
+
+Critério de aceite:
+
+- definir operador/controlador reais, contato, foro e política aprovada;
+- configurar e testar suporte e privacidade;
+- publicar termos/versionamento/consentimento necessários;
+- preparar procedimento de denúncia, apelação, retenção, exportação e exclusão;
+- definir escala humana para moderação e incidentes antes de abrir tráfego.
+
+### P1.5 Prova de carga, observabilidade e resposta a incidentes
+
+O repositório possui rate limits server-authoritative para amizade, pedidos de conversa, reports, posts, comentários e mensagens em `20260816230000_abuse_rate_limits.sql`. Não há, porém, evidência de teste de carga, SLO, alertas, budget, fila operacional, métricas de latência/erro ou runbook de incidentes em produção.
+
+Critério de aceite:
+
+- definir SLOs de Auth, feed, chat, upload e Realtime;
+- medir p95/p99 e concorrência com dados sintéticos isolados;
+- criar alertas para erros 5xx, Auth, Functions, banco, Storage e Realtime;
+- configurar analytics consentido atrás do port existente;
+- validar rate limits e backpressure sob abuso;
+- documentar on-call, severidades, contenção e comunicação.
+
+## P2 — qualidade de lançamento e fechamento funcional
+
+### P2.1 Inspeção visual e de dispositivo completa
+
+Playwright configura oito viewports Chromium e iPhone/WebKit, mas a execução autenticada integral continua bloqueada. Falta prova com teclado aberto, landscape, reduced motion, mídia quebrada, rede lenta, sessão expirada e aparelho iOS real.
+
+Aceite: screenshots e console/network limpos para 320×568, 375×667, 390×844, 393×852, 430×932, 440×932, tablet retrato/paisagem, 1280×800 e 1440×900, além de Safari/iPhone real instalado como PWA.
+
+### P2.2 Escopo consciente de arquivos em conversa
+
+`supabase/functions/README.md` restringe chat a imagem e áudio verificados e rejeita PDF/arquivo genérico até existir quarentena e antimalware. Isso é uma decisão segura, mas diverge do escopo funcional mais amplo que menciona “arquivos permitidos”.
+
+Aceite: manter o recurso invisível no lançamento ou criar pipeline de quarentena, scanner, allowlist, limite e testes hostis antes de expô-lo. Nunca aceitar binário genérico apenas por MIME declarado pelo cliente.
+
+### P2.3 Onboarding com conclusão autoritativa única
+
+O onboarding persiste etapas, mas a conclusão é feita por update do perfil no cliente (`onboarding_completed_at: new Date().toISOString()`) depois de outras mutations. As constraints server-side protegem campos básicos, porém não existe uma RPC nomeada de conclusão atômica.
+
+Aceite: consolidar a conclusão numa RPC que valide 18+, username, localização e bio no mesmo contrato, derive o timestamp no servidor e trate concorrência; manter etapas opcionais retomáveis.
+
+### P2.4 Superfícies administrativas por papel
+
+A moderação autoriza corretamente `super_admin`, `admin` e `moderator`; `support` não recebe autoridade de moderação. Ainda falta comprovar uma superfície de suporte compatível com seu papel e fluxos controlados de atribuição de roles.
+
+Aceite: matriz de permissões explicitada por papel, atribuição somente trusted backend, trilha de auditoria, rota de suporte mínima e testes de negação para usuário comum/suporte.
+
+## P3 — pós-lançamento controlado
+
+- Remover gradualmente as 171 ocorrências do namespace CSS `prototype` allowlisted, sem confundir nome legado com fonte de dados.
+- Revisar peso dos chunks: `authenticated-app` ~268 KiB, entry ~357 KiB e chat ~179 KiB antes de gzip; medir em rede móvel real antes de otimização prematura.
+- Conectar analytics opt-in pelo `AnalyticsPort`; não inserir PostHog/Umami diretamente nas páginas.
+- Manter Cinema, Pet, Loja, Avatar e Jogos como destinos honestamente futuros em `src/app/pages/explore-page.tsx` até existirem fatias persistentes completas.
+- Avaliar arquivos genéricos, push notifications e serviços Meilisearch/Gorse/Metarank somente por adapters e após demanda/infraestrutura aprovadas.
+
+## Ordem exata das próximas fatias verticais
+
+Cada item só começa quando o anterior possui evidência verde. Não promover parcialmente.
+
+1. **SQL runtime:** migration forward para as duas ambiguidades; lint remoto sem erros; testes de conversa direta e notificações.
+2. **Dependências:** corrigir/remover pacotes vulneráveis; audit de produção verde; repetir gates locais.
+3. **Edge em staging:** secrets, cinco deploys, Cron/Vault e testes de mídia/export/lifecycle/cleanup.
+4. **Auth/e-mail em staging:** SMTP, redirects, templates, CAPTCHA e jornadas reais; Google quando credenciais existirem.
+5. **Contas E2E:** provisionar A, B e admin; executar as jornadas completas com múltiplos usuários.
+6. **QA native-first:** matriz visual, teclado, gestos, iOS/Safari, offline/reconexão e PWA instalada.
+7. **Operação:** legal, suporte, moderação humana, observabilidade, SLO, alertas e incident response.
+8. **Host/domínio:** trocar para host com rewrite 200, configurar domínio/HTTPS/PWA/Auth callbacks e smoke.
+9. **Promoção Supabase:** snapshot/backup, hashes, migrations, tipos, Functions, secrets, Cron e smoke na produção.
+10. **Release:** mesclar na `main`, workflow completo verde, verificar SHA implantado, tag, release e rollback testado.
+11. **Smoke pós-release:** jornadas essenciais em produção com contas controladas, sem service role no navegador e sem conteúdo falso.
+12. **Go/no-go:** liberar tráfego apenas se todos os itens P0/P1 estiverem fechados e nenhum recurso visível simular sucesso.
+
+## Checklist de conclusão verificável
+
+O projeto pode ser chamado de finalizado para as massas somente quando todas as respostas abaixo forem “sim” com evidência:
+
+- A URL pública está no mesmo commit aprovado da branch candidata?
+- `PrototypeProvider`, seeds e arrays falsos estão ausentes do bundle implantado?
+- Produção possui as migrations, RLS, buckets, Realtime, Functions, secrets e jobs verificados?
+- `supabase db lint` está sem erros?
+- O audit de dependências está verde no limite do CI?
+- E-mail real confirma, recupera e troca senha?
+- Google OAuth funciona quando configurado?
+- Upload de avatar, capa, galeria, post, imagem e áudio funciona entre dispositivos?
+- Chat direto e grupos funcionam em Realtime, sem duplicação e com receipts?
+- Amizade, bloqueio, privacidade e moderação são decididos no servidor?
+- Exportação, desativação e exclusão completam de fato?
+- Deep links devolvem o app com HTTP 200?
+- PWA instalada abre, atualiza, preserva rascunho e reconecta honestamente?
+- E2E multiusuário está verde sem interceptações, skips ou sessão falsa?
+- Os viewports e aparelhos-alvo foram inspecionados sem erros críticos de console/network?
+- Existe backup/rollback testado, observabilidade e responsável operacional?
+- Termos, controlador, suporte e canal de privacidade estão publicados?
+
+Enquanto qualquer resposta P0/P1 for “não”, o estado correto é **candidato em validação**, não produto finalizado.
