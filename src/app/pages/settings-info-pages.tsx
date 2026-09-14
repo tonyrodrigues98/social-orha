@@ -20,8 +20,11 @@ import {
 } from "../settings/settings-info-routes";
 import { SettingsInfoLink } from "../settings/settings-info-link";
 import { buildSupportMailto, normalizeSupportEmail } from "../settings/support-contact";
-
-const LEGAL_LAST_UPDATED = "16 de agosto de 2026";
+import { appLegalConfiguration } from "../settings/legal-configuration-runtime";
+import {
+  formatLegalEffectiveDate,
+  type LegalPublicConfiguration,
+} from "@/config/legal-public-configuration";
 
 type InfoPageShellProps = SettingsInfoPageProps & {
   title: string;
@@ -78,17 +81,27 @@ function DocumentSection({ title, children }: { title: string; children: ReactNo
   );
 }
 
-function UpdatedAt() {
+function UpdatedAt({ configuration }: { configuration: LegalPublicConfiguration }) {
   return (
     <p className="px-1 text-xs text-gray-500">
-      Última atualização: <time dateTime="2026-08-16">{LEGAL_LAST_UPDATED}</time>.
+      Última atualização:{" "}
+      <time dateTime={configuration.effectiveDate ?? "2026-08-16"}>
+        {formatLegalEffectiveDate(configuration.effectiveDate)}
+      </time>.
     </p>
   );
 }
 
 type LinkedInfoPageProps = SettingsInfoPageProps & SettingsInfoNavigationProps;
+type LegalInfoPageProps = LinkedInfoPageProps & {
+  legalConfiguration?: LegalPublicConfiguration;
+};
 
-export function TermsPage({ onBack, onNavigate }: LinkedInfoPageProps) {
+export function TermsPage({
+  onBack,
+  onNavigate,
+  legalConfiguration = appLegalConfiguration,
+}: LegalInfoPageProps) {
   return (
     <InfoPageShell
       title="Termos de Uso"
@@ -97,7 +110,7 @@ export function TermsPage({ onBack, onNavigate }: LinkedInfoPageProps) {
       icon={<FileText aria-hidden size={23} />}
       onBack={onBack}
     >
-      <UpdatedAt />
+      <UpdatedAt configuration={legalConfiguration} />
       <article className="space-y-4" aria-label="Termos de Uso da ORHA">
         <DocumentSection title="1. Quem pode usar">
           <p>A ORHA é destinada exclusivamente a pessoas com 18 anos ou mais.</p>
@@ -135,8 +148,18 @@ export function TermsPage({ onBack, onNavigate }: LinkedInfoPageProps) {
         </DocumentSection>
 
         <DocumentSection title="7. Identificação do operador">
-          <p>ORHA é o nome do produto. A identificação jurídica do operador, endereço e foro aplicável ainda não foram fornecidos para publicação e não são inventados nesta versão.</p>
-          <p>Esses dados devem ser incluídos aqui antes da abertura operacional ao público.</p>
+          {legalConfiguration.isComplete ? (
+            <>
+              <p><strong>Operador:</strong> {legalConfiguration.operatorName}.</p>
+              <p><strong>Endereço público:</strong> {legalConfiguration.address}.</p>
+              <p><strong>Foro aplicável:</strong> {legalConfiguration.forum}.</p>
+            </>
+          ) : (
+            <>
+              <p>ORHA é o nome do produto. A identificação jurídica do operador, endereço e foro aplicável ainda não foram fornecidos para publicação e não são inventados nesta versão.</p>
+              <p>Esses dados devem ser incluídos aqui antes da abertura operacional ao público.</p>
+            </>
+          )}
         </DocumentSection>
       </article>
 
@@ -151,7 +174,11 @@ export function TermsPage({ onBack, onNavigate }: LinkedInfoPageProps) {
   );
 }
 
-export function PrivacyPolicyPage({ onBack, onNavigate }: LinkedInfoPageProps) {
+export function PrivacyPolicyPage({
+  onBack,
+  onNavigate,
+  legalConfiguration = appLegalConfiguration,
+}: LegalInfoPageProps) {
   return (
     <InfoPageShell
       title="Política de Privacidade"
@@ -160,7 +187,7 @@ export function PrivacyPolicyPage({ onBack, onNavigate }: LinkedInfoPageProps) {
       icon={<ShieldCheck aria-hidden size={23} />}
       onBack={onBack}
     >
-      <UpdatedAt />
+      <UpdatedAt configuration={legalConfiguration} />
       <article className="space-y-4" aria-label="Política de Privacidade da ORHA">
         <DocumentSection title="1. Dados tratados">
           <p>Tratamos dados de cadastro e segurança, como e-mail, identificador da conta, confirmação, sessões e registros necessários para proteger o acesso.</p>
@@ -203,8 +230,25 @@ export function PrivacyPolicyPage({ onBack, onNavigate }: LinkedInfoPageProps) {
         </DocumentSection>
 
         <DocumentSection title="7. Controlador e canal de privacidade">
-          <p>A identificação jurídica do controlador e o canal formal de privacidade ainda não foram fornecidos para publicação. Esta versão não atribui esses papéis a uma pessoa ou empresa sem confirmação.</p>
-          <p>Antes da abertura operacional, os dados do controlador e o canal válido devem substituir este aviso.</p>
+          {legalConfiguration.isComplete ? (
+            <>
+              <p><strong>Controlador:</strong> {legalConfiguration.controllerName}.</p>
+              <p>
+                Solicitações de privacidade podem ser enviadas para{" "}
+                <a
+                  className="font-semibold text-violet-700 underline underline-offset-2"
+                  href={`mailto:${legalConfiguration.privacyEmail}`}
+                >
+                  {legalConfiguration.privacyEmail}
+                </a>.
+              </p>
+            </>
+          ) : (
+            <>
+              <p>A identificação jurídica do controlador e o canal formal de privacidade ainda não foram fornecidos para publicação. Esta versão não atribui esses papéis a uma pessoa ou empresa sem confirmação.</p>
+              <p>Antes da abertura operacional, os dados do controlador e o canal válido devem substituir este aviso.</p>
+            </>
+          )}
         </DocumentSection>
       </article>
 
@@ -293,7 +337,7 @@ export function HelpPage({ onBack, onNavigate }: LinkedInfoPageProps) {
 export function ContactPage({
   onBack,
   onOpenSupport,
-  supportEmail = import.meta.env.VITE_ORHA_SUPPORT_EMAIL,
+  supportEmail = appLegalConfiguration.supportEmail,
 }: SettingsInfoPageProps & { supportEmail?: string | null; onOpenSupport?: () => void }) {
   const normalizedEmail = normalizeSupportEmail(supportEmail);
   const mailtoHref = buildSupportMailto(normalizedEmail);

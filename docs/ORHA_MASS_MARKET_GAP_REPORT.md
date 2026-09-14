@@ -63,7 +63,7 @@ Fontes versionadas: `scripts/remote-inventory.sql`, `scripts/supabase-validate.s
 |---|---|
 | `npm run typecheck` | Aprovado fora do sandbox |
 | `npm run lint` | Aprovado |
-| `npm test` | 77 arquivos e 337 testes aprovados |
+| `npm test` | 79 arquivos e 345 testes aprovados |
 | `npm run build` | Aprovado; 5.983 módulos, manifest e service worker gerados, precache de 103 entradas |
 | `npm run audit:bundle` | Aprovado; entrada JS 291,9 KiB gzip, CSS 27,8 KiB gzip e maior lazy chunk 78,8 KiB gzip |
 | `npm run check:catalog` | Aprovado |
@@ -207,7 +207,7 @@ Próxima fatia vertical:
 
 ### P1.4 Termos, privacidade, suporte e operação legal
 
-`src/app/pages/settings-info-pages.tsx` declara que identificação jurídica do operador, controlador, endereço, foro e canal formal de privacidade não foram fornecidos. O canal de suporte também aparece como não configurado quando `VITE_ORHA_SUPPORT_EMAIL` está vazio.
+`src/app/pages/settings-info-pages.tsx` agora consome uma configuração pública tipada para operador, controlador, endereço, foro, vigência, suporte e privacidade. O workflow executa `npm run audit:launch-config` antes do build e falha fechado se qualquer valor estiver ausente ou inválido. Em desenvolvimento, a interface permanece honesta e declara que esses dados não foram fornecidos; os valores reais ainda dependem de definição e aprovação externa e não foram inventados.
 
 Critério de aceite:
 

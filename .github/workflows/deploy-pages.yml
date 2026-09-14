@@ -17,6 +17,14 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      VITE_ORHA_LEGAL_OPERATOR_NAME: ${{ vars.VITE_ORHA_LEGAL_OPERATOR_NAME }}
+      VITE_ORHA_LEGAL_CONTROLLER_NAME: ${{ vars.VITE_ORHA_LEGAL_CONTROLLER_NAME }}
+      VITE_ORHA_LEGAL_ADDRESS: ${{ vars.VITE_ORHA_LEGAL_ADDRESS }}
+      VITE_ORHA_LEGAL_FORUM: ${{ vars.VITE_ORHA_LEGAL_FORUM }}
+      VITE_ORHA_LEGAL_EFFECTIVE_DATE: ${{ vars.VITE_ORHA_LEGAL_EFFECTIVE_DATE }}
+      VITE_ORHA_SUPPORT_EMAIL: ${{ vars.VITE_ORHA_SUPPORT_EMAIL }}
+      VITE_ORHA_PRIVACY_EMAIL: ${{ vars.VITE_ORHA_PRIVACY_EMAIL }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -40,6 +48,8 @@ jobs:
         run: npm run audit:secrets
       - name: Audit text encoding
         run: npm run audit:text-encoding
+      - name: Require public legal and support configuration
+        run: npm run audit:launch-config
       - name: Test
         run: npm run test
       - name: Check library catalog

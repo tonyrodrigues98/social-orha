@@ -13,6 +13,7 @@ import {
   isSettingsInfoPath,
 } from "../settings/settings-info-routes";
 import { buildSupportMailto, normalizeSupportEmail } from "../settings/support-contact";
+import { legalPublicConfigurationFromEnvironment } from "@/config/legal-public-configuration";
 
 const noop = () => undefined;
 
@@ -73,6 +74,33 @@ describe("settings information pages", () => {
     expect(markup).toContain("Captura automática, gravação de sessão");
     expect(markup).toContain("Nenhum serviço conectado à internet pode prometer risco zero");
     expect(markup).toContain("identificação jurídica do controlador");
+  });
+
+  it("publishes the approved operator, controller and privacy channel when launch configuration is complete", () => {
+    const legalConfiguration = legalPublicConfigurationFromEnvironment({
+      VITE_ORHA_LEGAL_OPERATOR_NAME: "ORHA Operações",
+      VITE_ORHA_LEGAL_CONTROLLER_NAME: "ORHA Controladoria",
+      VITE_ORHA_LEGAL_ADDRESS: "Endereço público aprovado, São Paulo - SP",
+      VITE_ORHA_LEGAL_FORUM: "Foro da Comarca de São Paulo - SP",
+      VITE_ORHA_LEGAL_EFFECTIVE_DATE: "2026-09-14",
+      VITE_ORHA_SUPPORT_EMAIL: "suporte@orha.example",
+      VITE_ORHA_PRIVACY_EMAIL: "privacidade@orha.example",
+    });
+    const termsMarkup = renderToStaticMarkup(
+      <TermsPage onBack={noop} legalConfiguration={legalConfiguration} />,
+    );
+    const privacyMarkup = renderToStaticMarkup(
+      <PrivacyPolicyPage onBack={noop} legalConfiguration={legalConfiguration} />,
+    );
+
+    expect(termsMarkup).toContain("14 de setembro de 2026");
+    expect(termsMarkup).toContain("ORHA Operações");
+    expect(termsMarkup).toContain("Endereço público aprovado, São Paulo - SP");
+    expect(termsMarkup).toContain("Foro da Comarca de São Paulo - SP");
+    expect(termsMarkup).not.toContain("não são inventados nesta versão");
+    expect(privacyMarkup).toContain("ORHA Controladoria");
+    expect(privacyMarkup).toContain('href="mailto:privacidade@orha.example"');
+    expect(privacyMarkup).not.toContain("ainda não foram fornecidos para publicação");
   });
 
   it("uses native accessible disclosures for the help topics", () => {

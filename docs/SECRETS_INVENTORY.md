@@ -18,6 +18,9 @@ Este inventário contém somente nomes e estado de disponibilidade. Valores, has
 | --- | --- | --- | --- |
 | `VITE_SUPABASE_URL` | configuração pública | presente em `.env.local` e no workflow | GitHub Actions Variable e ambiente local ignorado |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | chave pública | presente em `.env.local` e no workflow | GitHub Actions Variable e ambiente local ignorado |
+| `VITE_ORHA_LEGAL_OPERATOR_NAME`, `VITE_ORHA_LEGAL_CONTROLLER_NAME` | identidade pública, não secret | nomes exigidos; valores reais ainda não fornecidos | GitHub Actions Variables; publicação falha fechada sem ambos |
+| `VITE_ORHA_LEGAL_ADDRESS`, `VITE_ORHA_LEGAL_FORUM`, `VITE_ORHA_LEGAL_EFFECTIVE_DATE` | informação jurídica pública | nomes exigidos; valores reais ainda não fornecidos | GitHub Actions Variables; data em `AAAA-MM-DD` |
+| `VITE_ORHA_SUPPORT_EMAIL`, `VITE_ORHA_PRIVACY_EMAIL` | canais públicos, não secrets | nomes exigidos; valores reais ainda não fornecidos | GitHub Actions Variables; publicação falha fechada se inválidos |
 | `ORHA_STAGING_SUPABASE_URL` | configuração pública de staging | nome exigido; valor não pertence ao repositório | GitHub Actions Variable do gate E2E |
 | `ORHA_STAGING_SUPABASE_PUBLISHABLE_KEY` | chave pública isolada de staging | nome exigido; valor não pertence ao repositório | GitHub Actions Secret do gate E2E |
 | `ORHA_E2E_SUPABASE_HOST` | verificação pública de destino | nome exigido; deve corresponder à URL de staging | GitHub Actions Variable do gate E2E |
