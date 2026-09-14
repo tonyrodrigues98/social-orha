@@ -2,9 +2,9 @@
 
 Data da verificação: 2026-09-14  
 Branch auditada: `codex/production-launch`  
-Commit-base auditado antes deste checkpoint: `46d8742`
+Commit-base auditado antes deste checkpoint: `381108e`
 Staging auditado: `bgeauxljwjbtbwpbzpoo`  
-Produção Supabase: `iuaczhkfmwpyhtpdmuyt`  
+Produção Supabase: `iuaczhkfmwpyhtpdmuyt`
 
 ## Veredito
 
@@ -15,7 +15,7 @@ Mesmo assim, a ORHA **ainda não atende à Definition of Done para lançamento e
 Portanto, a classificação correta é:
 
 - **Código candidato a lançamento:** avançado, compilável e sem mocks de runtime na branch auditada.
-- **Staging de dados:** estruturalmente consistente, com RLS e lint validados, cinco Edge Functions ativas, gate anônimo/CORS 7/7, catálogo/export/mídia autenticados 14/14, ciclo de conta 17/17 e mensageria/mídia privada 18/18; a matriz E2E permanente de cinco contas ainda está pendente.
+- **Staging de dados:** estruturalmente consistente, com RLS e lint validados, cinco Edge Functions ativas, gate anônimo/CORS 7/7, catálogo/export/mídia autenticados 14/14, ciclo de conta 17/17, mensageria/mídia privada 18/18 e domínio social multiusuário 18/18; a matriz E2E permanente de cinco contas ainda está pendente.
 - **Produção:** não promovida.
 - **Produto público atual:** protótipo legado, não equivalente à branch candidata.
 - **Pronto para as massas:** não.
@@ -24,24 +24,24 @@ Portanto, a classificação correta é:
 
 ### O que existe de verdade
 
-| Área | Evidência | Estado |
-|---|---|---|
-| Runtime sem provider de protótipo | `src/app/app-runtime-providers.tsx` instancia adapters reais; `src/app/app-runtime-adapters.ts` liga Explore, Social, Notifications, Trust e Messaging ao Supabase | Implementado na branch |
-| Rotas recuperáveis | `src/app/router.tsx` e `src/app/router-policy.ts` definem Auth, onboarding, cinco áreas principais, conversas, comunidades, perfil público, notificações, configurações, denúncia e moderação | Implementado na branch |
-| Auth por e-mail | `src/infrastructure/supabase/email-auth.ts` contém cadastro, login, logout, resend, recovery e troca de senha; `src/app/auth/auth-provider.tsx` observa a sessão real | Implementado; entrega externa não comprovada |
-| Onboarding persistente | `src/app/onboarding/onboarding-flow.tsx` retoma `onboarding_step` e persiste identidade, localidade, detalhes e favoritos | Implementado; fechamento E2E pendente |
-| Domínios sociais | `src/domains/social/repository.ts` e `src/infrastructure/supabase/social/social-repository.ts` implementam perfis, amizades, comunidades, memberships, posts, comentários e reações | Implementado |
-| Comunidade administrativa | `src/infrastructure/supabase/community-management-repository.ts` e `src/app/community/community-manager-drawer.tsx` cobrem edição, regras, roles, banimento, branding e arquivamento | Implementado; mídia depende de Edge |
-| Mensageria persistente | `src/domains/messaging/contracts.ts` e `src/infrastructure/supabase/messaging/*` cobrem pedidos, grupos, texto, imagem, áudio, reply, reaction, forward, delete, receipts, busca, preferências e Realtime | Implementado; pedido/aceite, texto, receipts, mídia e Realtime privado comprovados 18/18 no staging |
-| Waveform e gravação | `src/app/pages/private-chat-page.tsx`, `src/infrastructure/media/browser-audio-recorder.ts` e `src/components/ui/chat/*` usam gravação real, waveform e primitives do chat | Implementado; WAV remoto, inspeção Edge, waveform persistida e download entre usuários comprovados |
-| Perfil e mídia | `src/app/pages/profile-page.tsx`, `src/app/profile/*`, `src/application/profile-media/*` e `src/infrastructure/supabase/profile-media-repository.ts` cobrem crop, avatar, capa, galeria, privacidade e favoritos | Implementado; verificação remota depende de Edge |
-| Home real | `src/app/pages/home-page.tsx` e `src/infrastructure/supabase/home/home-dashboard-repository.ts` usam resumo server-side, sem conteúdo falso | Implementado |
-| Explore real | `src/app/explore/*` e `src/infrastructure/supabase/explore/*` usam busca server-side de perfis, comunidades, interesses e posts | Implementado; destinos futuros estão claramente marcados como planejamento |
-| Confiança e moderação | `src/domains/trust/*`, `src/infrastructure/supabase/trust/*`, `src/app/pages/report-page.tsx` e `src/app/pages/admin-moderation-page.tsx` cobrem bloqueio, denúncia, contexto limitado, sanção e auditoria | Implementado; operação E2E pendente |
-| Suporte | `src/domains/support/*`, `src/infrastructure/supabase/support/*`, `src/app/pages/support-page.tsx` e migrations `20260914100000`/`101000` cobrem chamado, fila, resposta, atribuição, prioridade, notificação e Realtime | Implementado e validado transacionalmente no staging |
-| Analytics consentido | `src/infrastructure/analytics/*`, `src/app/analytics/*`, Configurações > Dados e migration `20260914104000` usam o port existente, carregamento lazy, allowlist e opt-in persistente | Implementado e validado transacionalmente; key/host externo ainda não provisionados |
-| PWA e native-first | `vite.config.ts`, `scripts/pwa-manifest.ts`, `src/app/pwa-runtime.ts`, `src/styles/index.css` e `public/brand/*` | Build PWA aprovado |
-| Base de bibliotecas | `src/infrastructure/libraries/library-catalog.ts`, `docs/LIBRARY-INVENTORY.md`, `components.json` e `package.json` | 43 itens, 66 pacotes/fontes conferidos, cinco pacotes em quarentena sem imports de runtime |
+| Área                              | Evidência                                                                                                                                                                                                                                   | Estado                                                                                              |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Runtime sem provider de protótipo | `src/app/app-runtime-providers.tsx` instancia adapters reais; `src/app/app-runtime-adapters.ts` liga Explore, Social, Notifications, Trust e Messaging ao Supabase                                                                          | Implementado na branch                                                                              |
+| Rotas recuperáveis                | `src/app/router.tsx` e `src/app/router-policy.ts` definem Auth, onboarding, cinco áreas principais, conversas, comunidades, perfil público, notificações, configurações, denúncia e moderação                                               | Implementado na branch                                                                              |
+| Auth por e-mail                   | `src/infrastructure/supabase/email-auth.ts` contém cadastro, login, logout, resend, recovery e troca de senha; `src/app/auth/auth-provider.tsx` observa a sessão real                                                                       | Implementado; entrega externa não comprovada                                                        |
+| Onboarding persistente            | `src/app/onboarding/onboarding-flow.tsx` retoma `onboarding_step` e persiste identidade, localidade, detalhes e favoritos                                                                                                                   | Implementado; fechamento E2E pendente                                                               |
+| Domínios sociais                  | `src/domains/social/repository.ts`, `src/infrastructure/supabase/social/social-repository.ts` e `scripts/social-domain-smoke.ts` implementam e comprovam perfis, amizades, comunidades, memberships, posts, comentários, reações e bloqueio | Implementado; jornada efêmera staging 18/18                                                         |
+| Comunidade administrativa         | `src/infrastructure/supabase/community-management-repository.ts` e `src/app/community/community-manager-drawer.tsx` cobrem edição, regras, roles, banimento, branding e arquivamento                                                        | Implementado; mídia depende de Edge                                                                 |
+| Mensageria persistente            | `src/domains/messaging/contracts.ts` e `src/infrastructure/supabase/messaging/*` cobrem pedidos, grupos, texto, imagem, áudio, reply, reaction, forward, delete, receipts, busca, preferências e Realtime                                   | Implementado; pedido/aceite, texto, receipts, mídia e Realtime privado comprovados 18/18 no staging |
+| Waveform e gravação               | `src/app/pages/private-chat-page.tsx`, `src/infrastructure/media/browser-audio-recorder.ts` e `src/components/ui/chat/*` usam gravação real, waveform e primitives do chat                                                                  | Implementado; WAV remoto, inspeção Edge, waveform persistida e download entre usuários comprovados  |
+| Perfil e mídia                    | `src/app/pages/profile-page.tsx`, `src/app/profile/*`, `src/application/profile-media/*` e `src/infrastructure/supabase/profile-media-repository.ts` cobrem crop, avatar, capa, galeria, privacidade e favoritos                            | Implementado; verificação remota depende de Edge                                                    |
+| Home real                         | `src/app/pages/home-page.tsx` e `src/infrastructure/supabase/home/home-dashboard-repository.ts` usam resumo server-side, sem conteúdo falso                                                                                                 | Implementado                                                                                        |
+| Explore real                      | `src/app/explore/*` e `src/infrastructure/supabase/explore/*` usam busca server-side de perfis, comunidades, interesses e posts                                                                                                             | Implementado; destinos futuros estão claramente marcados como planejamento                          |
+| Confiança e moderação             | `src/domains/trust/*`, `src/infrastructure/supabase/trust/*`, `src/app/pages/report-page.tsx` e `src/app/pages/admin-moderation-page.tsx` cobrem bloqueio, denúncia, contexto limitado, sanção e auditoria                                  | Implementado; operação E2E pendente                                                                 |
+| Suporte                           | `src/domains/support/*`, `src/infrastructure/supabase/support/*`, `src/app/pages/support-page.tsx` e migrations `20260914100000`/`101000` cobrem chamado, fila, resposta, atribuição, prioridade, notificação e Realtime                    | Implementado e validado transacionalmente no staging                                                |
+| Analytics consentido              | `src/infrastructure/analytics/*`, `src/app/analytics/*`, Configurações > Dados e migration `20260914104000` usam o port existente, carregamento lazy, allowlist e opt-in persistente                                                        | Implementado e validado transacionalmente; key/host externo ainda não provisionados                 |
+| PWA e native-first                | `vite.config.ts`, `scripts/pwa-manifest.ts`, `src/app/pwa-runtime.ts`, `src/styles/index.css` e `public/brand/*`                                                                                                                            | Build PWA aprovado                                                                                  |
+| Base de bibliotecas               | `src/infrastructure/libraries/library-catalog.ts`, `docs/LIBRARY-INVENTORY.md`, `components.json` e `package.json`                                                                                                                          | 43 itens, 66 pacotes/fontes conferidos, cinco pacotes em quarentena sem imports de runtime          |
 
 ### Estado remoto comprovado do staging
 
@@ -59,20 +59,20 @@ Fontes versionadas: `scripts/remote-inventory.sql`, `scripts/supabase-validate.s
 
 ### Gates locais executados nesta auditoria
 
-| Gate | Resultado |
-|---|---|
-| `npm run typecheck` | Aprovado fora do sandbox |
-| `npm run lint` | Aprovado |
-| `npm test` | 85 arquivos e 363 testes aprovados |
-| `npm run build` | Aprovado; 5.983 módulos, manifest e service worker gerados, precache de 103 entradas |
-| `npm run audit:bundle` | Aprovado; entrada JS 291,9 KiB gzip, CSS 27,8 KiB gzip e maior lazy chunk 78,8 KiB gzip |
-| `npm run check:catalog` | Aprovado |
-| `npm run audit:production-debt` | Aprovado; zero mock, seed, TODO e localStorage; ocorrências legadas explicitamente allowlisted |
-| `npm run audit:secrets` | Aprovado |
-| `npm run audit:text-encoding` | Aprovado |
-| `npm run test:e2e:production` | Bloqueado no preflight por ambiente/secrets ausentes; nenhuma jornada foi falsamente marcada como aprovada |
-| `npm audit --omit=dev --audit-level=high` | Aprovado; zero vulnerabilidades |
-| `npx supabase db lint --linked --level warning` | Aprovado sem erros; um aviso extra preexistente sobre variável PL/pgSQL não lida |
+| Gate                                            | Resultado                                                                                                  |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `npm run typecheck`                             | Aprovado fora do sandbox                                                                                   |
+| `npm run lint`                                  | Aprovado                                                                                                   |
+| `npm test`                                      | 86 arquivos e 364 testes aprovados                                                                         |
+| `npm run build`                                 | Aprovado; 5.985 módulos, manifest e service worker gerados, precache de 103 entradas                       |
+| `npm run audit:bundle`                          | Aprovado; entrada JS 291,9 KiB gzip, CSS 27,8 KiB gzip e maior lazy chunk 78,8 KiB gzip                    |
+| `npm run check:catalog`                         | Aprovado                                                                                                   |
+| `npm run audit:production-debt`                 | Aprovado; zero mock, seed, TODO e localStorage; ocorrências legadas explicitamente allowlisted             |
+| `npm run audit:secrets`                         | Aprovado                                                                                                   |
+| `npm run audit:text-encoding`                   | Aprovado                                                                                                   |
+| `npm run test:e2e:production`                   | Bloqueado no preflight por ambiente/secrets ausentes; nenhuma jornada foi falsamente marcada como aprovada |
+| `npm audit --omit=dev --audit-level=high`       | Aprovado; zero vulnerabilidades                                                                            |
+| `npx supabase db lint --linked --level warning` | Aprovado sem erros nem avisos                                                                              |
 
 ## Bloqueadores P0 — precisam ser eliminados antes de qualquer promoção
 
@@ -111,6 +111,8 @@ O novo gate `npm run smoke:edge:authenticated`, restrito por código ao projeto 
 O gate `npm run smoke:worker:account-deletion` passou 17/17. Para desativação, ele rejeitou confirmação inválida, persistiu a restrição imediata e comprovou a conclusão pelo worker real. Para exclusão, persistiu a janela de arrependimento, tornou devida somente a solicitação efêmera, acionou `private.invoke_orha_worker` com o segredo lido internamente pelo Vault e comprovou remoção de Auth, perfil, Storage, lifecycle e tombstone, além de `account.deletion_completed`. `audit_logs` foi corretamente preservada porque é append-only inclusive para `postgres`; ela é evidência operacional anônima, não fixture mutável. A consulta final confirmou zero contas sintéticas e zero tombstones mutáveis.
 
 O gate `npm run smoke:messaging:media` passou 18/18 com duas contas efêmeras: onboarding real, solicitação e aceite de conversa, texto em Realtime privado, imagem, áudio WAV, waveform, verificação binária, signed download, recibo, denúncia com retenção exata do anexo e evidência privada. O mesmo gate confirmou que os canais privados `notifications:<user>` e `support:<user>` alcançam readiness de replicação sem abrir escrita ao cliente. A pós-consulta confirmou zero contas, perfis e objetos sintéticos. A matriz permanente A/B/Admin/Moderador/Suporte continua sendo um gate maior e separado.
+
+O gate `npm run smoke:social:domain` também passou 18/18 com duas contas efêmeras e cleanup verificado. Ele exerceu os repositories de produção contra o staging: descoberta de perfis, autoamizade negada, pedido/aceite/notificações, par idempotente, escrita direta privilegiada negada, comunidade com owner server-side, membership, autoridade de manager, post, comentário, reações, saída/reentrada, bloqueio global, desbloqueio e negação anônima. A matriz permanente A/B/Admin/Moderador/Suporte permanece necessária porque esse smoke não substitui navegador, e-mail, papéis administrativos nem evidência longitudinal entre dispositivos.
 
 Critério de aceite:
 
@@ -162,7 +164,7 @@ O audit produtivo foi reexecutado em 2026-09-14 e retornou `found 0 vulnerabilit
 Evidência preservada:
 
 - `npm audit --omit=dev --audit-level=high`: zero vulnerabilidades;
-- catálogo, TypeScript, ESLint, 363 testes, orçamento de bundle e build PWA verdes;
+- catálogo, TypeScript, ESLint, 364 testes, orçamento de bundle e build PWA verdes;
 - E2E autenticado continua sendo um gate separado e não foi inferido deste resultado.
 
 ## Bloqueadores P1 — produto completo e operável

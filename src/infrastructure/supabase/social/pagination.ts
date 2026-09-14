@@ -1,4 +1,4 @@
-import type { SocialPage } from "@/domains/social";
+import type { SocialPage } from "@/domains/social/types";
 
 export const DEFAULT_SOCIAL_PAGE_SIZE = 20;
 export const MAX_SOCIAL_PAGE_SIZE = 50;

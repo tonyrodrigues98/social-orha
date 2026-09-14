@@ -7,7 +7,7 @@ import type {
   PostComment,
   SocialProfile,
   SocialReaction,
-} from "@/domains/social";
+} from "@/domains/social/types";
 
 export type SocialRow = Record<string, unknown>;
 
@@ -145,7 +145,10 @@ export function mapCommunityPost(row: SocialRow): CommunityPost {
     communityId: nullableString(row, "community_id"),
     authorId: nullableString(row, "author_id"),
     body: requiredString(row, "body"),
-    visibility: requiredString(row, "visibility") as CommunityPost["visibility"],
+    visibility: requiredString(
+      row,
+      "visibility",
+    ) as CommunityPost["visibility"],
     status: requiredString(row, "status") as CommunityPost["status"],
     createdAt: requiredString(row, "created_at"),
     updatedAt: requiredString(row, "updated_at"),

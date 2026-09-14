@@ -12,8 +12,8 @@ import type {
   SocialPageRequest,
   SocialProfile,
   SocialReaction,
-  SocialRepository,
-} from "@/domains/social";
+} from "@/domains/social/types";
+import type { SocialRepository } from "@/domains/social/repository";
 import {
   mapCommunity,
   mapCommunityMembership,
@@ -33,8 +33,13 @@ import {
 
 type SupabaseErrorLike = { message?: string } | null;
 
-function socialRepositoryError(action: string, error: SupabaseErrorLike): Error {
-  return new Error(`Não foi possível ${action}.`, { cause: error ?? undefined });
+function socialRepositoryError(
+  action: string,
+  error: SupabaseErrorLike,
+): Error {
+  return new Error(`Não foi possível ${action}.`, {
+    cause: error ?? undefined,
+  });
 }
 
 function rowsOf(value: unknown): SocialRow[] {
@@ -81,7 +86,8 @@ function ilikePattern(search?: string): string | null {
 
 async function requireCurrentUserId(client: SupabaseClient): Promise<string> {
   const { data, error } = await client.auth.getUser();
-  if (error || !data.user) throw socialRepositoryError("identificar sua conta", error);
+  if (error || !data.user)
+    throw socialRepositoryError("identificar sua conta", error);
   return data.user.id;
 }
 
@@ -107,9 +113,13 @@ async function profilesById(
   profileIds: Array<string | null>,
   signal?: AbortSignal,
 ): Promise<Map<string, SocialProfile>> {
-  const uniqueIds = [...new Set(profileIds.filter((id): id is string => Boolean(id)))];
+  const uniqueIds = [
+    ...new Set(profileIds.filter((id): id is string => Boolean(id))),
+  ];
   const profiles = await Promise.all(
-    uniqueIds.map(async (id) => [id, await visibleProfile(client, id, signal)] as const),
+    uniqueIds.map(
+      async (id) => [id, await visibleProfile(client, id, signal)] as const,
+    ),
   );
   return new Map(
     profiles.filter(
@@ -155,7 +165,8 @@ export function createSupabaseSocialRepository(
   return {
     listProfiles: (request) => listVisibleProfiles(client, request),
 
-    getProfile: (profileId, signal) => visibleProfile(client, profileId, signal),
+    getProfile: (profileId, signal) =>
+      visibleProfile(client, profileId, signal),
 
     async listFriendships(request: FriendshipListRequest = {}) {
       const userId = await requireCurrentUserId(client);
@@ -167,8 +178,10 @@ export function createSupabaseSocialRepository(
         .order("id", { ascending: false })
         .range(offset, end);
       if (request.status) query = query.eq("status", request.status);
-      if (request.direction === "incoming") query = query.eq("addressee_id", userId);
-      if (request.direction === "outgoing") query = query.eq("requester_id", userId);
+      if (request.direction === "incoming")
+        query = query.eq("addressee_id", userId);
+      if (request.direction === "outgoing")
+        query = query.eq("requester_id", userId);
       if (request.signal) query = query.abortSignal(request.signal);
       const { data, error } = await query;
       if (error) throw socialRepositoryError("carregar amizades", error);
@@ -224,7 +237,8 @@ export function createSupabaseSocialRepository(
         target_user_id: profileId,
       });
       const row = rowOf(data);
-      if (error || !row) throw socialRepositoryError("enviar a solicitação", error);
+      if (error || !row)
+        throw socialRepositoryError("enviar a solicitação", error);
       return mapFriendship(row);
     },
 
@@ -234,7 +248,8 @@ export function createSupabaseSocialRepository(
         accept_request: accept,
       });
       const row = rowOf(data);
-      if (error || !row) throw socialRepositoryError("responder à solicitação", error);
+      if (error || !row)
+        throw socialRepositoryError("responder à solicitação", error);
       return mapFriendship(row);
     },
 
@@ -280,10 +295,14 @@ export function createSupabaseSocialRepository(
           .select("*")
           .eq("profile_id", userId)
           .in("community_id", communityIds);
-        if (request.signal) membershipQuery = membershipQuery.abortSignal(request.signal);
+        if (request.signal)
+          membershipQuery = membershipQuery.abortSignal(request.signal);
         const membershipResult = await membershipQuery;
         if (membershipResult.error) {
-          throw socialRepositoryError("carregar participações", membershipResult.error);
+          throw socialRepositoryError(
+            "carregar participações",
+            membershipResult.error,
+          );
         }
         memberships = rowsOf(membershipResult.data);
       }
@@ -354,7 +373,10 @@ export function createSupabaseSocialRepository(
       if (signal) membershipQuery = membershipQuery.abortSignal(signal);
       const membershipResult = await membershipQuery.maybeSingle();
       if (membershipResult.error) {
-        throw socialRepositoryError("carregar a participação", membershipResult.error);
+        throw socialRepositoryError(
+          "carregar a participação",
+          membershipResult.error,
+        );
       }
       return mapCommunity({
         ...row,
@@ -375,10 +397,12 @@ export function createSupabaseSocialRepository(
         p_slug: slug,
         p_description: input.description?.trim() ?? "",
         p_visibility: input.visibility ?? "public",
-        p_category: input.category?.trim().toLocaleLowerCase("pt-BR") ?? "general",
+        p_category:
+          input.category?.trim().toLocaleLowerCase("pt-BR") ?? "general",
       });
       const row = rowOf(data);
-      if (error || !row) throw socialRepositoryError("criar a comunidade", error);
+      if (error || !row)
+        throw socialRepositoryError("criar a comunidade", error);
       return mapCommunity({
         ...row,
         member_count: 1,
@@ -394,7 +418,8 @@ export function createSupabaseSocialRepository(
         .select("*")
         .order("created_at", { ascending: false })
         .range(offset, end);
-      if (request.communityId) query = query.eq("community_id", request.communityId);
+      if (request.communityId)
+        query = query.eq("community_id", request.communityId);
       if (request.profileId) query = query.eq("profile_id", request.profileId);
       if (request.signal) query = query.abortSignal(request.signal);
       const { data, error } = await query;
@@ -423,7 +448,8 @@ export function createSupabaseSocialRepository(
         p_community_id: communityId,
       });
       const row = rowOf(data);
-      if (error || !row) throw socialRepositoryError("entrar na comunidade", error);
+      if (error || !row)
+        throw socialRepositoryError("entrar na comunidade", error);
       return mapCommunityMembership(row);
     },
 
@@ -445,7 +471,10 @@ export function createSupabaseSocialRepository(
       );
       const row = rowOf(data);
       if (error || !row) {
-        throw socialRepositoryError("responder à solicitação de entrada", error);
+        throw socialRepositoryError(
+          "responder à solicitação de entrada",
+          error,
+        );
       }
       return mapCommunityMembership(row);
     },
@@ -477,7 +506,8 @@ export function createSupabaseSocialRepository(
         .order("created_at", { ascending: false })
         .order("id", { ascending: false })
         .range(offset, end);
-      if (request.communityId) query = query.eq("community_id", request.communityId);
+      if (request.communityId)
+        query = query.eq("community_id", request.communityId);
       if (request.authorId) query = query.eq("author_id", request.authorId);
       const pattern = ilikePattern(request.search);
       if (pattern) query = query.ilike("body", pattern);
@@ -496,7 +526,8 @@ export function createSupabaseSocialRepository(
           .select("post_id, kind")
           .eq("reactor_id", userId)
           .in("post_id", postIds);
-        if (request.signal) reactionQuery = reactionQuery.abortSignal(request.signal);
+        if (request.signal)
+          reactionQuery = reactionQuery.abortSignal(request.signal);
         const reactionResult = await reactionQuery;
         if (reactionResult.error) {
           throw socialRepositoryError("carregar reações", reactionResult.error);
@@ -508,7 +539,9 @@ export function createSupabaseSocialRepository(
       );
       const authors = await profilesById(
         client,
-        rows.map((row) => (typeof row.author_id === "string" ? row.author_id : null)),
+        rows.map((row) =>
+          typeof row.author_id === "string" ? row.author_id : null,
+        ),
         request.signal,
       );
 
@@ -533,23 +566,24 @@ export function createSupabaseSocialRepository(
       const row = rowOf(data);
       if (!row || row.community_id !== communityId) return null;
 
-      const author = typeof row.author_id === "string"
-        && typeof row.author_full_name === "string"
-        && typeof row.author_username === "string"
-        ? {
-            id: row.author_id,
-            full_name: row.author_full_name,
-            username: row.author_username,
-            avatar_path: row.author_avatar_path ?? null,
-            bio: null,
-            church: null,
-            state_code: null,
-            city: null,
-            interests: [],
-            hobbies: [],
-            is_friend: false,
-          }
-        : null;
+      const author =
+        typeof row.author_id === "string" &&
+        typeof row.author_full_name === "string" &&
+        typeof row.author_username === "string"
+          ? {
+              id: row.author_id,
+              full_name: row.author_full_name,
+              username: row.author_username,
+              avatar_path: row.author_avatar_path ?? null,
+              bio: null,
+              church: null,
+              state_code: null,
+              city: null,
+              interests: [],
+              hobbies: [],
+              is_friend: false,
+            }
+          : null;
 
       return mapCommunityPost({
         id: row.post_id,
@@ -575,7 +609,8 @@ export function createSupabaseSocialRepository(
           author_id: userId,
           community_id: input.communityId ?? null,
           body: input.body.trim(),
-          visibility: input.visibility ?? (input.communityId ? "community" : "public"),
+          visibility:
+            input.visibility ?? (input.communityId ? "community" : "public"),
         })
         .select("*")
         .single();
@@ -615,7 +650,8 @@ export function createSupabaseSocialRepository(
           .select("comment_id, kind")
           .eq("reactor_id", userId)
           .in("comment_id", commentIds);
-        if (request.signal) reactionQuery = reactionQuery.abortSignal(request.signal);
+        if (request.signal)
+          reactionQuery = reactionQuery.abortSignal(request.signal);
         const reactionResult = await reactionQuery;
         if (reactionResult.error) {
           throw socialRepositoryError("carregar reações", reactionResult.error);
@@ -627,7 +663,9 @@ export function createSupabaseSocialRepository(
       );
       const authors = await profilesById(
         client,
-        rows.map((row) => (typeof row.author_id === "string" ? row.author_id : null)),
+        rows.map((row) =>
+          typeof row.author_id === "string" ? row.author_id : null,
+        ),
         request.signal,
       );
 
@@ -664,14 +702,16 @@ export function createSupabaseSocialRepository(
 
     async setReaction(input: SetReactionInput): Promise<SocialReaction | null> {
       const userId = await requireCurrentUserId(client);
-      const targetColumn = input.targetType === "post" ? "post_id" : "comment_id";
+      const targetColumn =
+        input.targetType === "post" ? "post_id" : "comment_id";
       const { data: existingData, error: existingError } = await client
         .from("post_reactions")
         .select("*")
         .eq("reactor_id", userId)
         .eq(targetColumn, input.targetId)
         .maybeSingle();
-      if (existingError) throw socialRepositoryError("carregar a reação", existingError);
+      if (existingError)
+        throw socialRepositoryError("carregar a reação", existingError);
       const existing = rowOf(existingData);
 
       if (!input.kind) {
@@ -696,7 +736,8 @@ export function createSupabaseSocialRepository(
             .insert({
               reactor_id: userId,
               post_id: input.targetType === "post" ? input.targetId : null,
-              comment_id: input.targetType === "comment" ? input.targetId : null,
+              comment_id:
+                input.targetType === "comment" ? input.targetId : null,
               kind: input.kind,
             })
             .select("*")
@@ -706,6 +747,5 @@ export function createSupabaseSocialRepository(
       if (error || !row) throw socialRepositoryError("salvar a reação", error);
       return mapSocialReaction(row);
     },
-
   };
 }
