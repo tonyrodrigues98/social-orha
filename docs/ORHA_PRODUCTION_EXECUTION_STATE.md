@@ -5,11 +5,11 @@ Branch: `codex/production-launch`
 Commit-base publicado: `54968d8`  
 Projeto vinculado durante os gates: `bgeauxljwjbtbwpbzpoo` (ORHA-Staging)  
 Produção: `iuaczhkfmwpyhtpdmuyt` (ORHA), ainda não promovida  
-Estado: **staging saudável e alinhado às 14 migrations locais; produção intacta e protegida pelo snapshot pré-promoção; gate estrutural 18/18 e matriz RLS transacional aprovados**.
+Estado: **staging saudável e alinhado às 15 migrations locais; produção intacta e protegida pelo snapshot pré-promoção; lint remoto sem erros, gate estrutural 18/18 e matriz RLS transacional aprovados**.
 
 ## Resumo executivo
 
-O banco de produção ainda não recebeu a cadeia social desta branch. No staging isolado `bgeauxljwjbtbwpbzpoo`, as 14 migrations versionadas, de `20260811040000` a `20260914060000`, estão agora aplicadas e registradas no ledger remoto. O gate estrutural passou em 18/18 checks e `scripts/supabase-rls-integration.sql` passou integralmente, terminando em `ROLLBACK` sem fixtures residuais.
+O banco de produção ainda não recebeu a cadeia social desta branch. No staging isolado `bgeauxljwjbtbwpbzpoo`, as 15 migrations versionadas, de `20260811040000` a `20260914070000`, estão agora aplicadas e registradas no ledger remoto. O lint hospedado passa sem erros, o gate estrutural passou em 18/18 checks e `scripts/supabase-rls-integration.sql` passou integralmente, terminando em `ROLLBACK` sem fixtures residuais.
 
 Em 2026-09-14, ambos os projetos foram confirmados como ativos no control plane e o staging como `Healthy` no Dashboard. A CLI foi autenticada pelo fluxo oficial no navegador e o workspace foi vinculado temporariamente ao staging. A primeira aplicação publicou `1800` a `2200`; `2300` falhou atomicamente por um alias SQL reservado e por uma pós-validação que não aceitava a serialização `search_path=""` do PostgreSQL hospedado. As duas causas foram corrigidas no SQL versionado. A retomada aplicou `2300`, `2400`, `2500` e `20260903010000` com sucesso. O único aviso final foi a impossibilidade de gerar cache local do catálogo porque Docker não está instalado; isso não afetou o commit remoto das migrations.
 
