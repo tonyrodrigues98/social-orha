@@ -330,22 +330,22 @@ begin
   end if;
 
   with expired as (
-    select window.actor_id,
-           window.action,
-           window.window_seconds,
-           window.window_started_at
-    from private.actor_rate_limit_windows as window
-    where window.window_expires_at < timezone('utc', now()) - interval '48 hours'
-    order by window.window_expires_at, window.actor_id
+    select rate_window.actor_id,
+           rate_window.action,
+           rate_window.window_seconds,
+           rate_window.window_started_at
+    from private.actor_rate_limit_windows as rate_window
+    where rate_window.window_expires_at < timezone('utc', now()) - interval '48 hours'
+    order by rate_window.window_expires_at, rate_window.actor_id
     limit p_limit
     for update skip locked
   ), removed as (
-    delete from private.actor_rate_limit_windows as window
+    delete from private.actor_rate_limit_windows as rate_window
     using expired
-    where window.actor_id = expired.actor_id
-      and window.action = expired.action
-      and window.window_seconds = expired.window_seconds
-      and window.window_started_at = expired.window_started_at
+    where rate_window.actor_id = expired.actor_id
+      and rate_window.action = expired.action
+      and rate_window.window_seconds = expired.window_seconds
+      and rate_window.window_started_at = expired.window_started_at
     returning 1
   )
   select count(*)::integer into deleted_count from removed;
@@ -415,7 +415,11 @@ begin
       and procedure.proname = 'consume_actor_rate_limits'
       and procedure.prosecdef
       and procedure.provolatile = 'v'
-      and procedure.proconfig @> array['search_path=']::text[]
+      and exists (
+        select 1
+        from unnest(coalesce(procedure.proconfig, array[]::text[])) as setting
+        where setting in ('search_path=', 'search_path=""')
+      )
   ) then
     raise exception 'The authoritative rate-limit consumer is not hardened.' using errcode = '55000';
   end if;

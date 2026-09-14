@@ -66,6 +66,9 @@ describe("server-authoritative abuse rate limits", () => {
     expect(migration).toContain(
       "grant execute on function public.cleanup_actor_rate_limit_windows(integer) to service_role",
     );
+    expect(migration).toContain(
+      "where setting in ('search_path=', 'search_path=\"\"')",
+    );
   });
 
   it("keeps a transactional runtime gate for PT429, rollback, privacy, and audit metadata", () => {

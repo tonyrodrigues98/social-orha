@@ -1,14 +1,17 @@
 # ORHA — estado de execução Supabase
 
-Atualizado em: 2026-09-03  
-Projeto vinculado: `iuaczhkfmwpyhtpdmuyt`  
-Estado: **produção intacta e com snapshot pré-promoção; projetos remoto e staging atualmente pausados pelo Supabase; schema social C903 aprovado anteriormente em staging isolado**.
+Atualizado em: 2026-09-14  
+Branch: `codex/production-launch`  
+Commit-base publicado: `54968d8`  
+Projeto vinculado durante os gates: `bgeauxljwjbtbwpbzpoo` (ORHA-Staging)  
+Produção: `iuaczhkfmwpyhtpdmuyt` (ORHA), ainda não promovida  
+Estado: **staging saudável e alinhado às 14 migrations locais; produção intacta e protegida pelo snapshot pré-promoção; gate estrutural 18/18 e matriz RLS transacional aprovados**.
 
 ## Resumo executivo
 
-O banco de produção ainda contém somente a fundação inicial de Auth/onboarding. A correção de privacidade e o schema social de lançamento existem como migrations locais forward-only e nunca foram promovidos à produção. No staging isolado `bgeauxljwjbtbwpbzpoo`, o hash congelado C903 do schema social foi aplicado com sucesso, passou por 14/14 validações estruturais e pelo gate RLS transacional completo, que terminou em `ROLLBACK` e deixou as contagens de fixtures em zero.
+O banco de produção ainda não recebeu a cadeia social desta branch. No staging isolado `bgeauxljwjbtbwpbzpoo`, as 14 migrations versionadas, de `20260811040000` a `20260914060000`, estão agora aplicadas e registradas no ledger remoto. O gate estrutural passou em 18/18 checks e `scripts/supabase-rls-integration.sql` passou integralmente, terminando em `ROLLBACK` sem fixtures residuais.
 
-Em 2026-09-03, a CLI autenticada confirmou `status=INACTIVE` tanto para produção quanto para staging. Tentativas de `supabase link` foram recusadas com `LegacyProjectPausedError`; nenhuma migration foi aplicada. A retomada dos projetos no painel Supabase é pré-condição externa para repetir os gates remotos. O vínculo local foi restaurado para a referência de produção após a inspeção.
+Em 2026-09-14, ambos os projetos foram confirmados como ativos no control plane e o staging como `Healthy` no Dashboard. A CLI foi autenticada pelo fluxo oficial no navegador e o workspace foi vinculado temporariamente ao staging. A primeira aplicação publicou `1800` a `2200`; `2300` falhou atomicamente por um alias SQL reservado e por uma pós-validação que não aceitava a serialização `search_path=""` do PostgreSQL hospedado. As duas causas foram corrigidas no SQL versionado. A retomada aplicou `2300`, `2400`, `2500` e `20260903010000` com sucesso. O único aviso final foi a impossibilidade de gerar cache local do catálogo porque Docker não está instalado; isso não afetou o commit remoto das migrations.
 
 O schema local agora cobre identidade e privacidade, amizades sem follow, bloqueios, comunidades e conteúdo, conversas consentidas, mensagens e mídia, notificações, denúncias/moderação, ciclo de conta, Storage privado e Realtime. Processos que exigem autoridade de serviço — exclusão final de conta, exportação de dados, limpeza física de objetos e eventual cópia física de anexos — permanecem jobs operacionais/Edge, não ações simuladas no navegador.
 
@@ -78,17 +81,17 @@ O hash congelado aprovado no staging é:
 - `20260816130000`: `78AB92778CD85EDD604E79C24B1708276D276CBB5445BEF8297CC10DB4D1E471`;
 - `20260816170000`: `C903098ACC014624B16806748A63397A1FAF34877D03C87C8D4CE5A640AE98E3`.
 
-As migrations forward seguintes já têm contratos locais, mas não fazem parte da aprovação C903 e precisam ser reaplicadas, na ordem, em staging descartável antes de qualquer promoção:
+As migrations forward seguintes já foram aplicadas, na ordem, no staging em 2026-09-14; seus gates de integração/RLS pós-aplicação ainda precisam ser repetidos antes de qualquer promoção:
 
-- `20260816180000_edge_worker_contracts.sql`: workers, validação de mídia, lifecycle e retenção de evidência; hash ainda não congelado;
+- `20260816180000_edge_worker_contracts.sql`: aplicado;
 - `20260816190000_explore_discovery.sql`: `046E07F8257352AE749F9116E97803943576C60304B26A1BA0077472942B8F63`;
 - `20260816200000_conversation_preference_controls.sql`: favorito/limpeza por usuário e visibilidade autoritativa de mensagens; hash ainda não congelado;
 - `20260816210000_profile_details_age_privacy.sql`: `09C766E036CDCB50EA23CE2E78FB0446936594FD19325083072DE6E203BED019`;
 - `20260816220000_home_dashboard_summary.sql`: `20EE562075D507C54AFA89176D154FD8789B07F00AD67117DDEF5C4D271E5FE2`;
-- `20260816230000_abuse_rate_limits.sql`: rate limits server-authoritative; hash e gate remoto pendentes;
-- `20260816240000_notification_lifecycle_hardening.sql`: produtores/dedupe/contexto tipado de notificações; hash e gate remoto pendentes.
-- `20260816250000_visible_community_post.sql`: deep link autoritativo de publicação comunitária; hash e gate remoto pendentes.
-- `20260903010000_group_conversation_lifecycle.sql`: saída, transferência de owner e encerramento atômico de grupos; SHA-256 `DCF36B5DA75D7D255682104F8B409EB066259EE5C9B595F6DDA7A85A8BE1986F`; gate remoto pendente.
+- `20260816230000_abuse_rate_limits.sql`: aplicado após correção validada transacionalmente pelo próprio staging;
+- `20260816240000_notification_lifecycle_hardening.sql`: aplicado;
+- `20260816250000_visible_community_post.sql`: aplicado;
+- `20260903010000_group_conversation_lifecycle.sql`: aplicado; saída, transferência de owner e encerramento atômico de grupos.
 
 Qualquer alteração posterior nesses arquivos invalida o resultado e exige staging descartável novo, reaplicação e repetição integral dos gates. A migration `20260816180000` dos workers privilegiados permanece um gate separado e ainda não está coberta por esta aprovação C903.
 
@@ -265,8 +268,8 @@ Qualquer falha nessas pós-condições levanta erro e deve reverter a transaçã
 
 - Docker/Podman não está disponível neste workspace; `supabase status/db reset` não pode executar o banco local;
 - os testes locais continuam sendo estáticos/contratuais, mas o schema social C903 também passou por aplicação SQL real, 14/14 validações e gate RLS transacional com `ROLLBACK` no staging `bgeauxljwjbtbwpbzpoo`;
-- nenhuma migration pendente foi aplicada ao projeto remoto;
-- nenhum bucket, publication ou policy novo está ativo remotamente neste momento;
+- todas as migrations locais estão aplicadas no staging; produção permanece sem promoção;
+- buckets, publication e policies do staging foram criados pelas migrations, mas ainda aguardam a repetição dos scripts integrais de RLS/Storage/Realtime nesta revisão;
 - workers de exportação, delete final, purge e retenção ainda precisam ser provisionados antes do lançamento público.
 - as Edge Functions locais implementam inspeção de assinatura/MIME e decode de dimensões, mas ainda não foram implantadas; PDF/arquivo genérico permanece fora do lançamento até existir quarentena e antimalware.
 
