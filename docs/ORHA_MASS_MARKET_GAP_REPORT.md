@@ -91,7 +91,7 @@ Critério de aceite:
 - `supabase db lint` sem erros;
 - repetir aceite de conversa, marcação individual e marcação total de notificações com dois usuários reais.
 
-### P0.2 Implantar e operar as cinco Edge Functions
+### P0.2 Implantar e operar as cinco Edge Functions — implantadas no staging; smoke autenticado pendente
 
 `npx supabase functions list` retornou `[]` tanto no staging quanto na produção. Estão versionadas, mas não implantadas:
 
@@ -146,7 +146,7 @@ Critério de aceite:
 - repetir falhas até todas as jornadas ficarem verdes;
 - preservar evidência de falha sem vazar sessão.
 
-### P0.5 Remover vulnerabilidades de dependências que quebram o CI
+### P0.5 Remover vulnerabilidades de dependências que quebram o CI — superfície produtiva corrigida
 
 O audit atual encontrou seis vulnerabilidades: uma crítica em `maplibre-gl`, três altas (`@tiptap/core`, `fast-uri`, `js-yaml`) e duas moderadas (`hono`, `qs`). O workflow executa `npm audit --omit=dev --audit-level=high`, portanto o candidato não deve ser promovido enquanto esse gate falhar.
 

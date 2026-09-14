@@ -5,7 +5,7 @@ Branch: `codex/production-launch`
 Commit-base publicado: `54968d8`  
 Projeto vinculado durante os gates: `bgeauxljwjbtbwpbzpoo` (ORHA-Staging)  
 Produção: `iuaczhkfmwpyhtpdmuyt` (ORHA), ainda não promovida  
-Estado: **staging saudável e alinhado às 15 migrations locais; produção intacta e protegida pelo snapshot pré-promoção; lint remoto sem erros, gate estrutural 18/18 e matriz RLS transacional aprovados**.
+Estado: **staging saudável e alinhado às 15 migrations locais; cinco Edge Functions ativas; dependências de produção com audit 0; produção intacta; lint remoto sem erros, gate estrutural 18/18 e matriz RLS transacional aprovados**.
 
 ## Resumo executivo
 

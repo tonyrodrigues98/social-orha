@@ -9,10 +9,15 @@ import {
 
 const packageJson = JSON.parse(readFileSync(resolve("package.json"), "utf8")) as {
   dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
 };
 
 const dependencies = packageJson.dependencies ?? {};
-const missingPackages = installedPackageNames.filter((packageName) => !(packageName in dependencies));
+const devDependencies = packageJson.devDependencies ?? {};
+const installedDependencies = { ...dependencies, ...devDependencies };
+const missingPackages = installedPackageNames.filter(
+  (packageName) => !(packageName in installedDependencies),
+);
 const missingSources = libraryCatalog.flatMap((entry) => {
   const paths = [...(entry.sourcePath ? [entry.sourcePath] : []), ...(entry.sourcePaths ?? [])];
   return paths.filter((path) => !existsSync(resolve(path))).map((path) => `${entry.name}: ${path}`);
