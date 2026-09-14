@@ -182,11 +182,13 @@ Verificação HTTP em 2026-09-14:
 - `/social-orha/auth/login`: 404;
 - `/social-orha/conversas/<uuid>`: 404.
 
+Vercel foi selecionado como o próximo host por já existir um contrato versionado em `vercel.json`, sem dependência adicional de runtime. A configuração usa o preset Vite, `dist`, rewrite SPA e headers de cache/segurança. Em 2026-09-14, o rewrite foi reconciliado com a regra oficial de `cleanUrls`: o destino agora é `/`, sem a extensão `.html`. A sessão do Chrome chegou à tela de login da Vercel, portanto nenhum projeto ou deploy foi criado e o host ainda não possui evidência HTTP pública.
+
 O `public/404.html` pode recuperar a navegação depois do 404, mas não satisfaz deep link, crawler, OAuth nem gate de host. O projeto já possui `scripts/host-capability-audit.ts` para impedir falso positivo.
 
 Próxima fatia vertical:
 
-- selecionar host com rewrite SPA real;
+- autenticar uma conta Vercel autorizada e importar `tonyrodrigues98/social-orha`;
 - configurar domínio, HTTPS, canonical, OG, PWA `id/scope/start_url` e callbacks Auth;
 - exigir HTTP 200 no root e em todas as rotas diretas;
 - executar smoke após deploy e rollback testado.

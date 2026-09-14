@@ -400,13 +400,16 @@ describe("ORHA route policy", () => {
     const config = JSON.parse(
       readFileSync(path.join(projectRoot, "vercel.json"), "utf8"),
     ) as {
+      cleanUrls?: boolean;
       outputDirectory?: string;
       rewrites?: Array<{ source?: string; destination?: string }>;
       headers?: Array<{ source?: string; headers?: Array<{ key?: string; value?: string }> }>;
     };
 
+    expect(config.cleanUrls).toBe(true);
     expect(config.outputDirectory).toBe("dist");
-    expect(config.rewrites).toContainEqual({ source: "/(.*)", destination: "/index.html" });
+    expect(config.rewrites).toContainEqual({ source: "/(.*)", destination: "/" });
+    expect(config.rewrites?.some(({ destination }) => destination?.endsWith(".html"))).toBe(false);
     expect(config.headers).toContainEqual(
       expect.objectContaining({
         source: "/sw.js",

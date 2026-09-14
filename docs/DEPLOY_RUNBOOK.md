@@ -211,7 +211,7 @@ Portanto, a migração para um host com rewrite de SPA continua sendo um bloquea
 externo explícito; o fallback atual melhora a navegação humana, mas não satisfaz
 o contrato HTTP de produção.
 
-Se Pages não fornecer fallback SPA confiável, migrar para host que suporte rewrites de todas as rotas para `index.html` sem alterar URLs de assets.
+Vercel é o host selecionado para substituir Pages. O contrato versionado em `vercel.json` usa Vite, saída `dist`, `cleanUrls` e rewrite de todas as rotas para `/`, preservando a URL solicitada. Com `cleanUrls: true`, o destino não pode conter `.html`. Ainda é necessário autenticar uma conta Vercel autorizada, importar o repositório e provar o resultado com `npm run audit:host` antes de qualquer promoção.
 
 ## 10. Domínio e PWA
 
