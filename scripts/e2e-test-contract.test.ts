@@ -17,6 +17,7 @@ const requiredProductionJourneys = [
   "authenticated-navigation.spec.ts",
   "authenticated-profile-journey.spec.ts",
   "authenticated-security-session-journey.spec.ts",
+  "authenticated-session-expiry.spec.ts",
   "authenticated-viewport-matrix.spec.ts",
   "authenticated-webkit-matrix.spec.ts",
   "multiuser-community-journey.spec.ts",

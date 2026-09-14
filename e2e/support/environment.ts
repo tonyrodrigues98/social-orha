@@ -19,6 +19,14 @@ export type NamedCredentials = {
   expectedProfileText?: string;
 };
 
+type NamedBrowserContextOptions = {
+  serviceWorkers?: "allow" | "block";
+  viewport?: { width: number; height: number };
+  deviceScaleFactor?: number;
+  hasTouch?: boolean;
+  isMobile?: boolean;
+};
+
 const PRINCIPAL_ENV_KEYS: Record<
   TestPrincipal,
   { email: string; password: string; expectedProfileText: string }
@@ -124,25 +132,10 @@ function browserStorageStateForSession(
   };
 }
 
-/**
- * Creates a new Supabase session for every browser context.
- *
- * Supabase rotates refresh tokens. Reusing a saved Playwright storageState in
- * several sequential contexts therefore makes a later journey inherit a token
- * that an earlier context already consumed. A fresh password sign-in keeps the
- * identities stable while isolating the session lifecycle of every journey.
- */
-export async function createNamedBrowserContext(
-  browser: Browser,
-  principal: TestPrincipal,
-  options: {
-    serviceWorkers?: "allow" | "block";
-    viewport?: { width: number; height: number };
-    deviceScaleFactor?: number;
-    hasTouch?: boolean;
-    isMobile?: boolean;
-  } = {},
-): Promise<BrowserContext> {
+async function createNamedSession(principal: TestPrincipal): Promise<{
+  session: Session;
+  stagingUrl: string;
+}> {
   const credentials = requireNamedCredentials(principal);
   const staging = stagingBrowserCredentials();
   const authClient = createClient(staging.url, staging.publishableKey, {
@@ -161,13 +154,17 @@ export async function createNamedBrowserContext(
       `Não foi possível criar uma sessão isolada para a identidade E2E ${principal}.`,
     );
   }
+  return { session: signedIn.data.session, stagingUrl: staging.url };
+}
 
-  return browser.newContext({
+function namedBrowserContextOptions(
+  stagingUrl: string,
+  session: Session,
+  options: NamedBrowserContextOptions,
+): BrowserContextOptions {
+  return {
     baseURL: e2eBaseUrl(),
-    storageState: browserStorageStateForSession(
-      staging.url,
-      signedIn.data.session,
-    ),
+    storageState: browserStorageStateForSession(stagingUrl, session),
     viewport: options.viewport ?? { width: 390, height: 844 },
     deviceScaleFactor: options.deviceScaleFactor,
     hasTouch: options.hasTouch,
@@ -175,7 +172,65 @@ export async function createNamedBrowserContext(
     locale: "pt-BR",
     timezoneId: "America/Sao_Paulo",
     serviceWorkers: options.serviceWorkers ?? "block",
+  };
+}
+
+/**
+ * Creates a new Supabase session for every browser context.
+ *
+ * Supabase rotates refresh tokens. Reusing a saved Playwright storageState in
+ * several sequential contexts therefore makes a later journey inherit a token
+ * that an earlier context already consumed. A fresh password sign-in keeps the
+ * identities stable while isolating the session lifecycle of every journey.
+ */
+export async function createNamedBrowserContext(
+  browser: Browser,
+  principal: TestPrincipal,
+  options: NamedBrowserContextOptions = {},
+): Promise<BrowserContext> {
+  const { session, stagingUrl } = await createNamedSession(principal);
+  return browser.newContext(
+    namedBrowserContextOptions(stagingUrl, session, options),
+  );
+}
+
+/**
+ * Produces a genuinely unusable Supabase refresh token without injecting a
+ * fake Auth event. The browser receives the real session marked as expired,
+ * so GoTrue must attempt the remote refresh and transition to SIGNED_OUT.
+ */
+export async function createExpiredNamedBrowserContext(
+  browser: Browser,
+  principal: TestPrincipal,
+  options: NamedBrowserContextOptions = {},
+): Promise<BrowserContext> {
+  const { session, stagingUrl } = await createNamedSession(principal);
+  const staging = stagingBrowserCredentials();
+  const revoker = createClient(staging.url, staging.publishableKey, {
+    auth: {
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+      persistSession: false,
+    },
   });
+  const revoked = await revoker.auth.admin.signOut(
+    session.access_token,
+    "global",
+  );
+  if (revoked.error) {
+    throw new Error(
+      `O Supabase não revogou a sessão E2E ${principal} para o teste de expiração.`,
+    );
+  }
+
+  const expiredSession: Session = {
+    ...session,
+    expires_at: Math.floor(Date.now() / 1_000) - 60,
+    expires_in: 0,
+  };
+  return browser.newContext(
+    namedBrowserContextOptions(stagingUrl, expiredSession, options),
+  );
 }
 
 export function createAnonymousBrowserContext(
