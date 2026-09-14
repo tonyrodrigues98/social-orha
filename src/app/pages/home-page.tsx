@@ -2,10 +2,13 @@ import {
   Bell,
   CheckCircle2,
   ChevronRight,
+  Headphones,
   HeartHandshake,
   MessageCircle,
   RefreshCw,
+  ShieldCheck,
   Sparkles,
+  UserCog,
   UsersRound,
 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -17,7 +20,7 @@ import {
   useHomeDashboard,
 } from "@/domains/home";
 import { NativeHeader } from "../components/native-header";
-import { buildCommunityPath } from "../router-policy";
+import { buildCommunityPath, ROUTE_PATHS } from "../router-policy";
 import { useAuth } from "../auth/auth-context";
 import { useAppUi } from "../ui-state-context";
 
@@ -111,6 +114,10 @@ export function HomePage() {
   const displayName = identity?.profile.full_name?.trim() ?? "";
   const displayFirstName = displayName.split(/\s+/)[0] || "você";
   const summary = dashboard.data;
+  const role = identity?.role ?? "user";
+  const canModerate = role === "super_admin" || role === "admin" || role === "moderator";
+  const canManageRoles = role === "super_admin" || role === "admin";
+  const canOperateSupport = role === "super_admin" || role === "admin" || role === "support";
 
   return (
     <div className="page home-page">
@@ -406,6 +413,56 @@ export function HomePage() {
               </div>
             </section>
           </>
+        )}
+
+        {(canModerate || canManageRoles || canOperateSupport) && (
+          <section className="content-section" aria-label="Ferramentas da equipe">
+            <SectionHeader eyebrow="OPERAÇÃO" title="Ferramentas da equipe" />
+            <div className="grid gap-2">
+              {canModerate && (
+                <Button
+                  type="button"
+                  size="md"
+                  color="tertiary"
+                  className={dashboardRowButtonClass}
+                  noTextPadding
+                  onPress={() => void routeNavigate({ to: ROUTE_PATHS.adminModeration })}
+                >
+                  <span className="grid size-10 shrink-0 place-items-center rounded-full bg-secondary"><ShieldCheck className="size-5 text-tertiary" aria-hidden /></span>
+                  <span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-primary">Fila de moderação</span><span className="block text-xs font-normal text-tertiary">Denúncias e ações auditadas</span></span>
+                  <ChevronRight className="size-4 text-quaternary" aria-hidden />
+                </Button>
+              )}
+              {canOperateSupport && (
+                <Button
+                  type="button"
+                  size="md"
+                  color="tertiary"
+                  className={dashboardRowButtonClass}
+                  noTextPadding
+                  onPress={() => void routeNavigate({ to: ROUTE_PATHS.support })}
+                >
+                  <span className="grid size-10 shrink-0 place-items-center rounded-full bg-secondary"><Headphones className="size-5 text-tertiary" aria-hidden /></span>
+                  <span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-primary">Fila de suporte</span><span className="block text-xs font-normal text-tertiary">Chamados privados da comunidade</span></span>
+                  <ChevronRight className="size-4 text-quaternary" aria-hidden />
+                </Button>
+              )}
+              {canManageRoles && (
+                <Button
+                  type="button"
+                  size="md"
+                  color="tertiary"
+                  className={dashboardRowButtonClass}
+                  noTextPadding
+                  onPress={() => void routeNavigate({ to: ROUTE_PATHS.adminRoles })}
+                >
+                  <span className="grid size-10 shrink-0 place-items-center rounded-full bg-secondary"><UserCog className="size-5 text-tertiary" aria-hidden /></span>
+                  <span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-primary">Funções da equipe</span><span className="block text-xs font-normal text-tertiary">Atribuições protegidas pelo banco</span></span>
+                  <ChevronRight className="size-4 text-quaternary" aria-hidden />
+                </Button>
+              )}
+            </div>
+          </section>
         )}
       </main>
     </div>

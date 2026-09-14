@@ -94,6 +94,16 @@ describe("notification domain", () => {
       title: "Nova resposta do suporte",
       targetPath: "/suporte",
     });
+    expect(
+      presentNotification({
+        ...notification,
+        type: "account_role_changed",
+        entityType: "profile",
+      }),
+    ).toMatchObject({
+      title: "Função da conta atualizada",
+      targetPath: "/configuracoes/conta",
+    });
   });
 
   it("mantém cursor determinístico por data e id", () => {

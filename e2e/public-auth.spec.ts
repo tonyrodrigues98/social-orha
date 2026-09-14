@@ -31,6 +31,11 @@ test.describe("Auth público e guards", () => {
     await waitForPublicAuth(page);
     await expect.poll(() => currentAppPath(page)).toBe("/auth/login");
     expect(new URL(page.url()).searchParams.get("redirect")).toBe("/suporte");
+
+    await openAppPath(page, "/admin/funcoes");
+    await waitForPublicAuth(page);
+    await expect.poll(() => currentAppPath(page)).toBe("/auth/login");
+    expect(new URL(page.url()).searchParams.get("redirect")).toBe("/admin/funcoes");
   });
 
   test("mantém rotas públicas endereçáveis e trata caminho inexistente", async ({

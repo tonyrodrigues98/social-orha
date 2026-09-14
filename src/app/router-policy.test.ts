@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { createMemoryHistory } from "@tanstack/react-router";
 import { describe, expect, it } from "vitest";
+import type { AppRole } from "@/domain/identity";
 import type { AuthContextValue } from "./auth/auth-context";
 import { createAppRouter, routeTree } from "./router";
 import {
@@ -10,6 +11,7 @@ import {
   buildCommunityPath,
   buildCommunityPostPath,
   buildConversationPath,
+  canAccessGlobalRoleManagement,
   canAccessModeration,
   getConversationIdFromPathname,
   getEntryRedirect,
@@ -50,7 +52,7 @@ const authenticated: RouteAuthSnapshot = {
 };
 
 function authenticatedContext(
-  role: "user" | "moderator" = "user",
+  role: AppRole = "user",
   accountStatus: "active" | "restricted" = "active",
   accountAccessEnabled = accountStatus === "active",
 ): AuthContextValue {
@@ -235,6 +237,15 @@ describe("ORHA route policy", () => {
     expect(canAccessModeration({ ...authenticated, role: "super_admin" })).toBe(true);
   });
 
+  it("restricts global role management to active Admin and SuperAdmin accounts", () => {
+    expect(canAccessGlobalRoleManagement(authenticated)).toBe(false);
+    expect(canAccessGlobalRoleManagement({ ...authenticated, role: "support" })).toBe(false);
+    expect(canAccessGlobalRoleManagement({ ...authenticated, role: "moderator" })).toBe(false);
+    expect(canAccessGlobalRoleManagement({ ...authenticated, role: "admin" })).toBe(true);
+    expect(canAccessGlobalRoleManagement({ ...authenticated, role: "super_admin" })).toBe(true);
+    expect(canAccessGlobalRoleManagement({ ...authenticated, role: "admin", accountAccessEnabled: false })).toBe(false);
+  });
+
   it("redirects a non-moderator away from the moderation route", async () => {
     const history = createMemoryHistory({ initialEntries: [ROUTE_PATHS.adminModeration] });
     const router = createAppRouter({ auth: authenticatedContext(), history });
@@ -248,6 +259,22 @@ describe("ORHA route policy", () => {
     });
     await moderatorRouter.load();
     expect(moderatorRouter.state.redirect).toBeUndefined();
+  });
+
+  it("redirects non-managers away from global role management", async () => {
+    const moderatorRouter = createAppRouter({
+      auth: authenticatedContext("moderator"),
+      history: createMemoryHistory({ initialEntries: [ROUTE_PATHS.adminRoles] }),
+    });
+    await moderatorRouter.load();
+    expect(moderatorRouter.state.redirect?.options.to).toBe(ROUTE_PATHS.home);
+
+    const adminRouter = createAppRouter({
+      auth: authenticatedContext("admin"),
+      history: createMemoryHistory({ initialEntries: [ROUTE_PATHS.adminRoles] }),
+    });
+    await adminRouter.load();
+    expect(adminRouter.state.redirect).toBeUndefined();
   });
 
   it("keeps account settings reachable while routing a restricted account away from the app", async () => {

@@ -2,6 +2,10 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { useQueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import {
+  useAdministrationRepository,
+  type AdministrationRepository,
+} from "@/domains/administration";
+import {
   useExploreRepository,
   type ExploreRepository,
 } from "@/domains/explore";
@@ -31,6 +35,7 @@ import { AppRuntimeProviders } from "./app-runtime-providers";
 describe("AppRuntimeProviders", () => {
   it("mounts every runtime repository together with TanStack Query", () => {
     const adapters: AppRuntimeAdapters = {
+      administration: Object.create(null) as AdministrationRepository,
       explore: Object.create(null) as ExploreRepository,
       social: Object.create(null) as SocialRepository,
       notifications: Object.create(null) as NotificationRepository,
@@ -43,6 +48,7 @@ describe("AppRuntimeProviders", () => {
 
     function Probe() {
       observed = {
+        administration: useAdministrationRepository(),
         explore: useExploreRepository(),
         social: useSocialRepository(),
         notifications: useNotificationRepository(),

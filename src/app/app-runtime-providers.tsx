@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { AdministrationRepositoryProvider } from "@/domains/administration";
 import { ExploreRepositoryProvider } from "@/domains/explore";
 import { NotificationRepositoryProvider } from "@/domains/notifications";
 import { SocialRepositoryProvider } from "@/domains/social";
@@ -24,19 +25,21 @@ export function AppRuntimeProviders({
 
   return (
     <OrhaQueryProvider>
-      <ExploreRepositoryProvider repository={adapters.explore}>
-        <SocialRepositoryProvider repository={adapters.social}>
-          <NotificationRepositoryProvider repository={adapters.notifications}>
-            <TrustRepositoryProvider repository={adapters.trust}>
-              <SupportRepositoryProvider repository={adapters.support}>
-                <SupabaseMessagingProvider services={adapters.messaging}>
-                  {children}
-                </SupabaseMessagingProvider>
-              </SupportRepositoryProvider>
-            </TrustRepositoryProvider>
-          </NotificationRepositoryProvider>
-        </SocialRepositoryProvider>
-      </ExploreRepositoryProvider>
+      <AdministrationRepositoryProvider repository={adapters.administration}>
+        <ExploreRepositoryProvider repository={adapters.explore}>
+          <SocialRepositoryProvider repository={adapters.social}>
+            <NotificationRepositoryProvider repository={adapters.notifications}>
+              <TrustRepositoryProvider repository={adapters.trust}>
+                <SupportRepositoryProvider repository={adapters.support}>
+                  <SupabaseMessagingProvider services={adapters.messaging}>
+                    {children}
+                  </SupabaseMessagingProvider>
+                </SupportRepositoryProvider>
+              </TrustRepositoryProvider>
+            </NotificationRepositoryProvider>
+          </SocialRepositoryProvider>
+        </ExploreRepositoryProvider>
+      </AdministrationRepositoryProvider>
     </OrhaQueryProvider>
   );
 }

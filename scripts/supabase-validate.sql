@@ -26,7 +26,9 @@ expected_migrations(version) as (
     ('20260914080000'),
     ('20260914090000'),
     ('20260914100000'),
-    ('20260914101000')
+    ('20260914101000'),
+    ('20260914102000'),
+    ('20260914103000')
 ),
 missing_migrations as (
   select expected.version
@@ -238,7 +240,9 @@ expected_functions(function_signature) as (
     ('public.claim_support_ticket(uuid)'),
     ('public.update_support_ticket_state(uuid,public.support_ticket_status,public.support_ticket_priority)'),
     ('public.list_support_tickets(public.support_ticket_status,integer,timestamptz,uuid)'),
-    ('public.list_support_ticket_messages(uuid,integer,timestamptz,uuid)')
+    ('public.list_support_ticket_messages(uuid,integer,timestamptz,uuid)'),
+    ('public.list_global_role_assignments(text,integer,timestamptz,uuid)'),
+    ('public.assign_global_role(uuid,public.app_role,text)')
 ),
 missing_functions as (
   select function_signature
@@ -360,6 +364,22 @@ support_operations_contract as (
       select 1
       from private.actor_rate_limit_policies
       where action = 'support_ticket_reply'
+    ) as present
+),
+global_role_management_contract as (
+  select
+    to_regprocedure('private.is_global_role_manager(uuid)') is not null
+    and not has_table_privilege('authenticated', 'public.user_roles', 'INSERT')
+    and not has_table_privilege('authenticated', 'public.user_roles', 'UPDATE')
+    and not has_table_privilege('authenticated', 'public.user_roles', 'DELETE')
+    and not has_function_privilege('anon', 'public.list_global_role_assignments(text,integer,timestamptz,uuid)', 'EXECUTE')
+    and not has_function_privilege('anon', 'public.assign_global_role(uuid,public.app_role,text)', 'EXECUTE')
+    and has_function_privilege('authenticated', 'public.list_global_role_assignments(text,integer,timestamptz,uuid)', 'EXECUTE')
+    and has_function_privilege('authenticated', 'public.assign_global_role(uuid,public.app_role,text)', 'EXECUTE')
+    and (
+      select count(*) = 2
+      from private.actor_rate_limit_policies
+      where action = 'global_role_change'
     ) as present
 ),
 username_unique_index as (
@@ -535,6 +555,16 @@ checks(check_order, check_name, passed, details) as (
       when (select present from support_operations_contract)
         then 'support tickets are persistent, RLS-protected, RPC-only, rate-limited, and operator-scoped'
       else 'support tables, policies, RPC authority, or abuse controls are incomplete'
+    end
+  union all
+  select
+    190,
+    'global_role_management_contract',
+    (select present from global_role_management_contract),
+    case
+      when (select present from global_role_management_contract)
+        then 'global roles are RPC-only, least-privilege, rate-limited, and server-authoritative'
+      else 'global role functions, grants, or rate limits are incomplete'
     end
 )
 select check_name, passed, details

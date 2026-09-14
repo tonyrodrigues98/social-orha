@@ -29,6 +29,7 @@ export const ROUTE_PATHS = {
   publicProfile: "/perfil/$username",
   report: "/denunciar/$targetType/$targetId",
   adminModeration: "/admin/moderacao",
+  adminRoles: "/admin/funcoes",
   support: "/suporte",
 } as const;
 
@@ -76,6 +77,7 @@ export function toRouteAuthSnapshot(auth: AuthContextValue): RouteAuthSnapshot {
 }
 
 const moderationRoles: readonly AppRole[] = ["super_admin", "admin", "moderator"];
+const globalRoleManagerRoles: readonly AppRole[] = ["super_admin", "admin"];
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export function isRouteUuid(value: string): boolean {
@@ -103,6 +105,15 @@ export function canAccessModeration(auth: RouteAuthSnapshot): boolean {
     && auth.accountAccessEnabled === true
     && auth.role !== null
     && moderationRoles.includes(auth.role);
+}
+
+export function canAccessGlobalRoleManagement(auth: RouteAuthSnapshot): boolean {
+  return auth.status === "ready"
+    && auth.onboardingCompleted
+    && auth.accountStatus === "active"
+    && auth.accountAccessEnabled === true
+    && auth.role !== null
+    && globalRoleManagerRoles.includes(auth.role);
 }
 
 function authIsBusy(auth: RouteAuthSnapshot) {
@@ -211,6 +222,7 @@ export function parsePostAuthRedirect(value: unknown): string | undefined {
       ROUTE_PATHS.help,
       ROUTE_PATHS.contact,
       ROUTE_PATHS.adminModeration,
+      ROUTE_PATHS.adminRoles,
       ROUTE_PATHS.support,
     ];
     const isUtilityRoute = utilityPaths.includes(pathname);

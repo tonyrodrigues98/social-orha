@@ -91,6 +91,7 @@ const IMPORTANT_TYPES = new Set([
   "moderation_action",
   "support_ticket_reply",
   "support_ticket_updated",
+  "account_role_changed",
 ]);
 
 export function notificationTypesForCategory(
@@ -213,6 +214,12 @@ export function presentNotification(notification: Notification): NotificationPre
       return {
         title: "Atualização da conta",
         description: "Há uma informação importante sobre sua conta.",
+        targetPath: "/configuracoes/conta",
+      };
+    case "account_role_changed":
+      return {
+        title: "Função da conta atualizada",
+        description: "Sua função operacional na ORHA foi alterada por uma pessoa autorizada.",
         targetPath: "/configuracoes/conta",
       };
     case "support_ticket_reply":

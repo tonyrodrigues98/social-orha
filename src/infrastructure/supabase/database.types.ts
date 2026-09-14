@@ -2046,6 +2046,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assign_global_role: {
+        Args: {
+          p_reason: string
+          p_role: Database["public"]["Enums"]["app_role"]
+          p_target_user_id: string
+        }
+        Returns: {
+          full_name: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+          user_id: string
+          username: string
+        }[]
+      }
       apply_moderation_action: {
         Args: {
           p_action_type: Database["public"]["Enums"]["moderation_action_type"]
@@ -3052,6 +3066,21 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      list_global_role_assignments: {
+        Args: {
+          p_before_updated_at?: string
+          p_before_user_id?: string
+          p_limit?: number
+          p_query?: string
+        }
+        Returns: {
+          full_name: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+          user_id: string
+          username: string
+        }[]
       }
       list_report_evidence_cleanup: {
         Args: { p_limit?: number }

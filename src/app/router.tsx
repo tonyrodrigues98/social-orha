@@ -31,6 +31,7 @@ import {
   LEGACY_AUTH_PATHS,
   buildCommunityPath,
   buildCommunityPostPath,
+  canAccessGlobalRoleManagement,
   canAccessModeration,
   getAppPathFromPathname,
   getEntryRedirect,
@@ -59,6 +60,8 @@ const loadReportPage = () => import("./pages/report-page")
   .then((module) => ({ default: module.ReportPage }));
 const loadAdminModerationPage = () => import("./pages/admin-moderation-page")
   .then((module) => ({ default: module.AdminModerationPage }));
+const loadAdminRolesPage = () => import("./pages/admin-roles-page")
+  .then((module) => ({ default: module.AdminRolesPage }));
 const loadSupportPage = () => import("./pages/support-page")
   .then((module) => ({ default: module.SupportPage }));
 const loadPublicProfilePage = () => import("./pages/public-profile-page")
@@ -75,6 +78,7 @@ const HelpPage = lazy(() => loadSettingsInfoPages().then((module) => ({ default:
 const ContactPage = lazy(() => loadSettingsInfoPages().then((module) => ({ default: module.ContactPage })));
 const ReportPage = lazy(loadReportPage);
 const AdminModerationPage = lazy(loadAdminModerationPage);
+const AdminRolesPage = lazy(loadAdminRolesPage);
 const SupportPage = lazy(loadSupportPage);
 const PublicProfilePage = lazy(loadPublicProfilePage);
 const CommunityDetailPage = lazy(loadCommunityDetailPage);
@@ -331,6 +335,13 @@ function AdminModerationRoutePage() {
   const goBack = useRouteBack(ROUTE_PATHS.home);
   if (!auth.identity) return <RouterLoadingScreen />;
   return <AdminModerationPage role={auth.identity.role} onBack={goBack} />;
+}
+
+function AdminRolesRoutePage() {
+  const auth = useAuth();
+  const goBack = useRouteBack(ROUTE_PATHS.home);
+  if (!auth.identity) return <RouterLoadingScreen />;
+  return <AdminRolesPage identity={auth.identity} onBack={goBack} />;
 }
 
 function PublicProfileRoutePage() {
@@ -665,6 +676,16 @@ const adminModerationRoute = createRoute({
   },
   component: AdminModerationRoutePage,
 });
+const adminRolesRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: ROUTE_PATHS.adminRoles,
+  beforeLoad: ({ context }) => {
+    if (!canAccessGlobalRoleManagement(toRouteAuthSnapshot(context.auth))) {
+      throw redirect({ to: ROUTE_PATHS.home, replace: true });
+    }
+  },
+  component: AdminRolesRoutePage,
+});
 const supportRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: ROUTE_PATHS.support,
@@ -702,6 +723,7 @@ export const routeTree = rootRoute.addChildren([
     contactRoute,
     reportRoute,
     adminModerationRoute,
+    adminRolesRoute,
     supportRoute,
   ]),
 ]);
@@ -773,6 +795,7 @@ export function preloadAuthenticatedUtilities() {
     loadSettingsInfoPages(),
     loadReportPage(),
     loadAdminModerationPage(),
+    loadAdminRolesPage(),
     loadSupportPage(),
   ]);
 }
