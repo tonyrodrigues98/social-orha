@@ -2,7 +2,7 @@
 
 Atualizado em: 2026-09-14  
 Branch: `codex/production-launch`  
-Commit-base publicado antes deste checkpoint: `e4f65a8`
+Commit-base publicado antes deste checkpoint: `b613dc9`
 Projeto vinculado durante os gates: `bgeauxljwjbtbwpbzpoo` (ORHA-Staging)  
 Produção: `iuaczhkfmwpyhtpdmuyt` (ORHA), ainda não promovida  
 Estado: **staging saudável e alinhado às 16 migrations locais; cinco Edge Functions ativas, gate anônimo/CORS 7/7 e dois jobs Cron/Vault ativos; Auth remoto sincronizado com senha mínima de 12 caracteres e validação server-side da senha atual; dependências de produção com audit 0; produção intacta; lint remoto sem erros, gate estrutural 19/19 e matriz RLS transacional aprovados**.
@@ -222,6 +222,8 @@ Evidência obtida no Dashboard e pela CLI oficial, sem copiar secrets para logs:
 - concluído: 16 migrations ledgered, lint SQL remoto, validação estrutural 19/19 e matriz RLS/Storage/Realtime com rollback;
 - concluído: cinco Edge Functions ativas, CORS/anon 7/7, Cron/Vault e workers com filas vazias;
 - concluído nesta fatia: Auth config sincronizada, política de senha endurecida e contrato do cliente atualizado para `current_password`;
+- concluído nesta fatia: validação visual e automatizada do Auth/PWA em `320×568`; todos os campos editáveis permanecem em 16 px, o cadastro rejeita senha abaixo de 12 caracteres, o aviso offline não cobre nem intercepta o CTA após o scroll e o botão Voltar conserva pelo menos 44 px durante a animação;
+- gates desta fatia: PWA offline `1/1`, qualidade pública Chromium `320×568` + WebKit/iPhone `390×844` `8/8`, Vitest `301/301`, catálogo, TypeScript, ESLint, secrets, encoding, dívida de produção e build aprovados;
 - pendente: custom SMTP + domínio de envio, CAPTCHA e jornadas reais de confirmação/reenvio/reset;
 - pendente: contas sintéticas A/B/admin e jornadas autenticadas completas, inclusive a prova automatizada de rejeição da senha atual incorreta;
 - pendente: mídia real, Realtime multiusuário, QA native-first/PWA, host definitivo, observabilidade e promoção controlada da produção.

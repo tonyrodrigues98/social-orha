@@ -1,4 +1,5 @@
 import { expect, test } from "playwright/test";
+import { waitForPublicAuth } from "./support/auth-ui";
 import { openApp } from "./support/environment";
 
 type WebManifest = {
@@ -102,6 +103,13 @@ test.describe("PWA de produção", () => {
       [],
     );
 
+    await waitForPublicAuth(page);
+    await page.getByRole("button", { name: "Criar conta" }).click();
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Criar uma conta" }),
+    ).toBeVisible();
+    await page.setViewportSize({ width: 320, height: 568 });
+
     await context.setOffline(true);
     try {
       const offlineResponse = await page.reload({ waitUntil: "domcontentloaded" });
@@ -111,6 +119,45 @@ test.describe("PWA de produção", () => {
       await expect(page.getByText("Sem conexão", { exact: true })).toBeVisible();
       await expect(page.getByText(/novos dados e alterações exigem internet/i)).toBeVisible();
       await expect(page.getByText(/disponível offline/i)).toHaveCount(0);
+
+      const submitButton = page
+        .locator(".access-form")
+        .getByRole("button", { name: "Criar conta" });
+      await submitButton.scrollIntoViewIfNeeded();
+      await expect(submitButton).toBeVisible();
+
+      const compactGeometry = await page.evaluate(() => {
+        const button = document.querySelector<HTMLElement>(
+          ".access-form .access-primary-button",
+        );
+        const notice = document.querySelector<HTMLElement>(
+          ".pwa-runtime-notices > *",
+        );
+        if (!button || !notice) return null;
+
+        const buttonRect = button.getBoundingClientRect();
+        const noticeRect = notice.getBoundingClientRect();
+        const centerX = buttonRect.left + buttonRect.width / 2;
+        const centerY = buttonRect.top + buttonRect.height / 2;
+        const centerTarget = document.elementFromPoint(centerX, centerY);
+
+        return {
+          buttonBottom: buttonRect.bottom,
+          noticeTop: noticeRect.top,
+          centerReachesButton:
+            centerTarget === button || Boolean(centerTarget && button.contains(centerTarget)),
+        };
+      });
+
+      expect(compactGeometry, "O CTA e o aviso offline precisam existir.").not.toBeNull();
+      expect(
+        compactGeometry!.buttonBottom,
+        "O aviso PWA não pode cobrir o CTA do cadastro em 320×568.",
+      ).toBeLessThanOrEqual(compactGeometry!.noticeTop);
+      expect(
+        compactGeometry!.centerReachesButton,
+        "O centro do CTA precisa permanecer acionável.",
+      ).toBe(true);
       expect(pageErrors, "O boot online/offline não deve gerar pageerror.").toEqual([]);
     } finally {
       await context.setOffline(false);
