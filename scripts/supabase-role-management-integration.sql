@@ -79,9 +79,29 @@ set full_name = case id
     state_code = 'SP',
     city = 'São Paulo',
     bio = 'Synthetic transactional role gate profile.',
-    onboarding_step = 6,
-    onboarding_completed_at = timezone('utc', now())
+    onboarding_step = 5
 where id::text like '27272727-2727-4727-8727-%';
+
+do $$
+declare
+  actor_id uuid;
+begin
+  foreach actor_id in array array[
+    '27272727-2727-4727-8727-000000000001'::uuid,
+    '27272727-2727-4727-8727-000000000002'::uuid,
+    '27272727-2727-4727-8727-000000000003'::uuid,
+    '27272727-2727-4727-8727-000000000004'::uuid,
+    '27272727-2727-4727-8727-000000000005'::uuid
+  ] loop
+    perform set_config(
+      'request.jwt.claims',
+      jsonb_build_object('sub', actor_id, 'role', 'authenticated')::text,
+      true
+    );
+    perform public.complete_own_onboarding();
+  end loop;
+end
+$$;
 
 update public.user_roles
 set role = case user_id

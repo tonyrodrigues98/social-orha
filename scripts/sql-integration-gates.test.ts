@@ -32,13 +32,23 @@ describe("Supabase transactional integration gates", () => {
     expect(source.trimEnd()).toMatch(/rollback;$/);
   });
 
-  it("creates rate-limit fixtures through authoritative onboarding", () => {
-    const source = readFileSync(
-      path.resolve("scripts", "supabase-rate-limit-integration.sql"),
-      "utf8",
+  it.each([
+    "supabase-notification-integration.sql",
+    "supabase-rate-limit-integration.sql",
+    "supabase-rls-integration.sql",
+    "supabase-role-management-integration.sql",
+    "supabase-support-integration.sql",
+  ])("creates the profiles in %s through authoritative onboarding", (name) => {
+    const source = readFileSync(path.resolve("scripts", name), "utf8");
+    const fixtureStart = source.indexOf("update public.profiles");
+    const authoritativeCompletion = source.indexOf(
+      "public.complete_own_onboarding()",
+      fixtureStart,
     );
+    const fixtureSetup = source.slice(fixtureStart, authoritativeCompletion);
 
-    expect(source.match(/public\.complete_own_onboarding\(\)/g)).toHaveLength(2);
-    expect(source).not.toMatch(/set[\s\S]{0,240}onboarding_completed_at\s*=/i);
+    expect(fixtureStart).toBeGreaterThanOrEqual(0);
+    expect(authoritativeCompletion).toBeGreaterThan(fixtureStart);
+    expect(fixtureSetup).not.toMatch(/onboarding_completed_at\s*=/i);
   });
 });

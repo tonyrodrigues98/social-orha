@@ -88,8 +88,7 @@ set full_name = actor.full_name,
     state_code = 'SP',
     city = 'Sao Paulo',
     bio = 'Perfil sintetico do gate RLS',
-    onboarding_step = 6,
-    onboarding_completed_at = timezone('utc', now())
+    onboarding_step = 5
 from (values
   ('11111111-1111-4111-8111-000000000001'::uuid, 'RLS Owner', 'rls.owner'),
   ('11111111-1111-4111-8111-000000000002'::uuid, 'RLS Other', 'rls.other'),
@@ -102,6 +101,31 @@ from (values
   ('11111111-1111-4111-8111-000000000009'::uuid, 'RLS Support', 'rls.support')
 ) as actor(id, full_name, username)
 where profile.id = actor.id;
+
+do $$
+declare
+  actor_id uuid;
+begin
+  foreach actor_id in array array[
+    '11111111-1111-4111-8111-000000000001'::uuid,
+    '11111111-1111-4111-8111-000000000002'::uuid,
+    '11111111-1111-4111-8111-000000000003'::uuid,
+    '11111111-1111-4111-8111-000000000004'::uuid,
+    '11111111-1111-4111-8111-000000000005'::uuid,
+    '11111111-1111-4111-8111-000000000006'::uuid,
+    '11111111-1111-4111-8111-000000000007'::uuid,
+    '11111111-1111-4111-8111-000000000008'::uuid,
+    '11111111-1111-4111-8111-000000000009'::uuid
+  ] loop
+    perform set_config(
+      'request.jwt.claims',
+      jsonb_build_object('sub', actor_id, 'role', 'authenticated')::text,
+      true
+    );
+    perform public.complete_own_onboarding();
+  end loop;
+end
+$$;
 
 update public.user_roles
 set role = case user_id

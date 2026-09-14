@@ -60,14 +60,33 @@ set full_name = actor.full_name,
     birth_date = date '1990-01-01',
     state_code = 'SP',
     city = 'Sao Paulo',
-    onboarding_step = 6,
-    onboarding_completed_at = timezone('utc', now())
+    bio = 'Perfil sintético e transacional do gate de notificações.',
+    onboarding_step = 5
 from (values
   ('24242424-2424-4424-8424-000000000001'::uuid, 'Notice Owner', 'notice.owner'),
   ('24242424-2424-4424-8424-000000000002'::uuid, 'Notice Author', 'notice.author'),
   ('24242424-2424-4424-8424-000000000003'::uuid, 'Notice Member', 'notice.member')
 ) as actor(id, full_name, username)
 where profile.id = actor.id;
+
+do $$
+declare
+  actor_id uuid;
+begin
+  foreach actor_id in array array[
+    '24242424-2424-4424-8424-000000000001'::uuid,
+    '24242424-2424-4424-8424-000000000002'::uuid,
+    '24242424-2424-4424-8424-000000000003'::uuid
+  ] loop
+    perform set_config(
+      'request.jwt.claims',
+      jsonb_build_object('sub', actor_id, 'role', 'authenticated')::text,
+      true
+    );
+    perform public.complete_own_onboarding();
+  end loop;
+end
+$$;
 
 select set_config(
   'request.jwt.claims',

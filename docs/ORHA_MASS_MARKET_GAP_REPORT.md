@@ -63,7 +63,7 @@ Fontes versionadas: `scripts/remote-inventory.sql`, `scripts/supabase-validate.s
 |---|---|
 | `npm run typecheck` | Aprovado fora do sandbox |
 | `npm run lint` | Aprovado |
-| `npm test` | 75 arquivos e 320 testes aprovados |
+| `npm test` | 76 arquivos e 333 testes aprovados |
 | `npm run build` | Aprovado; 5.983 módulos, manifest e service worker gerados, precache de 103 entradas |
 | `npm run audit:bundle` | Aprovado; entrada JS 291,9 KiB gzip, CSS 27,8 KiB gzip e maior lazy chunk 78,8 KiB gzip |
 | `npm run check:catalog` | Aprovado |
@@ -219,7 +219,7 @@ Critério de aceite:
 
 ### P1.5 Prova de carga, observabilidade e resposta a incidentes — fundação consentida concluída
 
-O repositório possui rate limits server-authoritative para amizade, pedidos de conversa, reports, posts, comentários e mensagens em `20260816230000_abuse_rate_limits.sql`. O gate rollback-only `scripts/supabase-rate-limit-integration.sql` passou no staging após ser reconciliado com o onboarding atômico atual: comprovou `PT429`, rollback da mutação excedente, capacidade/auditoria mínima, bloqueio antes do consumo de quota, isolamento do estado privado e zero resíduos pós-transação. A fundação de analytics agora está completa: escolha owner-only no Supabase, desligada por padrão, timestamp do servidor, adapter PostHog lazy, reset por conta e allowlist sem conteúdo/URL/autocapture/replay. `docs/OBSERVABILITY_AND_INCIDENT_RESPONSE.md` define SLIs/SLOs, orçamento de erro, severidades, alertas e contenção; `npm run audit:bundle` impõe limites verificáveis no CI. Ainda não há key/host PostHog provisionados, prova de carga, dashboards, alertas externos ativos ou escala humana nomeada.
+O repositório possui rate limits server-authoritative para amizade, pedidos de conversa, reports, posts, comentários e mensagens em `20260816230000_abuse_rate_limits.sql`. Os sete gates rollback-only foram reconciliados com o onboarding atômico e repetidos no staging no hash atual. O gate `scripts/supabase-rate-limit-integration.sql` comprovou `PT429`, rollback da mutação excedente, capacidade/auditoria mínima, bloqueio antes do consumo de quota e isolamento do estado privado; a pós-condição conjunta confirmou zero resíduos sintéticos de todos os gates. A fundação de analytics agora está completa: escolha owner-only no Supabase, desligada por padrão, timestamp do servidor, adapter PostHog lazy, reset por conta e allowlist sem conteúdo/URL/autocapture/replay. `docs/OBSERVABILITY_AND_INCIDENT_RESPONSE.md` define SLIs/SLOs, orçamento de erro, severidades, alertas e contenção; `npm run audit:bundle` impõe limites verificáveis no CI. Ainda não há key/host PostHog provisionados, prova de carga, dashboards, alertas externos ativos ou escala humana nomeada.
 
 Critério de aceite:
 
