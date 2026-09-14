@@ -162,7 +162,7 @@ export async function buildAccountExport(
   };
 }
 
-export function encodeAccountExport(exported: Record<string, unknown>): Uint8Array {
+export function encodeAccountExport(exported: Record<string, unknown>): Uint8Array<ArrayBuffer> {
   const bytes = new TextEncoder().encode(JSON.stringify(exported));
   if (bytes.byteLength > 26_214_400) {
     throw new EdgeHttpError(413, "export_artifact_too_large", "Sua exportação precisa de processamento assistido.");
@@ -170,7 +170,7 @@ export function encodeAccountExport(exported: Record<string, unknown>): Uint8Arr
   return bytes;
 }
 
-export async function sha256Hex(bytes: Uint8Array): Promise<string> {
+export async function sha256Hex(bytes: Uint8Array<ArrayBuffer>): Promise<string> {
   const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
   return [...digest].map((value) => value.toString(16).padStart(2, "0")).join("");
 }

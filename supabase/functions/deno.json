@@ -4,8 +4,7 @@
     "strict": true
   },
   "tasks": {
-    "check": "deno check account-export/index.ts account-lifecycle-worker/index.ts media-cleanup-worker/index.ts media-verify/index.ts catalog-search/index.ts",
-    "test": "deno test tests"
+    "check": "deno check --frozen account-export/index.ts account-lifecycle-worker/index.ts media-cleanup-worker/index.ts media-verify/index.ts catalog-search/index.ts",
+    "test": "deno test --frozen tests"
   }
 }
-

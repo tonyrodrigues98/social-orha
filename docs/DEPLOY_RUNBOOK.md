@@ -62,17 +62,19 @@ Este runbook separa verificação, alteração de banco e publicação. Nenhum g
 
 ## 2. Gates locais
 
-Executar com lockfile congelado:
+Instalar Deno `2.8.0` pelo método oficial quando o binário ainda não estiver no `PATH`. Executar Node e Deno com os dois lockfiles congelados:
 
 ```powershell
 npm ci
 npm run check:catalog
 npm run typecheck
+npm run check:edge
 npm run lint
 npm run audit:production-debt
 npm run audit:secrets
 npm run audit:text-encoding
 npm test
+npm run test:edge
 npm run build
 npm run audit:bundle
 ```

@@ -104,21 +104,21 @@ As cinco funções estão versionadas e `ACTIVE` no staging; produção continua
 - `supabase/functions/media-verify`;
 - `supabase/functions/catalog-search`.
 
-`ORHA_CRON_SECRET` e `ORHA_ALLOWED_ORIGINS` foram provisionados no staging. O gate `npm run smoke:edge:anonymous` passou 7/7: todas rejeitam acesso anônimo com `401`, o preflight da origem permitida retorna `204` e uma origem externa recebe `403`. `pg_cron`, `pg_net`, Vault e os jobs de 5/10 minutos estão ativos; ambos os workers retornaram `200` em filas vazias. O teste revelou e corrigiu o parsing de um composto SQL nulo que antes causava retry inválido. Ainda faltam as jornadas autenticadas de upload, catálogo, exportação, exclusão e cleanup com artefatos reais.
+`ORHA_CRON_SECRET` e `ORHA_ALLOWED_ORIGINS` foram provisionados no staging. O gate `npm run smoke:edge:anonymous` passou 7/7: todas rejeitam acesso anônimo com `401`, o preflight da origem permitida retorna `204` e uma origem externa recebe `403`. `pg_cron`, `pg_net`, Vault e os jobs de 5/10 minutos estão ativos; ambos os workers retornaram `200` em filas vazias. O teste revelou e corrigiu o parsing de um composto SQL nulo que antes causava retry inválido. Em 2026-09-14, Deno 2.8 também verificou os cinco entrypoints e executou 11/11 testes; esse gate encontrou e corrigiu o contrato `ArrayBuffer` do SHA-256 e um teste Vitest que estava indevidamente dentro da suíte Deno. `npm run check:edge` e `npm run test:edge` agora são obrigatórios no CI. Ainda faltam as jornadas autenticadas de upload, catálogo, exportação, exclusão e cleanup com artefatos reais.
 
 Critério de aceite:
 
 - manter `ORHA_CRON_SECRET` e `ORHA_ALLOWED_ORIGINS` rotacionáveis por ambiente;
 - manter as cinco funções com `verify_jwt` conforme `supabase/config.toml`;
 - manter Cron/Vault de lifecycle e cleanup monitorados e rotacionáveis;
-- executar check/test Deno em ambiente com Deno 2;
+- manter check/test Deno 2 obrigatórios e verdes no CI;
 - provar reserva → upload → verificação → associação → URL assinada → remoção → cleanup;
 - provar exportação e exclusão com reconciliação idempotente;
 - confirmar ausência de tokens, paths privados e conteúdo em logs.
 
 ### P0.3 Tirar o protótipo da URL pública
 
-O workflow publica somente pushes da `main` (`.github/workflows/deploy-pages.yml`). A URL pública está no commit `b9ab9ca`, enquanto a fundação candidata está dois commits à frente na branch auditada. A inspeção do Git em `main` encontrou:
+O workflow publica somente pushes da `main` (`.github/workflows/deploy-pages.yml`). A URL pública está no commit `b9ab9ca`, enquanto a fundação candidata `ada660f` está 23 commits à frente na branch auditada. A inspeção do Git em `main` encontrou:
 
 - `src/app/authenticated-app.tsx` importando `PrototypeProvider`;
 - `src/app/pages/home-page.tsx` importando `prototype-data`;
@@ -184,14 +184,14 @@ Verificação HTTP em 2026-09-14:
 
 Vercel foi selecionado como o próximo host por já existir um contrato versionado em `vercel.json`, sem dependência adicional de runtime. A configuração usa o preset Vite, `dist`, rewrite SPA e headers de cache/segurança. Em 2026-09-14, o rewrite foi reconciliado com a regra oficial de `cleanUrls`: o destino agora é `/`, sem a extensão `.html`.
 
-O comando obrigatório `npm run build:vercel` passou a executar um preflight fail-closed: Preview só pode apontar para o projeto Supabase de staging; Production só pode apontar para o projeto Supabase de produção e também exige a configuração jurídica/de suporte pública. Ambos exigem raiz `/` e publishable key. O origin público pode ser derivado das system environment variables da Vercel, e um build sintético de Preview confirmou canonical e `og:url` corretos. Esse gate elimina promoção cruzada acidental, mas não substitui a prova no host. A sessão do Chrome chegou à tela de login da Vercel; nenhum deploy foi criado até a autorização explícita de conexão com o GitHub.
+O comando obrigatório `npm run build:vercel` passou a executar um preflight fail-closed: Preview só pode apontar para o projeto Supabase de staging; Production só pode apontar para o projeto Supabase de produção e também exige a configuração jurídica/de suporte pública. Ambos exigem raiz `/` e publishable key. O origin público pode ser derivado das system environment variables da Vercel, e um build sintético de Preview confirmou canonical e `og:url` corretos. Esse gate elimina promoção cruzada acidental, mas não substitui a prova no host. A conta Vercel autorizada já foi conectada ao GitHub e o projeto `social-orha` foi criado sem Production Deployment; URL/chave publicável do staging e base `/` estão limitadas a Preview. A referência `codex/production-launch@ada660f` foi resolvida pelo Vercel e está pronta para o clique final de criação do Preview.
 
 O `public/404.html` pode recuperar a navegação depois do 404, mas não satisfaz deep link, crawler, OAuth nem gate de host. O projeto já possui `scripts/host-capability-audit.ts` para impedir falso positivo.
 
 Próxima fatia vertical:
 
-- autenticar uma conta Vercel autorizada e importar `tonyrodrigues98/social-orha`;
-- provisionar variáveis separadas por escopo, mantendo Preview em staging e Production em produção;
+- criar o Preview já preparado de `codex/production-launch` após confirmação explícita;
+- manter variáveis separadas por escopo, com Preview em staging e Production ainda sem acesso até a promoção aprovada;
 - configurar domínio, HTTPS, canonical, OG, PWA `id/scope/start_url` e callbacks Auth;
 - exigir HTTP 200 no root e em todas as rotas diretas;
 - executar smoke após deploy e rollback testado.

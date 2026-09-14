@@ -1,4 +1,4 @@
-import { exportDatasets } from "../_shared/account-export.ts";
+import { exportDatasets, sha256Hex } from "../_shared/account-export.ts";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -19,4 +19,12 @@ Deno.test("account export never discloses the private moderation snapshot to its
   assert(dataset?.columns, "reports export must use an explicit safe projection");
   assert(!dataset.columns.includes("target_snapshot"), "moderation target snapshot leaked into export");
   assert(!dataset.columns.includes("target_owner_id"), "moderation target owner leaked into export");
+});
+
+Deno.test("account export hashes ArrayBuffer-backed bytes with Web Crypto", async () => {
+  const digest = await sha256Hex(new TextEncoder().encode("abc"));
+  assert(
+    digest === "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+    "SHA-256 digest changed",
+  );
 });
