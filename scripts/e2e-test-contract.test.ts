@@ -14,10 +14,12 @@ const forbiddenTestDoubleApis = [
 
 const requiredProductionJourneys = [
   "auth-lifecycle.spec.ts",
+  "authenticated-broken-profile-media.spec.ts",
   "authenticated-navigation.spec.ts",
   "authenticated-profile-journey.spec.ts",
   "authenticated-security-session-journey.spec.ts",
   "authenticated-session-expiry.spec.ts",
+  "authenticated-slow-network.spec.ts",
   "authenticated-viewport-matrix.spec.ts",
   "authenticated-webkit-matrix.spec.ts",
   "multiuser-community-journey.spec.ts",
