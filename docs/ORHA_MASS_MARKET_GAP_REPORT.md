@@ -15,7 +15,7 @@ Mesmo assim, a ORHA **ainda não atende à Definition of Done para lançamento e
 Portanto, a classificação correta é:
 
 - **Código candidato a lançamento:** avançado, compilável e sem mocks de runtime na branch auditada.
-- **Staging de dados:** estruturalmente consistente, com RLS e lint validados, cinco Edge Functions ativas, gate anônimo/CORS 7/7 e dois jobs Cron/Vault ativos; jornadas autenticadas ainda pendentes.
+- **Staging de dados:** estruturalmente consistente, com RLS e lint validados, cinco Edge Functions ativas, gate anônimo/CORS 7/7, catálogo/export/mídia autenticados 14/14 e exclusão final 10/10 via worker/Vault; jornadas multiusuário ainda pendentes.
 - **Produção:** não promovida.
 - **Produto público atual:** protótipo legado, não equivalente à branch candidata.
 - **Pronto para as massas:** não.
@@ -106,7 +106,9 @@ As cinco funções estão versionadas e `ACTIVE` no staging; produção continua
 
 `ORHA_CRON_SECRET` e `ORHA_ALLOWED_ORIGINS` foram provisionados no staging. O gate `npm run smoke:edge:anonymous` passou 7/7: todas rejeitam acesso anônimo com `401`, o preflight da origem permitida retorna `204` e uma origem externa recebe `403`. `pg_cron`, `pg_net`, Vault e os jobs de 5/10 minutos estão ativos; ambos os workers retornaram `200` em filas vazias. O teste revelou e corrigiu o parsing de um composto SQL nulo que antes causava retry inválido. Em 2026-09-14, Deno 2.8 também verificou os cinco entrypoints e executou 11/11 testes; esse gate encontrou e corrigiu o contrato `ArrayBuffer` do SHA-256 e um teste Vitest que estava indevidamente dentro da suíte Deno. `npm run check:edge` e `npm run test:edge` agora são obrigatórios no CI.
 
-O novo gate `npm run smoke:edge:authenticated`, restrito por código ao projeto staging, passou 14/14. Ele criou uma conta efêmera confirmada, obteve sessão real por senha, consultou `catalog-search` com provedor externo, persistiu uma solicitação `data_export`, gerou e baixou o artefato privado, conferiu tamanho, SHA-256, schema, request e owner e repetiu a chamada idempotente. Na mesma execução, reservou mídia de perfil, realizou upload privado, comprovou inspeção binária/promoção pela Edge Function, signed URL, integridade do download, remoção assíncrona e cleanup físico + metadata. Objeto, export e usuário foram removidos no `finally`. Nenhum e-mail, senha, token, signed URL ou path privado foi impresso. Ainda faltam lifecycle destrutivo completo e a jornada multiusuário permanente.
+O novo gate `npm run smoke:edge:authenticated`, restrito por código ao projeto staging, passou 14/14. Ele criou uma conta efêmera confirmada, obteve sessão real por senha, consultou `catalog-search` com provedor externo, persistiu uma solicitação `data_export`, gerou e baixou o artefato privado, conferiu tamanho, SHA-256, schema, request e owner e repetiu a chamada idempotente. Na mesma execução, reservou mídia de perfil, realizou upload privado, comprovou inspeção binária/promoção pela Edge Function, signed URL, integridade do download, remoção assíncrona e cleanup físico + metadata. Objeto, export e usuário foram removidos no `finally`. Nenhum e-mail, senha, token, signed URL ou path privado foi impresso.
+
+O gate `npm run smoke:worker:account-deletion` passou 10/10. Ele rejeitou confirmação inválida, persistiu a janela de arrependimento, tornou devida somente a solicitação efêmera, acionou `private.invoke_orha_worker` com o segredo lido internamente pelo Vault, e comprovou remoção de Auth, perfil, Storage, lifecycle e tombstone, além de `account.deletion_completed`. `audit_logs` foi corretamente preservada porque é append-only inclusive para `postgres`; ela é evidência operacional anônima, não fixture mutável. A consulta final confirmou zero contas sintéticas e zero tombstones mutáveis. Ainda faltam desativação e a jornada multiusuário permanente.
 
 Critério de aceite:
 
@@ -158,7 +160,7 @@ O audit produtivo foi reexecutado em 2026-09-14 e retornou `found 0 vulnerabilit
 Evidência preservada:
 
 - `npm audit --omit=dev --audit-level=high`: zero vulnerabilidades;
-- catálogo, TypeScript, ESLint, 353 testes, orçamento de bundle e build PWA verdes;
+- catálogo, TypeScript, ESLint, 354 testes, orçamento de bundle e build PWA verdes;
 - E2E autenticado continua sendo um gate separado e não foi inferido deste resultado.
 
 ## Bloqueadores P1 — produto completo e operável

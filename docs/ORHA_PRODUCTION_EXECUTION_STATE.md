@@ -2,10 +2,10 @@
 
 Atualizado em: 2026-09-14  
 Branch: `codex/production-launch`  
-Commit-base publicado antes deste checkpoint: `28cae8b`
+Commit-base publicado antes deste checkpoint: `a55ae18`
 Projeto vinculado durante os gates: `bgeauxljwjbtbwpbzpoo` (ORHA-Staging)  
 Produção: `iuaczhkfmwpyhtpdmuyt` (ORHA), ainda não promovida  
-Estado: **staging saudável e alinhado às 22 migrations locais; 40 tabelas públicas com RLS, 16 tabelas Realtime, cinco Edge Functions ativas, gates anônimo/CORS 7/7 e autenticado catálogo/export/mídia 14/14, dois jobs Cron/Vault ativos; Preview Vercel `Ready` porém ainda protegido por SSO; Auth remoto sincronizado; onboarding atômico; suporte persistente, gestão global de papéis RPC-only e consentimento de analytics owner-only; produção intacta**.
+Estado: **staging saudável e alinhado às 22 migrations locais; 40 tabelas públicas com RLS, 16 tabelas Realtime, cinco Edge Functions ativas, gates anônimo/CORS 7/7, autenticado catálogo/export/mídia 14/14 e exclusão final 10/10 via worker/Vault, dois jobs Cron ativos; Preview Vercel `Ready` porém ainda protegido por SSO; Auth remoto sincronizado; produção intacta**.
 
 ## Resumo executivo
 
@@ -17,7 +17,9 @@ O schema local agora cobre identidade e privacidade, amizades sem follow, bloque
 
 As cinco Edge Functions estão `ACTIVE` no staging. `ORHA_CRON_SECRET` foi gerado criptograficamente em memória e provisionado junto de `ORHA_ALLOWED_ORIGINS`, sem gravar ou imprimir o valor. O gate reproduzível `npm run smoke:edge:anonymous` comprovou 7/7 checks: as cinco funções retornam `401` sem credenciais, a origem local exata recebe preflight `204` e uma origem externa recebe `403` sem header permissivo. A migration `20260914080000` instalou `pg_cron`/`pg_net` e funções privadas restritas a `postgres`; o Vault possui somente os nomes `orha_project_url` e `orha_cron_secret`. Os jobs `orha-account-lifecycle-worker` (5 min) e `orha-media-cleanup-worker` (10 min) estão ativos. Execuções idempotentes com filas vazias retornaram `200`: ciclo de conta com quatro contagens zero e mídia com oito filas zero.
 
-O gate autenticado staging passou 14/14 com conta efêmera e cleanup verificado: sessão por senha, catálogo externo real com retry limitado apenas para falhas transitórias, request persistida de exportação, criação/download privado, integridade SHA-256 e owner e retry idempotente. Também comprovou reserva, upload privado, inspeção binária pela `media-verify`, promoção server-side, signed URL, bytes intactos, fila de remoção e exclusão física + metadata da mídia. O script recusa explicitamente o project-ref de produção e não imprime credenciais nem signed URLs. Lifecycle destrutivo e a jornada multiusuário permanecem gates separados.
+O gate autenticado staging passou 14/14 com conta efêmera e cleanup verificado: sessão por senha, catálogo externo real com retry limitado apenas para falhas transitórias, request persistida de exportação, criação/download privado, integridade SHA-256 e owner e retry idempotente. Também comprovou reserva, upload privado, inspeção binária pela `media-verify`, promoção server-side, signed URL, bytes intactos, fila de remoção e exclusão física + metadata da mídia. O script recusa explicitamente o project-ref de produção e não imprime credenciais nem signed URLs.
+
+O gate de exclusão final passou 10/10 usando somente uma conta efêmera: confirmação inválida negada, request atrasada persistida, vencimento restrito ao ID temporário, worker real acionado pela função privada/Vault, Auth/profile/Storage/lifecycle/tombstone reconciliados e conclusão auditada. A trilha `audit_logs` permaneceu por desenho append-only; todo estado sintético mutável foi removido e as contagens finais de contas de smoke e tombstones retornaram zero. Desativação e jornadas multiusuário permanecem separadas.
 
 ## Inventário remoto confirmado
 
@@ -118,7 +120,7 @@ O script de inventário está em `scripts/remote-inventory.sql` e consulta apena
 | Auth/onboarding | `20260811040000` | mesma fundação | aplicado |
 | Privacidade de perfis | `20260816130000_security_privacy_hardening.sql` | owner-only + RPC mascarada + amizades | aplicado e validado |
 | Social de lançamento | `20260816170000_social_launch_schema.sql` + suporte | 40 tabelas públicas protegidas | aplicado e validado |
-| Workers/lifecycle | `20260816180000_edge_worker_contracts.sql` + cinco Edge Functions | mesma implementação versionada | implantado; jornadas autenticadas pendentes |
+| Workers/lifecycle | `20260816180000_edge_worker_contracts.sql` + cinco Edge Functions | mesma implementação versionada | catálogo/export/mídia 14/14; exclusão final 10/10; multiusuário pendente |
 | Explore/chat/perfil/Home | `20260816190000` → `20260816220000` | mesma cadeia | aplicado e validado estruturalmente |
 | Antiabuso/notificações | `20260816230000` → `20260816240000` | mesma cadeia | aplicado e validado estruturalmente |
 | Storage | cinco buckets privados e policies | mesma configuração | aplicado; mídia autenticada pendente |
@@ -252,7 +254,8 @@ Evidência obtida no Dashboard e pela CLI oficial, sem copiar secrets para logs:
 - concluído nesta fatia: a conta Vercel autorizada foi conectada ao GitHub e o projeto `social-orha` foi criado sem Production Deployment. As variáveis detectadas foram substituídas por URL/chave publicável do staging e base `/`, todas limitadas a Preview; o build foi sobrescrito para `npm run build:vercel`.
 - concluído nesta fatia: o Preview do commit `28cae8b` foi criado e concluiu o build em 52 s. Splash, Auth e guard de deep link foram inspecionados no Chrome. O acesso anônimo ainda recebe `302` para `vercel.com/sso-api`, então a proteção de Preview precisa ser desligada e o gate HTTP repetido antes de chamar a URL de pública.
 - concluído nesta fatia: `npm run smoke:edge:authenticated` passou 14/14 contra staging com conta efêmera removida; catálogo real, export privado, SHA-256/owner, retry idempotente e mídia completa reserva → upload → verify → signed URL → remove → cleanup foram comprovados sem resíduos nem exposição de secrets.
-- gates atuais: matriz E2E pública completa `111/111`, inclusive WebKit 390×844 após reforço dos alvos de toque canônicos contra arredondamento subpixel; guards/deep links de `/suporte` e `/admin/funcoes` revalidados em `66/66` nos 11 projetos públicos; Playwright descobre 128 execuções em 16 arquivos — 111 públicas, 12 jornadas autenticadas e cinco setups de sessão —; Vitest `353/353` em 80 arquivos, Deno `11/11`, Edge anônimo/CORS `7/7`, Edge autenticado catálogo/export/mídia `14/14`, catálogo, TypeScript, ESLint, secrets, encoding, dívida de produção, auditoria de dependências, orçamento de bundle e build PWA com 103 entradas aprovados;
+- concluído nesta fatia: `npm run smoke:worker:account-deletion` passou 10/10; worker/Vault executou a exclusão final de uma conta efêmera e reconciliou Auth, perfil, Storage, lifecycle e tombstone, preservando somente a auditoria append-only. A pós-validação confirmou zero usuários sintéticos e zero tombstones mutáveis.
+- gates atuais: matriz E2E pública completa `111/111`, inclusive WebKit 390×844 após reforço dos alvos de toque canônicos contra arredondamento subpixel; guards/deep links de `/suporte` e `/admin/funcoes` revalidados em `66/66` nos 11 projetos públicos; Playwright descobre 128 execuções em 16 arquivos — 111 públicas, 12 jornadas autenticadas e cinco setups de sessão —; Vitest `354/354` em 81 arquivos, Deno `11/11`, Edge anônimo/CORS `7/7`, Edge autenticado catálogo/export/mídia `14/14`, exclusão final `10/10`, catálogo, TypeScript, ESLint, secrets, encoding, dívida de produção, auditoria de dependências, orçamento de bundle e build PWA com 103 entradas aprovados;
 - pendente: fornecer e aprovar os sete valores públicos reais do gate jurídico/de suporte; nenhuma identidade, endereço, foro ou e-mail foi inventado ou presumido;
 - pendente: custom SMTP + domínio de envio, CAPTCHA e jornadas reais de confirmação/reenvio/reset;
 - pendente: contas sintéticas A/B/Admin/Moderador/Suporte e execução das jornadas autenticadas completas já contratadas, inclusive suporte, autoridade por papel e rejeição da senha atual incorreta;
@@ -265,7 +268,7 @@ Evidência obtida no Dashboard e pela CLI oficial, sem copiar secrets para logs:
 - os testes locais continuam sendo estáticos/contratuais, mas o schema social também passou por aplicação SQL real, 23/23 validações e gates transacionais de RLS, onboarding, suporte, papéis globais e consentimento com `ROLLBACK` no staging `bgeauxljwjbtbwpbzpoo`;
 - todas as 22 migrations locais estão aplicadas no staging; produção permanece sem promoção;
 - buckets, publication e policies do staging foram criados pelas migrations e cobertos pela repetição integral dos gates estrutural e RLS/Storage/Realtime;
-- os workers estão implantados, protegidos por bearer próprio, agendados por Cron/Vault e aprovados com filas vazias no staging; jornadas autenticadas de exportação, delete final, purge e retenção ainda precisam ser comprovadas antes do lançamento público;
+- os workers estão implantados, protegidos por bearer próprio e agendados por Cron/Vault; exportação, perfil-mídia e delete final/purge foram comprovados com contas efêmeras. Ainda faltam desativação, anexos reais de conversa/denúncia e retenção temporal;
 - as Edge Functions de mídia estão implantadas e passam o gate anônimo/CORS; PDF/arquivo genérico permanece fora do lançamento até existir quarentena e antimalware.
 
 ## Referências oficiais
