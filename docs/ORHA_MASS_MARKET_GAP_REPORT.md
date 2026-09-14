@@ -2,7 +2,7 @@
 
 Data da verificação: 2026-09-14  
 Branch auditada: `codex/production-launch`  
-Commit-base auditado antes deste checkpoint: `381108e`
+Commit-base auditado antes deste checkpoint: `779507a`
 Staging auditado: `bgeauxljwjbtbwpbzpoo`  
 Produção Supabase: `iuaczhkfmwpyhtpdmuyt`
 
@@ -30,7 +30,7 @@ Portanto, a classificação correta é:
 | Rotas recuperáveis                | `src/app/router.tsx` e `src/app/router-policy.ts` definem Auth, onboarding, cinco áreas principais, conversas, comunidades, perfil público, notificações, configurações, denúncia e moderação                                               | Implementado na branch                                                                              |
 | Auth por e-mail                   | `src/infrastructure/supabase/email-auth.ts` contém cadastro, login, logout, resend, recovery e troca de senha; `src/app/auth/auth-provider.tsx` observa a sessão real                                                                       | Implementado; entrega externa não comprovada                                                        |
 | Onboarding persistente            | `src/app/onboarding/onboarding-flow.tsx` retoma `onboarding_step` e persiste identidade, localidade, detalhes e favoritos                                                                                                                   | Implementado; fechamento E2E pendente                                                               |
-| Domínios sociais                  | `src/domains/social/repository.ts`, `src/infrastructure/supabase/social/social-repository.ts` e `scripts/social-domain-smoke.ts` implementam e comprovam perfis, amizades, comunidades, memberships, posts, comentários, reações e bloqueio | Implementado; jornada efêmera staging 18/18                                                         |
+| Domínios sociais                  | `src/domains/social/repository.ts`, `src/infrastructure/supabase/social/social-repository.ts`, `scripts/social-domain-smoke.ts` e `e2e/staging-social-browser-smoke.spec.ts` comprovam perfis, amizades, comunidades, memberships, posts, comentários, reações e bloqueio | Implementado; domínio staging 18/18 e navegador multiusuário efêmero 2/2                            |
 | Comunidade administrativa         | `src/infrastructure/supabase/community-management-repository.ts` e `src/app/community/community-manager-drawer.tsx` cobrem edição, regras, roles, banimento, branding e arquivamento                                                        | Implementado; mídia depende de Edge                                                                 |
 | Mensageria persistente            | `src/domains/messaging/contracts.ts` e `src/infrastructure/supabase/messaging/*` cobrem pedidos, grupos, texto, imagem, áudio, reply, reaction, forward, delete, receipts, busca, preferências e Realtime                                   | Implementado; pedido/aceite, texto, receipts, mídia e Realtime privado comprovados 18/18 no staging |
 | Waveform e gravação               | `src/app/pages/private-chat-page.tsx`, `src/infrastructure/media/browser-audio-recorder.ts` e `src/components/ui/chat/*` usam gravação real, waveform e primitives do chat                                                                  | Implementado; WAV remoto, inspeção Edge, waveform persistida e download entre usuários comprovados  |
@@ -70,6 +70,7 @@ Fontes versionadas: `scripts/remote-inventory.sql`, `scripts/supabase-validate.s
 | `npm run audit:production-debt`                 | Aprovado; zero mock, seed, TODO e localStorage; ocorrências legadas explicitamente allowlisted             |
 | `npm run audit:secrets`                         | Aprovado                                                                                                   |
 | `npm run audit:text-encoding`                   | Aprovado                                                                                                   |
+| `npm run test:e2e:staging:social`               | Aprovado 2/2; duas sessões reais, amizade e comunidade com persistência após reload                        |
 | `npm run test:e2e:production`                   | Bloqueado no preflight por ambiente/secrets ausentes; nenhuma jornada foi falsamente marcada como aprovada |
 | `npm audit --omit=dev --audit-level=high`       | Aprovado; zero vulnerabilidades                                                                            |
 | `npx supabase db lint --linked --level warning` | Aprovado sem erros nem avisos                                                                              |
@@ -142,9 +143,11 @@ Critério de aceite:
 - confirmar que o bundle implantado corresponde ao commit/release aprovado;
 - procurar novamente `PrototypeProvider`, `prototype-data`, mock e seed no commit implantado.
 
-### P0.4 Desbloquear e executar o E2E real multiusuário
+### P0.4 Completar a matriz E2E real multiusuário — prova efêmera 2/2 concluída
 
-O preflight bloqueia por ausência de 22 valores operacionais, incluindo URL/key/host de staging, contas A/B/Admin/Moderador/Suporte, credenciais, service role exclusiva do runner, domínio catch-all e confirmação SMTP. A suíte agora existe em 15 specs e 23 testes declarados, incluindo suporte persistente e matriz de autoridade por papel, mas código de teste não é evidência de jornada aprovada.
+O gate efêmero `npm run test:e2e:staging:social` passou 2/2 com duas contas criadas e removidas pelo runner e duas sessões de navegador independentes. A interface real comprovou amizade completa e comunidade com post, reação e comentário recuperados após reload. O gate também detectou e corrigiu invalidação de cache após ingresso, heading duplicado e uma asserção que confundia conteúdo do editor com gravação confirmada.
+
+O preflight da matriz permanente ainda bloqueia por ausência de 22 valores operacionais, incluindo URL/key/host de staging, contas A/B/Admin/Moderador/Suporte, credenciais, service role exclusiva do runner, domínio catch-all e confirmação SMTP. A prova efêmera reduz risco nos domínios de amizade/comunidade, mas não substitui Auth por e-mail, papéis administrativos, suporte, moderação, chat/mídia no navegador nem evidência longitudinal entre dispositivos.
 
 Evidência: `.env.e2e.example`, `scripts/require-production-e2e-secrets.ts`, `playwright.config.ts`, `e2e/*` e `.github/workflows/deploy-pages.yml`.
 
@@ -283,18 +286,15 @@ A rota `/admin/funcoes` fornece busca sem e-mail e alteração por motivo obriga
 
 Cada item só começa quando o anterior possui evidência verde. Não promover parcialmente.
 
-1. **SQL runtime:** migration forward para as duas ambiguidades; lint remoto sem erros; testes de conversa direta e notificações.
-2. **Dependências:** corrigir/remover pacotes vulneráveis; audit de produção verde; repetir gates locais.
-3. **Edge em staging:** secrets, cinco deploys, Cron/Vault e testes de mídia/export/lifecycle/cleanup.
-4. **Auth/e-mail em staging:** política de senha e redirects concluídos; falta SMTP, templates, CAPTCHA e jornadas reais; Google quando credenciais existirem.
-5. **Contas E2E:** provisionar A, B, Admin, Moderador e Suporte; executar as jornadas completas com múltiplos usuários.
-6. **QA native-first:** matriz visual, teclado, gestos, iOS/Safari, offline/reconexão e PWA instalada.
-7. **Operação:** legal, suporte, moderação humana, observabilidade, SLO, alertas e incident response.
-8. **Host/domínio:** trocar para host com rewrite 200, configurar domínio/HTTPS/PWA/Auth callbacks e smoke.
-9. **Promoção Supabase:** snapshot/backup, hashes, migrations, tipos, Functions, secrets, Cron e smoke na produção.
-10. **Release:** mesclar na `main`, workflow completo verde, verificar SHA implantado, tag, release e rollback testado.
-11. **Smoke pós-release:** jornadas essenciais em produção com contas controladas, sem service role no navegador e sem conteúdo falso.
-12. **Go/no-go:** liberar tráfego apenas se todos os itens P0/P1 estiverem fechados e nenhum recurso visível simular sucesso.
+1. **Auth/e-mail em staging:** provisionar SMTP/remetente/domínio, templates, CAPTCHA e catch-all; provar cadastro, confirmação, reenvio e recuperação; Google somente com client ID/secret reais.
+2. **Matriz E2E permanente:** provisionar A, B, Admin, Moderador e Suporte; executar todas as jornadas de Auth, amizade, comunidade, conversa/mídia, perfil, trust, suporte, conta e autoridade.
+3. **QA native-first privada:** completar screenshots, teclado, gestos, iOS/Safari físico, rede lenta, offline/reconexão e PWA instalada nas áreas autenticadas.
+4. **Operação:** fornecer os sete valores jurídico/suporte, nomear moderação humana, provisionar observabilidade/alertas, executar carga e exercício de incidente.
+5. **Host/domínio:** retirar SSO apenas do Preview autorizado, provar deep links HTTP 200, configurar domínio/HTTPS/PWA/Auth callbacks e repetir smoke.
+6. **Promoção Supabase:** renovar snapshot, obter recuperação proporcional ao risco, congelar hashes, aplicar migrations, tipos, Functions, secrets, Cron e smoke na produção.
+7. **Release:** mesclar na `main`, workflow completo verde, verificar SHA implantado, criar tag/release e executar rollback testado.
+8. **Smoke pós-release:** executar jornadas essenciais em produção com contas controladas, sem service role no navegador nem conteúdo falso.
+9. **Go/no-go:** liberar tráfego apenas quando P0/P1 estiverem fechados e nenhuma função visível simular sucesso.
 
 ## Checklist de conclusão verificável
 

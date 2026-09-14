@@ -423,6 +423,9 @@ export function useCommunityActions() {
       queryClient.invalidateQueries({ queryKey: ["social", "communities"] }),
       queryClient.invalidateQueries({ queryKey: ["social", "community"] }),
       queryClient.invalidateQueries({ queryKey: ["social", "memberships"] }),
+      queryClient.invalidateQueries({ queryKey: ["social", "posts"] }),
+      queryClient.invalidateQueries({ queryKey: ["social", "post"] }),
+      queryClient.invalidateQueries({ queryKey: ["social", "comments"] }),
     ]);
   const create = useMutation({
     mutationFn: (input: CreateCommunityInput) => repository.createCommunity(input),

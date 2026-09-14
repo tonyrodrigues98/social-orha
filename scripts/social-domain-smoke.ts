@@ -5,9 +5,9 @@ import { fileURLToPath } from "node:url";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseSocialRepository } from "../src/infrastructure/supabase/social/social-repository";
 import type { SocialRepository } from "../src/domains/social/repository";
+import { validateSocialSmokeTarget } from "./social-domain-smoke-target";
 
-const STAGING_PROJECT_REF = "bgeauxljwjbtbwpbzpoo";
-const STAGING_ORIGIN = `https://${STAGING_PROJECT_REF}.supabase.co`;
+export { validateSocialSmokeTarget } from "./social-domain-smoke-target";
 
 type SmokeEnvironment = {
   supabaseUrl: string;
@@ -32,27 +32,6 @@ function requiredEnvironment(name: string): string {
   const value = process.env[name]?.trim();
   if (!value) throw new Error(`Missing required environment: ${name}.`);
   return value;
-}
-
-export function validateSocialSmokeTarget(
-  supabaseUrl: string,
-  linkedProjectRef: string,
-): string {
-  const url = new URL(supabaseUrl);
-  if (
-    url.origin !== STAGING_ORIGIN ||
-    (url.pathname !== "/" && url.pathname !== "") ||
-    url.username ||
-    url.password ||
-    url.search ||
-    url.hash ||
-    linkedProjectRef.trim() !== STAGING_PROJECT_REF
-  ) {
-    throw new Error(
-      "Social-domain smoke is restricted to the linked ORHA staging project.",
-    );
-  }
-  return url.origin;
 }
 
 function client(url: string, key: string): SupabaseClient {

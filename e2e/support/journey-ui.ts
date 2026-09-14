@@ -63,7 +63,9 @@ export async function openPersonFromSearch(
 ): Promise<void> {
   await openAppPath(page, "/inicio");
   await waitForAuthenticatedShell(page);
-  await page.getByRole("button", { name: "Ver todas" }).click();
+  await page
+    .getByRole("button", { name: "Pesquisar", exact: true })
+    .click();
   const searchDialog = page.getByRole("dialog", { name: "Pesquisar" });
   await expect(searchDialog).toBeVisible();
   await searchDialog
@@ -85,7 +87,9 @@ export async function openCommunityFromSearch(
 ): Promise<void> {
   await openAppPath(page, "/inicio");
   await waitForAuthenticatedShell(page);
-  await page.getByRole("button", { name: "Ver todas" }).click();
+  await page
+    .getByRole("button", { name: "Pesquisar", exact: true })
+    .click();
   const searchDialog = page.getByRole("dialog", { name: "Pesquisar" });
   await searchDialog
     .getByLabel("Pesquisar pessoas, comunidades e interesses")
@@ -104,7 +108,9 @@ export async function expectPersonAbsentFromSearch(
 ): Promise<void> {
   await openAppPath(page, "/inicio");
   await waitForAuthenticatedShell(page);
-  await page.getByRole("button", { name: "Ver todas" }).click();
+  await page
+    .getByRole("button", { name: "Pesquisar", exact: true })
+    .click();
   const searchDialog = page.getByRole("dialog", { name: "Pesquisar" });
   const profilesResponse = page.waitForResponse(
     (response) =>

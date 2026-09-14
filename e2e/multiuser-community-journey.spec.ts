@@ -34,7 +34,6 @@ async function openCommunity(
   communityName: string,
 ): Promise<void> {
   await openAppPath(page, communityPath);
-  await waitForAuthenticatedShell(page);
   await expect(
     page.getByRole("heading", { level: 1, name: communityName }),
   ).toBeVisible({ timeout: 30_000 });
@@ -167,12 +166,20 @@ test.describe("jornada C — comunidade, publicação, comentário e reação", 
       });
       await thread.getByLabel("Texto do comentário").fill(commentText);
       await thread.getByRole("button", { name: "Comentar" }).click();
-      await expect(thread.getByText(commentText)).toBeVisible({ timeout: 30_000 });
+      await expect(thread.getByRole("status")).toHaveText(
+        "Comentário publicado.",
+        { timeout: 30_000 },
+      );
+      await expect(
+        thread.locator("article").filter({ hasText: commentText }),
+      ).toBeVisible({ timeout: 30_000 });
 
-      await pageB.keyboard.press("Escape");
+      await pageB.goBack({ waitUntil: "domcontentloaded" });
       await expect(thread).toBeHidden();
       await pageB.reload({ waitUntil: "domcontentloaded" });
-      await waitForAuthenticatedShell(pageB);
+      await expect(
+        pageB.getByRole("heading", { level: 1, name: communityName }),
+      ).toBeVisible({ timeout: 30_000 });
       memberPost = postByText(pageB, postText);
       await expect(memberPost).toBeVisible({ timeout: 30_000 });
       await expect(
@@ -180,8 +187,10 @@ test.describe("jornada C — comunidade, publicação, comentário e reação", 
       ).toHaveAttribute("aria-pressed", "true");
       await pageB.getByTestId(`community-post-comments-${postId}`).click();
       thread = pageB.getByRole("dialog", { name: "Conversa da publicação" });
-      await expect(thread.getByText(commentText)).toBeVisible({ timeout: 30_000 });
-      await pageB.keyboard.press("Escape");
+      await expect(
+        thread.locator("article").filter({ hasText: commentText }),
+      ).toBeVisible({ timeout: 30_000 });
+      await pageB.goBack({ waitUntil: "domcontentloaded" });
 
       await leaveCommunityIfNeeded(pageB, communityPath, communityName);
       membershipNeedsLeave = false;

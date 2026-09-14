@@ -92,9 +92,14 @@ export function observeRuntimeQuality(page: Page): {
     record({ kind: "pageerror", message: error.message });
   });
   page.on("requestfailed", (request) => {
+    const failure = request.failure()?.errorText ?? "Falha de rede sem detalhe";
+    // Route changes intentionally abort stale TanStack/Supabase reads through
+    // AbortController. Chromium reports those client-side cancellations as
+    // ERR_ABORTED; they are not transport failures and have no HTTP response.
+    if (/\bERR_ABORTED\b/i.test(failure)) return;
     record({
       kind: "requestfailed",
-      message: request.failure()?.errorText ?? "Falha de rede sem detalhe",
+      message: failure,
       url: request.url(),
     });
   });

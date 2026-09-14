@@ -26,6 +26,8 @@ export type DrawerProps = {
   title?: React.ReactNode;
   /** Extra classes for the panel. */
   className?: string;
+  /** Whether outside press and Escape may dismiss the drawer. */
+  isDismissable?: boolean;
   children?: React.ReactNode;
 };
 
@@ -41,7 +43,15 @@ const CLOSE_VELOCITY = 600;
 
 const Drawer = React.forwardRef<HTMLDivElement, DrawerProps>(
   (
-    { open, onOpenChange, side = "bottom", title, className, children },
+    {
+      open,
+      onOpenChange,
+      side = "bottom",
+      title,
+      className,
+      isDismissable = true,
+      children,
+    },
     ref,
   ) => {
     const isBottom = side === "bottom";
@@ -66,7 +76,8 @@ const Drawer = React.forwardRef<HTMLDivElement, DrawerProps>(
     return (
       <ModalOverlay
         isOpen={open}
-        isDismissable
+        isDismissable={isDismissable}
+        isKeyboardDismissDisabled={!isDismissable}
         onOpenChange={onOpenChange}
         className={`orha-modal-overlay fixed inset-0 opacity-100 ${shouldReduceMotion ? "" : "transition-opacity duration-300 data-[entering]:opacity-0 data-[exiting]:opacity-0"}`}
         style={{ zIndex: 1000 }}

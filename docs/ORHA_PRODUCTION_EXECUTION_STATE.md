@@ -2,10 +2,10 @@
 
 Atualizado em: 2026-09-14  
 Branch: `codex/production-launch`  
-Commit-base publicado antes deste checkpoint: `381108e`
+Commit-base publicado antes deste checkpoint: `779507a`
 Projeto vinculado durante os gates: `bgeauxljwjbtbwpbzpoo` (ORHA-Staging)  
 Produção: `iuaczhkfmwpyhtpdmuyt` (ORHA), ainda não promovida  
-Estado: **staging saudável e alinhado às 25 migrations locais; 40 tabelas públicas com RLS, 16 tabelas Realtime, cinco Edge Functions ativas, gates anônimo/CORS 7/7, autenticado catálogo/export/mídia 14/14, ciclo de conta 17/17, mensageria/mídia privada 18/18 e domínio social multiusuário 18/18, dois jobs Cron ativos; Preview Vercel `Ready` porém ainda protegido por SSO; Auth remoto sincronizado; produção intacta**.
+Estado: **staging saudável e alinhado às 25 migrations locais; 40 tabelas públicas com RLS, 16 tabelas Realtime, cinco Edge Functions ativas, gates anônimo/CORS 7/7, autenticado catálogo/export/mídia 14/14, ciclo de conta 17/17, mensageria/mídia privada 18/18, domínio social 18/18 e navegador social efêmero 2/2, dois jobs Cron ativos; Preview Vercel `Ready` porém ainda protegido por SSO; Auth remoto sincronizado; produção intacta**.
 
 ## Resumo executivo
 
@@ -24,6 +24,8 @@ O gate de ciclo de conta passou 17/17 usando somente contas efêmeras. A desativ
 O gate `npm run smoke:messaging:media` passou 18/18 com duas contas efêmeras onboarded. Ele comprovou pedido/aceite de conversa, canal privado com readiness de replicação, texto via Postgres Changes, imagem e WAV validados pela Edge Function, waveform persistida, download por URL assinada apenas para participante, recibo de leitura, retenção exata do anexo denunciado, evidência privada e canais próprios de notificações/suporte. As migrations `20260914105000` a `20260914107000` corrigiram a autorização RLS do upload de evidência, autorizaram somente tópicos operacionais do próprio usuário e eliminaram o último aviso do lint SQL. A consulta independente final retornou zero contas, perfis e objetos sintéticos.
 
 O gate `npm run smoke:social:domain` passou 18/18 usando os mesmos princípios de isolamento. Duas contas efêmeras com onboarding concluído comprovaram descoberta server-side, negação de autoamizade, pedido/aceite/notificações, deduplicação do par, bloqueio de escrita privilegiada direta, criação de comunidade com owner derivado no servidor, descoberta/entrada/saída/reentrada, autoridade exclusiva de manager, publicação, comentário, reações e notificações persistentes, bloqueio global removendo e impedindo amizade, desbloqueio restaurando contato consentido e negação de leitura social ao papel `anon`. O `finally` removeu a comunidade e os dois usuários; a pós-validação confirmou zero Auth users, perfis e comunidades do smoke.
+
+O gate `npm run test:e2e:staging:social` passou 2/2 em Chromium 390×844 usando duas sessões independentes e contas efêmeras confirmadas. Pela interface pública real, comprovou login, descoberta, pedido/aceite/remoção de amizade, criação e entrada em comunidade, publicação, reação, comentário confirmado pelo servidor, retorno por rota e recuperação da reação e do comentário após reload. O gate encontrou e corrigiu a invalidação incompleta após membership, heading duplicado, seletores ambíguos, falso positivo de request cancelada e o contrato de dismiss durante mutation; o cleanup confirmou zero perfis efêmeros residuais.
 
 ## Inventário remoto confirmado
 
@@ -259,12 +261,12 @@ Evidência obtida no Dashboard e pela CLI oficial, sem copiar secrets para logs:
 - concluído nesta fatia: o Preview do commit `28cae8b` foi criado e concluiu o build em 52 s. Splash, Auth e guard de deep link foram inspecionados no Chrome. O acesso anônimo ainda recebe `302` para `vercel.com/sso-api`, então a proteção de Preview precisa ser desligada e o gate HTTP repetido antes de chamar a URL de pública.
 - concluído nesta fatia: `npm run smoke:edge:authenticated` passou 14/14 contra staging com conta efêmera removida; catálogo real, export privado, SHA-256/owner, retry idempotente e mídia completa reserva → upload → verify → signed URL → remove → cleanup foram comprovados sem resíduos nem exposição de secrets.
 - concluído nesta fatia: `npm run smoke:worker:account-deletion` passou 17/17; worker/Vault executou desativação com restrição imediata e exclusão final de contas efêmeras, reconciliando Auth, perfil, Storage, lifecycle e tombstone e preservando somente a auditoria append-only. A pós-validação confirmou zero usuários sintéticos e zero tombstones mutáveis.
-- gates atuais: matriz E2E pública completa `111/111`, inclusive WebKit 390×844 após reforço dos alvos de toque canônicos contra arredondamento subpixel; guards/deep links de `/suporte` e `/admin/funcoes` revalidados em `66/66` nos 11 projetos públicos; Playwright descobre 128 execuções em 16 arquivos — 111 públicas, 12 jornadas autenticadas e cinco setups de sessão —; Vitest `364/364` em 86 arquivos, Deno `11/11`, Edge anônimo/CORS `7/7`, Edge autenticado catálogo/export/mídia `14/14`, ciclo de conta `17/17`, mensageria/mídia privada `18/18`, domínio social multiusuário `18/18`, catálogo, TypeScript, ESLint, secrets, encoding, dívida de produção, auditoria de dependências, orçamento de bundle e build PWA com 103 entradas aprovados;
+- gates atuais: matriz E2E pública completa `111/111`, inclusive WebKit 390×844 após reforço dos alvos de toque canônicos contra arredondamento subpixel; guards/deep links de `/suporte` e `/admin/funcoes` revalidados em `66/66` nos 11 projetos públicos; smoke social no navegador `2/2` com contas efêmeras; Vitest `364/364` em 86 arquivos, Deno `11/11`, Edge anônimo/CORS `7/7`, Edge autenticado catálogo/export/mídia `14/14`, ciclo de conta `17/17`, mensageria/mídia privada `18/18`, domínio social multiusuário `18/18`, catálogo, TypeScript, ESLint, secrets, encoding, dívida de produção, auditoria de dependências, orçamento de bundle e build PWA com 103 entradas aprovados;
 - pendente: fornecer e aprovar os sete valores públicos reais do gate jurídico/de suporte; nenhuma identidade, endereço, foro ou e-mail foi inventado ou presumido;
 - pendente: custom SMTP + domínio de envio, CAPTCHA e jornadas reais de confirmação/reenvio/reset;
-- pendente: contas sintéticas A/B/Admin/Moderador/Suporte e execução das jornadas autenticadas completas já contratadas, inclusive suporte, autoridade por papel e rejeição da senha atual incorreta;
+- pendente: contas sintéticas permanentes A/B/Admin/Moderador/Suporte e execução das jornadas autenticadas completas já contratadas, inclusive Auth por e-mail, suporte, autoridade por papel e rejeição da senha atual incorreta; amizade e comunidade já possuem prova adicional efêmera 2/2 no navegador;
 - pendente: remover a proteção SSO somente do Preview após confirmação, provar root/deep links por HTTP 200 e somente depois provisionar Production com os valores públicos aprovados;
-- pendente: mídia real, Realtime multiusuário, QA native-first/PWA, domínio definitivo, provisionamento do PostHog/dashboards/alertas, prova de carga, escala humana e promoção controlada da produção.
+- pendente: QA privada completa native-first/PWA, domínio definitivo, provisionamento do PostHog/dashboards/alertas, prova de carga, escala humana e promoção controlada da produção; mídia privada e Realtime já possuem smoke remoto, mas ainda devem integrar a matriz permanente de navegador.
 
 ## Limitações conhecidas do ambiente atual
 

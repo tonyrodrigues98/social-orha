@@ -247,6 +247,7 @@ export function CommunityPostThreadDrawer({
   return (
     <Drawer
       open={Boolean(post)}
+      isDismissable={!pending}
       onOpenChange={(open) => {
         if (!open && !pending) onClose();
       }}

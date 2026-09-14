@@ -630,7 +630,7 @@ export function CommunityDetailPage({
               ) : community.name.slice(0, 2).toLocaleUpperCase("pt-BR")}
             </span>
             <div className="min-w-0 flex-1">
-              <h1 className="text-2xl font-semibold tracking-tight text-gray-950">{community.name}</h1>
+              <h2 className="text-2xl font-semibold tracking-tight text-gray-950">{community.name}</h2>
               <div className="mt-1 flex flex-wrap gap-2 text-xs font-medium text-gray-600">
                 <span>{communityCategoryLabel(community.category)}</span>
                 <span aria-hidden>·</span>

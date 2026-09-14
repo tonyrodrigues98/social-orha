@@ -47,8 +47,14 @@ export default defineConfig({
   timeout: 45_000,
   expect: { timeout: 10_000 },
   reporter: process.env.CI
-    ? [["github"], ["html", { open: "never", outputFolder: "playwright-report" }]]
-    : [["list"], ["html", { open: "never", outputFolder: "playwright-report" }]],
+    ? [
+        ["github"],
+        ["html", { open: "never", outputFolder: "playwright-report" }],
+      ]
+    : [
+        ["list"],
+        ["html", { open: "never", outputFolder: "playwright-report" }],
+      ],
   use: {
     baseURL,
     serviceWorkers: "block",
@@ -140,6 +146,17 @@ export default defineConfig({
         viewport: { width: 390, height: 844 },
         trace: "off",
         video: "off",
+      },
+    },
+    {
+      name: "staging-social-smoke-chromium",
+      testMatch: /staging-social-browser-smoke\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 390, height: 844 },
+        serviceWorkers: "block",
+        trace: "retain-on-failure",
+        video: "retain-on-failure",
       },
     },
   ],

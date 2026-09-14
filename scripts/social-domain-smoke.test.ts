@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateSocialSmokeTarget } from "./social-domain-smoke";
+import { validateSocialSmokeTarget } from "./social-domain-smoke-target";
 
 describe("social-domain staging smoke guards", () => {
   it("accepts only the exact linked ORHA staging origin", () => {
