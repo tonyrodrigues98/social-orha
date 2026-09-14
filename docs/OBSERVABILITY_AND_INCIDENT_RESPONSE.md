@@ -2,7 +2,7 @@
 
 Atualizado em: 2026-09-14
 
-Estado: contrato operacional versionado; integrações de alertas, responsáveis humanos e prova de carga ainda são gates de lançamento.
+Estado: contrato operacional versionado e baseline remoto curto comprovado no staging; integrações de alertas, responsáveis humanos e teste de capacidade sustentado ainda são gates de lançamento.
 
 Este runbook não afirma que existe monitoramento externo ativo. Ele define o que deve ser medido, como classificar impacto e quais evidências precisam existir antes de abrir a ORHA ao público.
 
@@ -30,6 +30,19 @@ Janela padrão: 28 dias corridos. Percentuais excluem rejeições esperadas `4xx
 | PWA pública | app shell disponível e instalável | 99,9% | LCP p75 ≤ 2,5 s |
 
 Metas de experiência no percentil 75: INP ≤ 200 ms e CLS ≤ 0,1. O gate local `npm run audit:bundle` limita a entrada JavaScript a 340 KiB gzip, CSS a 36 KiB gzip e o maior chunk lazy a 100 KiB gzip. Esses limites impedem crescimento silencioso; não provam Web Vitals de rede real.
+
+## Baseline remoto de latência
+
+Em 2026-09-14, `e2e/authenticated-load-baseline.spec.ts` passou no Supabase Staging com cinco identidades efêmeras autenticadas simultaneamente e cleanup verificado. O gate executou cinco logins reais e, após aquecimento, seis rodadas concorrentes de três leituras server-side, totalizando 90 consultas sociais sem interceptação, mock ou seed persistente.
+
+| Operação | Amostras | Erros | p50 | p95 | p99 | Máximo |
+|---|---:|---:|---:|---:|---:|---:|
+| Auth por senha | 5 | 0 | 355 ms | 385 ms | 385 ms | 385 ms |
+| Resumo da Home | 30 | 0 | 44 ms | 60 ms | 110 ms | 110 ms |
+| Busca de perfis visíveis | 30 | 0 | 41 ms | 54 ms | 56 ms | 56 ms |
+| Interesses descobríveis | 30 | 0 | 42 ms | 50 ms | 64 ms | 64 ms |
+
+Esse resultado comprova conectividade concorrente básica e conformidade inicial com os SLOs acima no ambiente atual. Ele não mede pico público, saturação, backpressure nem estabilidade por 60 minutos. Antes do lançamento em massa ainda é obrigatório registrar o envelope de tráfego esperado e sustentar pelo menos 3× esse pico em ambiente e plano representativos de produção.
 
 ## Orçamento de erro e política de mudança
 
@@ -92,6 +105,7 @@ Dashboards mínimos: visão executiva de SLO/orçamento; Auth; banco/API; chat/R
 - [ ] Logs operacionais com retenção e acesso definidos.
 - [ ] Alertas acima implantados, disparados sinteticamente e reconhecidos.
 - [ ] Responsáveis e substitutos registrados fora do Git.
+- [x] Baseline remoto curto registra p50/p95/p99, erro e concorrência no staging.
 - [ ] Teste de carga mede p95/p99, erro, concorrência e backpressure.
 - [ ] Recovery/rollback exercitado no ambiente compatível.
 - [ ] Dashboard acompanha limites do plano Supabase e do host.
