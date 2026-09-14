@@ -366,4 +366,26 @@ describe("ORHA route policy", () => {
     expect(entry.indexOf("__orha_route")).toBeGreaterThan(-1);
     expect(entry.indexOf("__orha_route")).toBeLessThan(entry.indexOf("/src/main.tsx"));
   });
+
+  it("ships a rewrite-capable production host contract for real deep links", () => {
+    const projectRoot = path.resolve(process.cwd());
+    const config = JSON.parse(
+      readFileSync(path.join(projectRoot, "vercel.json"), "utf8"),
+    ) as {
+      outputDirectory?: string;
+      rewrites?: Array<{ source?: string; destination?: string }>;
+      headers?: Array<{ source?: string; headers?: Array<{ key?: string; value?: string }> }>;
+    };
+
+    expect(config.outputDirectory).toBe("dist");
+    expect(config.rewrites).toContainEqual({ source: "/(.*)", destination: "/index.html" });
+    expect(config.headers).toContainEqual(
+      expect.objectContaining({
+        source: "/sw.js",
+        headers: expect.arrayContaining([
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+        ]),
+      }),
+    );
+  });
 });
