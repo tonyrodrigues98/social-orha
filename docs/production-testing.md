@@ -87,6 +87,10 @@ As contas devem existir no Supabase e ter onboarding concluído:
   `ORHA_E2E_USER_B_PROFILE_TEXT`
 - `ORHA_E2E_ADMIN_EMAIL` / `ORHA_E2E_ADMIN_PASSWORD` /
   `ORHA_E2E_ADMIN_PROFILE_TEXT`
+- `ORHA_E2E_MODERATOR_EMAIL` / `ORHA_E2E_MODERATOR_PASSWORD` /
+  `ORHA_E2E_MODERATOR_PROFILE_TEXT`
+- `ORHA_E2E_SUPPORT_EMAIL` / `ORHA_E2E_SUPPORT_PASSWORD` /
+  `ORHA_E2E_SUPPORT_PROFILE_TEXT`
 - `ORHA_E2E_SERVICE_ROLE_KEY`, pertencente ao mesmo projeto de staging e lida somente pelo processo Node para criar e
   remover usuários descartáveis da jornada Auth; ela nunca recebe prefixo
   `VITE_`, nunca entra no browser e não pode aparecer em artefatos
@@ -103,10 +107,10 @@ tokens e credenciais não sejam incorporados a diagnósticos. A suíte pública
 pode ser executada isoladamente sem secrets; a suíte autenticada nunca cria
 sessão falsa e nunca é ignorada.
 
-As três contas devem ser dedicadas ao gate, distintas e sem dados pessoais. A e
+As cinco contas devem ser dedicadas ao gate, distintas e sem dados pessoais. A e
 B precisam estar ativas, com onboarding concluído, inicialmente pesquisáveis e
-com ao menos uma vaga livre na galeria de A. A conta admin precisa ter um dos
-papéis autorizados no backend. A suíte normaliza amizade/bloqueio e restaura bio,
+com ao menos uma vaga livre na galeria de A. Admin, Moderador e Suporte precisam
+ter exatamente os papéis correspondentes atribuídos pelo backend. A suíte normaliza amizade/bloqueio e restaura bio,
 privacidade, associação à comunidade, preferências e senha ao terminar. As
 comunidades de teste são arquivadas. Mensagens criadas pelo gate são excluídas
 pela própria UI, removendo seus anexos e preservando apenas o tombstone de
@@ -114,7 +118,7 @@ auditoria; denúncias são encerradas pelo moderador e permanecem no histórico
 append-only do produto.
 
 O gate final executa um preflight que falha antes do browser se a configuração
-isolada de staging, A, B, admin, marcadores ou senha rotativa estiverem ausentes
+isolada de staging, A, B, admin, moderador, suporte, marcadores ou senha rotativa estiverem ausentes
 ou inconsistentes. Depois roda a matriz pública em
 paralelo e as jornadas autenticadas com um único worker, porque elas mutam e
 restauram as mesmas contas reais:
@@ -139,6 +143,8 @@ As jornadas autenticadas cobrem, pela UI e contra o Supabase real:
 - solicitação/conversa, texto, imagem, áudio com waveform, recibo e preferência;
 - perfil, galeria, privacidade cruzada e restauração;
 - bloqueio, denúncia e ação administrativa de moderação;
+- chamado persistente, resposta/estado em Realtime e isolamento da função Suporte;
+- matriz de rotas de Usuário, Suporte, Moderador e Admin;
 - troca reversível de senha, logout, troca de conta sem cache cruzado e deep links.
 
 ## Política contra falsos positivos

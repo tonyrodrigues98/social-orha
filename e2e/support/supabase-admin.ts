@@ -103,3 +103,30 @@ export async function deleteTemporaryUser(
     throw new Error("O Supabase não removeu o usuário E2E temporário.");
   }
 }
+
+/** Removes only a uniquely named E2E support fixture and its user-facing notifications. */
+export async function deleteSupportTicketFixture(
+  client: SupabaseClient,
+  subject: string,
+): Promise<void> {
+  const { data, error } = await client
+    .from("support_tickets")
+    .select("id")
+    .eq("subject", subject);
+  if (error) throw new Error("Não foi possível localizar o chamado E2E para limpeza.");
+
+  for (const ticket of data ?? []) {
+    const { error: notificationError } = await client
+      .from("notifications")
+      .delete()
+      .eq("entity_type", "support_ticket")
+      .eq("entity_id", ticket.id);
+    if (notificationError) throw new Error("Não foi possível limpar notificações do chamado E2E.");
+
+    const { error: ticketError } = await client
+      .from("support_tickets")
+      .delete()
+      .eq("id", ticket.id);
+    if (ticketError) throw new Error("Não foi possível remover o chamado E2E.");
+  }
+}

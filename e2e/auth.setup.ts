@@ -9,7 +9,7 @@ import {
   type TestPrincipal,
 } from "./support/environment";
 
-const principals: readonly TestPrincipal[] = ["user-a", "user-b", "admin"];
+const principals: readonly TestPrincipal[] = ["user-a", "user-b", "admin", "moderator", "support"];
 
 setup.describe("sessões reais nomeadas", () => {
   setup.describe.configure({ mode: "serial" });

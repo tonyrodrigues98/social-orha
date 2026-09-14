@@ -2,7 +2,7 @@
 
 Data da verificação: 2026-09-14  
 Branch auditada: `codex/production-launch`  
-Commit-base auditado antes deste checkpoint: `3ab0a7c`
+Commit-base auditado antes deste checkpoint: `f377382`
 Staging auditado: `bgeauxljwjbtbwpbzpoo`  
 Produção Supabase: `iuaczhkfmwpyhtpdmuyt`  
 
@@ -136,13 +136,13 @@ Critério de aceite:
 
 ### P0.4 Desbloquear e executar o E2E real multiusuário
 
-O preflight bloqueou por ausência de 16 valores operacionais, incluindo URL/key/host de staging, contas A/B/admin, credenciais, service role exclusiva do runner, domínio catch-all e confirmação SMTP. A suíte existe em 13 specs e 21 testes declarados, mas código de teste não é evidência de jornada aprovada.
+O preflight bloqueia por ausência de 22 valores operacionais, incluindo URL/key/host de staging, contas A/B/Admin/Moderador/Suporte, credenciais, service role exclusiva do runner, domínio catch-all e confirmação SMTP. A suíte agora existe em 15 specs e 23 testes declarados, incluindo suporte persistente e matriz de autoridade por papel, mas código de teste não é evidência de jornada aprovada.
 
 Evidência: `.env.e2e.example`, `scripts/require-production-e2e-secrets.ts`, `playwright.config.ts`, `e2e/*` e `.github/workflows/deploy-pages.yml`.
 
 Critério de aceite:
 
-- provisionar contas isoladas sem dados pessoais;
+- provisionar contas A/B/Admin/Moderador/Suporte isoladas e sem dados pessoais;
 - configurar secrets/variables no ambiente protegido do GitHub;
 - executar Auth, amizade, comunidade, conversa, perfil/mídia, trust/moderação, conta, offline e PWA;
 - manter zero `skip`, zero interceptação e zero sessão injetada;
@@ -272,7 +272,7 @@ Cada item só começa quando o anterior possui evidência verde. Não promover p
 2. **Dependências:** corrigir/remover pacotes vulneráveis; audit de produção verde; repetir gates locais.
 3. **Edge em staging:** secrets, cinco deploys, Cron/Vault e testes de mídia/export/lifecycle/cleanup.
 4. **Auth/e-mail em staging:** política de senha e redirects concluídos; falta SMTP, templates, CAPTCHA e jornadas reais; Google quando credenciais existirem.
-5. **Contas E2E:** provisionar A, B e admin; executar as jornadas completas com múltiplos usuários.
+5. **Contas E2E:** provisionar A, B, Admin, Moderador e Suporte; executar as jornadas completas com múltiplos usuários.
 6. **QA native-first:** matriz visual, teclado, gestos, iOS/Safari, offline/reconexão e PWA instalada.
 7. **Operação:** legal, suporte, moderação humana, observabilidade, SLO, alertas e incident response.
 8. **Host/domínio:** trocar para host com rewrite 200, configurar domínio/HTTPS/PWA/Auth callbacks e smoke.

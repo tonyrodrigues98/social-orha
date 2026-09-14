@@ -2,7 +2,7 @@
 
 Atualizado em: 2026-09-14  
 Branch: `codex/production-launch`  
-Commit-base publicado antes deste checkpoint: `3ab0a7c`
+Commit-base publicado antes deste checkpoint: `f377382`
 Projeto vinculado durante os gates: `bgeauxljwjbtbwpbzpoo` (ORHA-Staging)  
 Produção: `iuaczhkfmwpyhtpdmuyt` (ORHA), ainda não promovida  
 Estado: **staging saudável e alinhado às 22 migrations locais; 40 tabelas públicas com RLS, 16 tabelas Realtime, cinco Edge Functions ativas, gate anônimo/CORS 7/7 e dois jobs Cron/Vault ativos; Auth remoto sincronizado; onboarding atômico; suporte persistente, gestão global de papéis RPC-only e consentimento de analytics owner-only; produção intacta; lint remoto sem erros, gate estrutural 23/23 e matrizes RLS transacionais aprovadas**.
@@ -240,9 +240,10 @@ Evidência obtida no Dashboard e pela CLI oficial, sem copiar secrets para logs:
 - concluído nesta fatia: gestão global de papéis na rota `/admin/funcoes`, com busca sem e-mail, UI por papel, autoridade no PostgreSQL, menor privilégio de tabela, proteção contra escalada e log de auditoria; `scripts/supabase-role-management-integration.sql` passou com `ROLLBACK`.
 - concluído nesta fatia: consentimento de analytics persistido no Supabase e desligado por padrão; PostHog é importado somente após opt-in, bloqueia autocapture/replay/URLs/conteúdo e aceita apenas eventos técnicos allowlisted; `scripts/supabase-analytics-consent-integration.sql` provou owner, negação cross-user e timestamp server-side com `ROLLBACK`.
 - concluído nesta fatia: orçamento de bundle versionado e obrigatório no CI; contrato operacional define SLOs de Auth/social/chat/Realtime/upload/PWA, orçamento de erro, alertas, severidades e contenção sem declarar integrações externas ainda inexistentes.
-- gates atuais: matriz E2E pública completa `111/111`, inclusive WebKit 390×844 após reforço dos alvos de toque canônicos contra arredondamento subpixel; guards/deep links de `/suporte` e `/admin/funcoes` revalidados em `66/66` nos 11 projetos públicos; Vitest `320/320` em 75 arquivos, catálogo, TypeScript, ESLint, secrets, encoding, dívida de produção, auditoria de dependências, orçamento de bundle e build PWA com 103 entradas aprovados;
+- concluído nesta fatia: o contrato E2E usa cinco sessões Supabase nomeadas e distintas — A, B, Admin, Moderador e Suporte —; a jornada de moderação usa o papel mínimo correto; suporte persistente e a matriz negativa/positiva de autoridade por rota possuem jornadas próprias; o CI exige os 22 valores operacionais e falha fechado antes de abrir o navegador.
+- gates atuais: matriz E2E pública completa `111/111`, inclusive WebKit 390×844 após reforço dos alvos de toque canônicos contra arredondamento subpixel; guards/deep links de `/suporte` e `/admin/funcoes` revalidados em `66/66` nos 11 projetos públicos; Playwright descobre 128 execuções em 16 arquivos — 111 públicas, 12 jornadas autenticadas e cinco setups de sessão —; Vitest `320/320` em 75 arquivos, catálogo, TypeScript, ESLint, secrets, encoding, dívida de produção, auditoria de dependências, orçamento de bundle e build PWA com 103 entradas aprovados;
 - pendente: custom SMTP + domínio de envio, CAPTCHA e jornadas reais de confirmação/reenvio/reset;
-- pendente: contas sintéticas A/B/admin e jornadas autenticadas completas, inclusive a prova automatizada de rejeição da senha atual incorreta;
+- pendente: contas sintéticas A/B/Admin/Moderador/Suporte e execução das jornadas autenticadas completas já contratadas, inclusive suporte, autoridade por papel e rejeição da senha atual incorreta;
 - pendente: mídia real, Realtime multiusuário, QA native-first/PWA, host definitivo, provisionamento do PostHog/dashboards/alertas, prova de carga, escala humana e promoção controlada da produção.
 
 ## Limitações conhecidas do ambiente atual

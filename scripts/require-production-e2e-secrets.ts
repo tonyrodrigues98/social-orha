@@ -15,6 +15,12 @@ export const requiredProductionE2ESecrets = [
   "ORHA_E2E_ADMIN_EMAIL",
   "ORHA_E2E_ADMIN_PASSWORD",
   "ORHA_E2E_ADMIN_PROFILE_TEXT",
+  "ORHA_E2E_MODERATOR_EMAIL",
+  "ORHA_E2E_MODERATOR_PASSWORD",
+  "ORHA_E2E_MODERATOR_PROFILE_TEXT",
+  "ORHA_E2E_SUPPORT_EMAIL",
+  "ORHA_E2E_SUPPORT_PASSWORD",
+  "ORHA_E2E_SUPPORT_PROFILE_TEXT",
   "ORHA_E2E_SERVICE_ROLE_KEY",
   "ORHA_E2E_EMAIL_DOMAIN",
   "ORHA_E2E_SMTP_DELIVERY_VERIFIED",
@@ -94,6 +100,8 @@ export function productionE2ESecretIssues(
     environment.ORHA_E2E_USER_A_EMAIL!,
     environment.ORHA_E2E_USER_B_EMAIL!,
     environment.ORHA_E2E_ADMIN_EMAIL!,
+    environment.ORHA_E2E_MODERATOR_EMAIL!,
+    environment.ORHA_E2E_SUPPORT_EMAIL!,
   ].map((value) => value.trim().toLowerCase());
   if (new Set(normalizedEmails).size !== normalizedEmails.length) {
     issues.push("invalid:named-principals:emails-must-be-distinct");

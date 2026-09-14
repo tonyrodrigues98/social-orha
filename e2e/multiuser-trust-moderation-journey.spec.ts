@@ -58,26 +58,26 @@ async function dismissReport(
 }
 
 test.describe("jornada F — bloqueio, denúncia e moderação real", () => {
-  test("B bloqueia/desbloqueia A, denuncia e admin encerra o caso", async ({ browser }) => {
+  test("B bloqueia/desbloqueia A, denuncia e moderador encerra o caso", async ({ browser }) => {
     test.setTimeout(180_000);
     const accountA = requireNamedCredentials("user-a");
     const accountB = requireNamedCredentials("user-b");
-    requireNamedCredentials("admin");
+    requireNamedCredentials("moderator");
     const reportMarker = marker("denúncia-e2e");
     const contexts: BrowserContext[] = await Promise.all([
       createNamedBrowserContext(browser, "user-a"),
       createNamedBrowserContext(browser, "user-b"),
-      createNamedBrowserContext(browser, "admin"),
+      createNamedBrowserContext(browser, "moderator"),
     ]);
-    const [contextA, contextB, contextAdmin] = contexts;
-    const [pageA, pageB, pageAdmin] = await Promise.all([
+    const [contextA, contextB, contextModerator] = contexts;
+    const [pageA, pageB, pageModerator] = await Promise.all([
       contextA.newPage(),
       contextB.newPage(),
-      contextAdmin.newPage(),
+      contextModerator.newPage(),
     ]);
     const qualityA = observeRuntimeQuality(pageA);
     const qualityB = observeRuntimeQuality(pageB);
-    const qualityAdmin = observeRuntimeQuality(pageAdmin);
+    const qualityModerator = observeRuntimeQuality(pageModerator);
     let blockNeedsCleanup = false;
     let reportNeedsCleanup = false;
 
@@ -121,12 +121,12 @@ test.describe("jornada F — bloqueio, denúncia e moderação real", () => {
       await expect(pageB.getByRole("heading", { level: 1, name: "Fazer denúncia" })).toHaveCount(0, { timeout: 30_000 });
       reportNeedsCleanup = true;
 
-      await dismissReport(pageAdmin, reportMarker);
+      await dismissReport(pageModerator, reportMarker);
       reportNeedsCleanup = false;
 
       qualityA.expectClean();
       qualityB.expectClean();
-      qualityAdmin.expectClean();
+      qualityModerator.expectClean();
     } finally {
       await runCleanupSteps([
         {
@@ -138,7 +138,7 @@ test.describe("jornada F — bloqueio, denúncia e moderação real", () => {
         {
           name: "encerrar denúncia E2E",
           run: reportNeedsCleanup
-            ? () => dismissReport(pageAdmin, reportMarker)
+            ? () => dismissReport(pageModerator, reportMarker)
             : undefined,
         },
         {

@@ -18,6 +18,8 @@ describe("production E2E secrets preflight", () => {
       ORHA_E2E_USER_A_EMAIL: "a@example.test",
       ORHA_E2E_USER_B_EMAIL: "b@example.test",
       ORHA_E2E_ADMIN_EMAIL: "admin@example.test",
+      ORHA_E2E_MODERATOR_EMAIL: "moderator@example.test",
+      ORHA_E2E_SUPPORT_EMAIL: "support@example.test",
       ORHA_E2E_USER_A_PASSWORD: "primary-password",
       ORHA_E2E_USER_A_ROTATED_PASSWORD: "rotated-password",
       ORHA_E2E_EMAIL_DOMAIN: "e2e.example.com",
@@ -25,7 +27,7 @@ describe("production E2E secrets preflight", () => {
     };
   }
 
-  it("requires two users, one admin and their visible identity markers", () => {
+  it("requires two users and the three operational roles with visible identity markers", () => {
     expect(missingProductionE2ESecrets({})).toEqual([
       ...requiredProductionE2ESecrets,
     ]);
@@ -42,6 +44,8 @@ describe("production E2E secrets preflight", () => {
       ORHA_E2E_USER_A_EMAIL: "same@example.test",
       ORHA_E2E_USER_B_EMAIL: "same@example.test",
       ORHA_E2E_ADMIN_EMAIL: "admin@example.test",
+      ORHA_E2E_MODERATOR_EMAIL: "moderator@example.test",
+      ORHA_E2E_SUPPORT_EMAIL: "support@example.test",
       ORHA_E2E_USER_A_PASSWORD: "same",
       ORHA_E2E_USER_A_ROTATED_PASSWORD: "same",
       ORHA_E2E_EMAIL_DOMAIN: "e2e.example.com",
@@ -55,7 +59,7 @@ describe("production E2E secrets preflight", () => {
     ]);
   });
 
-  it("accepts three distinct principals and a reversible password", () => {
+  it("accepts five distinct principals and a reversible password", () => {
     const environment = completeEnvironment();
 
     expect(productionE2ESecretIssues(environment)).toEqual([]);

@@ -19,7 +19,9 @@ const requiredProductionJourneys = [
   "multiuser-community-journey.spec.ts",
   "multiuser-friendship-journey.spec.ts",
   "multiuser-messaging-journey.spec.ts",
+  "multiuser-role-authority-journey.spec.ts",
   "multiuser-session.spec.ts",
+  "multiuser-support-journey.spec.ts",
   "multiuser-trust-moderation-journey.spec.ts",
 ] as const;
 
