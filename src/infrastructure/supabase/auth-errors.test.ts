@@ -13,4 +13,10 @@ describe("auth error localization", () => {
       "Não foi possível concluir. Tente novamente.",
     );
   });
+
+  it("normaliza a exigência remota de comprimento sem depender do número do provedor", () => {
+    expect(getAuthErrorMessage(new Error("Password should be at least 12 characters"))).toBe(
+      "A senha precisa ter pelo menos 12 caracteres.",
+    );
+  });
 });

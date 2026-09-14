@@ -161,13 +161,13 @@ Critério de aceite:
 
 ### P1.1 Auth externo e entrega real de e-mail
 
-`src/infrastructure/supabase/email-auth.ts` não implementa `signInWithOAuth`; Google não existe no frontend. `supabase/config.toml` contém somente exemplos comentados de OAuth. O estado remoto de SMTP, templates, Site URL, redirect allowlist, CAPTCHA e proteção contra bots não está comprovado.
+Google continua ausente do frontend e corretamente desligado no remoto enquanto faltam client ID/secret. No staging, Site URL e seis redirects foram conferidos, confirmação de e-mail está ativa, senha mínima de 12 caracteres e composição forte foram sincronizadas, e a validação server-side da senha atual foi ativada. O cliente agora envia `current_password` no mesmo `updateUser`, com erro tipado e gate E2E para rejeição da senha incorreta. Custom SMTP está desligado, o mailer padrão está limitado a 2 e-mails/h e CAPTCHA/bot protection, templates e entrega real ainda não foram comprovados.
 
 Próxima fatia vertical:
 
 1. configurar SMTP transacional real, remetente e domínio autenticado;
 2. validar cadastro, confirmação, reenvio, recovery e mudança de senha recebendo e-mail real;
-3. ajustar Site URL/redirects para staging, preview e domínio definitivo;
+3. manter Site URL/redirects do staging sincronizados e substituir o host legado pelo domínio definitivo quando provisionado;
 4. implementar Google com callback seguro quando client ID/secret existirem;
 5. configurar CAPTCHA/rate limits de Auth adequados ao lançamento;
 6. testar sessão expirada, conta restrita, troca de usuário e limpeza de cache.
@@ -269,7 +269,7 @@ Cada item só começa quando o anterior possui evidência verde. Não promover p
 1. **SQL runtime:** migration forward para as duas ambiguidades; lint remoto sem erros; testes de conversa direta e notificações.
 2. **Dependências:** corrigir/remover pacotes vulneráveis; audit de produção verde; repetir gates locais.
 3. **Edge em staging:** secrets, cinco deploys, Cron/Vault e testes de mídia/export/lifecycle/cleanup.
-4. **Auth/e-mail em staging:** SMTP, redirects, templates, CAPTCHA e jornadas reais; Google quando credenciais existirem.
+4. **Auth/e-mail em staging:** política de senha e redirects concluídos; falta SMTP, templates, CAPTCHA e jornadas reais; Google quando credenciais existirem.
 5. **Contas E2E:** provisionar A, B e admin; executar as jornadas completas com múltiplos usuários.
 6. **QA native-first:** matriz visual, teclado, gestos, iOS/Safari, offline/reconexão e PWA instalada.
 7. **Operação:** legal, suporte, moderação humana, observabilidade, SLO, alertas e incident response.

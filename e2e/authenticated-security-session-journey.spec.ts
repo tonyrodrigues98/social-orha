@@ -34,6 +34,31 @@ async function updatePassword(
     .toBeVisible({ timeout: 30_000 });
 }
 
+async function expectPasswordUpdateRejected(
+  page: Parameters<typeof openAppPath>[0],
+  currentPassword: string,
+  nextPassword: string,
+  onUnexpectedCommitted?: () => void,
+): Promise<void> {
+  await openAppPath(page, "/configuracoes");
+  await page.getByRole("button", { name: "Segurança" }).click();
+  await page.getByLabel("Senha atual").fill(currentPassword);
+  await page.getByLabel("Nova senha").fill(nextPassword);
+  await page.getByLabel("Confirmar nova senha").fill(nextPassword);
+  const passwordUpdate = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname.endsWith("/auth/v1/user") &&
+      response.request().method() === "PUT",
+    { timeout: 30_000 },
+  );
+  await page.getByRole("button", { name: "Atualizar senha" }).click();
+  const response = await passwordUpdate;
+  if (response.ok()) onUnexpectedCommitted?.();
+  expect(response.ok(), "O Supabase precisa rejeitar uma senha atual incorreta.").toBe(false);
+  expect(response.status()).toBe(400);
+  await expect(page.getByRole("alert")).toContainText("senha atual", { timeout: 30_000 });
+}
+
 test.describe("jornada G — senha, logout, cache, sessão e deep links", () => {
   test.use({ storageState: authStatePath("user-a") });
 
@@ -56,6 +81,13 @@ test.describe("jornada G — senha, logout, cache, sessão e deep links", () => 
       await openAppPath(page, "/perfil");
       await waitForAuthenticatedShell(page);
       await expect(page.getByText(accountA.expectedProfileText!)).toBeVisible();
+
+      await expectPasswordUpdateRejected(
+        page,
+        `${accountA.password}-incorreta`,
+        rotatedPassword,
+        () => { passwordState.value = "rotated"; },
+      );
 
       await updatePassword(
         page,

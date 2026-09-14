@@ -329,7 +329,7 @@ function SignUpScreen({
           variant="access"
           rules={{
             required: "Crie uma senha.",
-            minLength: { value: 8, message: "Use pelo menos 8 caracteres." },
+            minLength: { value: 12, message: "Use pelo menos 12 caracteres." },
           }}
         />
         <ControlledInput
@@ -527,7 +527,7 @@ export function ResetPasswordScreen() {
         <p>NOVO ACESSO</p>
         <h1 tabIndex={-1}>Crie uma nova senha</h1>
         <span>
-          Use pelo menos 8 caracteres e não reutilize uma senha antiga.
+          Use pelo menos 12 caracteres e não reutilize uma senha antiga.
         </span>
       </div>
       <form className="access-form" onSubmit={submit} noValidate>
@@ -541,7 +541,7 @@ export function ResetPasswordScreen() {
           variant="access"
           rules={{
             required: "Informe uma senha.",
-            minLength: { value: 8, message: "Use pelo menos 8 caracteres." },
+            minLength: { value: 12, message: "Use pelo menos 12 caracteres." },
           }}
         />
         <ControlledInput

@@ -119,8 +119,24 @@ export function mapTrustError(error: unknown): TrustError {
   const source = (error ?? {}) as SupabaseErrorShape;
   const code = source.code ?? "";
   const status = source.status;
-  if (code === "invalid_credentials") {
+  if (
+    code === "invalid_credentials" ||
+    code === "current_password_required" ||
+    code === "current_password_mismatch"
+  ) {
     return new TrustError("authentication", "A senha atual não foi confirmada.", { cause: error });
+  }
+  if (code === "same_password") {
+    return new TrustError("validation", "A nova senha precisa ser diferente da senha atual.", {
+      cause: error,
+    });
+  }
+  if (code === "weak_password") {
+    return new TrustError(
+      "validation",
+      "Use pelo menos 12 caracteres, com maiúscula, minúscula, número e símbolo.",
+      { cause: error },
+    );
   }
   if (status === 401 || code === "PGRST301") {
     return new TrustError("authentication", "Sua sessão expirou. Entre novamente.", { cause: error });
@@ -537,8 +553,13 @@ export class SupabaseTrustRepository implements TrustRepository {
     if (newPassword.length < 12) {
       throw new TrustError("validation", "A nova senha deve ter pelo menos 12 caracteres.");
     }
-    await confirmPassword(this.client, currentPassword);
-    const { error } = await this.client.auth.updateUser({ password: newPassword });
+    if (!currentPassword) {
+      throw new TrustError("validation", "Informe sua senha atual para confirmar esta ação.");
+    }
+    const { error } = await this.client.auth.updateUser({
+      password: newPassword,
+      current_password: currentPassword,
+    });
     if (error) throw mapTrustError(error);
   }
 

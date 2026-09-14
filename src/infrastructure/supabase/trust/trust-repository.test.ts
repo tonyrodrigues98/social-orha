@@ -52,6 +52,11 @@ describe("SupabaseTrustRepository mapping", () => {
     expect(error.code).toBe("permission");
     expect(error.message).not.toContain("raw database");
     expect(mapTrustError({ code: "PGRST003" }).code).toBe("unavailable");
+    expect(mapTrustError({ code: "current_password_mismatch" }).message).toBe(
+      "A senha atual não foi confirmada.",
+    );
+    expect(mapTrustError({ code: "same_password" }).message).toContain("diferente");
+    expect(mapTrustError({ code: "weak_password" }).message).toContain("12 caracteres");
   });
 
   it("consulta o bloqueio exato sem inferir pela página da lista", async () => {
@@ -88,34 +93,20 @@ describe("SupabaseTrustRepository mapping", () => {
     expect(builder.maybeSingle).toHaveBeenCalledOnce();
   });
 
-  it("altera senha e encerra sessões pelo cliente autenticado injetado", async () => {
+  it("altera senha com validação server-side da senha atual e encerra sessões", async () => {
     const updateUser = vi.fn().mockResolvedValue({ error: null });
     const signOut = vi.fn().mockResolvedValue({ error: null });
-    const getUser = vi.fn().mockResolvedValue({
-      data: {
-        user: {
-          id: "10000000-0000-4000-8000-000000000031",
-          email: "pessoa@orha.app",
-        },
-      },
-      error: null,
-    });
-    const signInWithPassword = vi.fn().mockResolvedValue({
-      data: { user: { id: "10000000-0000-4000-8000-000000000031" } },
-      error: null,
-    });
     const repository = new SupabaseTrustRepository({
-      auth: { getUser, signInWithPassword, updateUser, signOut },
+      auth: { updateUser, signOut },
     } as unknown as SupabaseClient);
 
     await repository.changePassword("senha-atual", "uma-senha-forte-123");
     await repository.signOutEverywhere();
 
-    expect(signInWithPassword).toHaveBeenCalledWith({
-      email: "pessoa@orha.app",
-      password: "senha-atual",
+    expect(updateUser).toHaveBeenCalledWith({
+      password: "uma-senha-forte-123",
+      current_password: "senha-atual",
     });
-    expect(updateUser).toHaveBeenCalledWith({ password: "uma-senha-forte-123" });
     expect(signOut).toHaveBeenCalledWith({ scope: "global" });
   });
 

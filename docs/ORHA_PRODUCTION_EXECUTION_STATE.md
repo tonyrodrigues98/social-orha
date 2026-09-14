@@ -2,10 +2,10 @@
 
 Atualizado em: 2026-09-14  
 Branch: `codex/production-launch`  
-Commit-base publicado: `f6b7ad2`
+Commit-base publicado antes deste checkpoint: `e4f65a8`
 Projeto vinculado durante os gates: `bgeauxljwjbtbwpbzpoo` (ORHA-Staging)  
 Produção: `iuaczhkfmwpyhtpdmuyt` (ORHA), ainda não promovida  
-Estado: **staging saudável e alinhado às 16 migrations locais; cinco Edge Functions ativas, gate anônimo/CORS 7/7 e dois jobs Cron/Vault ativos; dependências de produção com audit 0; produção intacta; lint remoto sem erros, gate estrutural 19/19 e matriz RLS transacional aprovados**.
+Estado: **staging saudável e alinhado às 16 migrations locais; cinco Edge Functions ativas, gate anônimo/CORS 7/7 e dois jobs Cron/Vault ativos; Auth remoto sincronizado com senha mínima de 12 caracteres e validação server-side da senha atual; dependências de produção com audit 0; produção intacta; lint remoto sem erros, gate estrutural 19/19 e matriz RLS transacional aprovados**.
 
 ## Resumo executivo
 
@@ -108,14 +108,14 @@ O script de inventário está em `scripts/remote-inventory.sql` e consulta apena
 | Camada | Remoto confirmado | Local preparado | Estado |
 |---|---|---|---|
 | Auth/onboarding | `20260811040000` | mesma fundação | aplicado |
-| Privacidade de perfis | leitura crua ampla da fundação inicial | `20260816130000_security_privacy_hardening.sql`: owner-only + RPC mascarada + amizades | pendente |
-| Social de lançamento | ausente | `20260816170000_social_launch_schema.sql` | pendente |
-| Workers/lifecycle | ausente | `20260816180000_edge_worker_contracts.sql` + Edge Functions versionadas | pendente de gate/deploy |
-| Explore/chat/perfil/Home | ausente | `20260816190000` → `20260816220000` | pendente |
-| Antiabuso/notificações | ausente | `20260816230000` → `20260816240000` | pendente |
-| Storage | nenhum bucket | cinco buckets privados e policies | pendente |
-| Realtime | nenhuma tabela publicada | Postgres Changes + Broadcast/Presence privados | pendente |
-| Jobs privilegiados | não inventariados | contratos persistentes e código Edge local, sem worker remoto implantado | pendente |
+| Privacidade de perfis | `20260816130000_security_privacy_hardening.sql` | owner-only + RPC mascarada + amizades | aplicado e validado |
+| Social de lançamento | `20260816170000_social_launch_schema.sql` | 38 tabelas públicas protegidas | aplicado e validado |
+| Workers/lifecycle | `20260816180000_edge_worker_contracts.sql` + cinco Edge Functions | mesma implementação versionada | implantado; jornadas autenticadas pendentes |
+| Explore/chat/perfil/Home | `20260816190000` → `20260816220000` | mesma cadeia | aplicado e validado estruturalmente |
+| Antiabuso/notificações | `20260816230000` → `20260816240000` | mesma cadeia | aplicado e validado estruturalmente |
+| Storage | cinco buckets privados e policies | mesma configuração | aplicado; mídia autenticada pendente |
+| Realtime | 14 tabelas + Broadcast/Presence privados | mesma configuração | aplicado; jornada multiusuário pendente |
+| Jobs privilegiados | Cron/Vault, funções privadas e dois jobs ativos | mesma configuração versionada | implantado e smoke de fila vazia aprovado |
 
 A migration `20260816170000` depende explicitamente das duas anteriores. Ela não deve ser executada isoladamente.
 
@@ -196,79 +196,35 @@ Quando moderação remove uma mensagem, o banco marca imediatamente os anexos e 
 - `cancel_account_lifecycle` cancela pedido ainda pendente e só remove a restrição criada por aquele pedido;
 - delete final de `auth.users`, exportação, revogação global e purge de Storage pertencem a um worker/Edge com `service_role` e trilha de auditoria.
 
-Para email/senha, o cliente deve provar a senha atual com novo `signInWithPassword`, verificar o mesmo `user.id` e só então chamar a RPC. A checagem de `iat <= 10 minutos` no banco é defesa adicional; refresh silencioso isolado não deve ser tratado como reautenticação.
+Para `deactivate`/`delete`, o cliente prova a senha atual com `signInWithPassword`, verifica o mesmo `user.id` e só então chama a RPC; a checagem de `iat <= 10 minutos` no banco é defesa adicional. Para troca de senha, o cliente envia `current_password` no mesmo `updateUser`, e o GoTrue hospedado valida a senha atual server-side.
 
-## Auth remoto ainda não confirmado
+## Auth remoto parcialmente confirmado
 
-SQL de inventário não retorna com segurança toda a configuração GoTrue hospedada. Portanto, ainda precisam ser verificados no Dashboard/Management API, sem copiar secrets para logs:
+Evidência obtida no Dashboard e pela CLI oficial, sem copiar secrets para logs:
 
-- Site URL e allow-list exata para `https://tonyrodrigues98.github.io/social-orha/`;
-- confirmação de email e templates;
-- comprimento/política de senha;
-- rotação/reuso de refresh token;
-- rate limits e proteção contra bots;
-- SMTP de produção;
-- MFA e provedores externos efetivamente habilitados.
+- Site URL do staging: `http://127.0.0.1:4173`;
+- redirects exatos: previews locais `4173`/`5173`, LAN existente e GitHub Pages legado;
+- signup por e-mail e confirmação de e-mail: ativos; anônimo e manual linking: desligados;
+- senha mínima: 12; maiúscula, minúscula, número e símbolo obrigatórios;
+- `Require current password when updating`: ativo e reaberto no Dashboard para comprovar persistência;
+- OTP: oito dígitos, expiração 3600 segundos;
+- Auth rate limits sincronizados: refresh 150/5 min, verificação 30/5 min, signup/login 30/5 min e e-mail 2/h no mailer padrão;
+- Google e demais OAuth: desligados; nenhum botão falso deve aparecer;
+- custom SMTP: desligado; entrega de produção continua bloqueada até provisionar domínio/remetente/credenciais;
+- leaked-password protection: indisponível no plano Free;
+- nonce por e-mail para sessão antiga (`Secure password change`): desligado; a ORHA usa a validação server-side da senha atual, sem fluxo de OTP incompleto.
 
-O `supabase/config.toml` local é intenção de configuração, não prova do remoto. Ele define confirmação de email, senha mínima de oito caracteres, rotação de refresh token, cadastro anônimo desativado e TOTP disponível.
+`npx supabase config push --project-ref bgeauxljwjbtbwpbzpoo` confirmou API, banco, SSL, Auth e Storage como `up_to_date`. `storage.vector` foi alinhado para `false`, pois o staging Free rejeita esse recurso pago. Ainda faltam CAPTCHA/bot protection, templates/entrega SMTP real, jornadas de confirmação/reset e revisão de MFA/sessões.
 
-## Gates obrigatórios antes de aplicar
+## Gates concluídos e próximos gates
 
-### Precondições verificadas pelo próprio SQL
-
-- fundação `profiles/profile_details/profile_privacy/user_roles` presente;
-- hardening `friendships` + `get_visible_profiles(uuid,integer,integer)` presente;
-- nenhuma tabela sentinela de lançamento (`blocks`, `communities`, `conversations`, `reports`) já existente;
-- `storage.buckets`, `storage.objects`, `realtime.messages` e publication `supabase_realtime` presentes;
-- quando `realtime.messages` estiver ausente, inicializar o serviço oficial e repetir o preflight; nunca suprir a ausência com DDL de aplicação.
-
-### Pós-condições verificadas pelo próprio SQL
-
-- a migration social verifica suas 27 tabelas de lançamento; a validação da cadeia até `20260816240000` exige 38 tabelas públicas com RLS;
-- `anon` não possui grants de mutação e não recebe leitura crua das tabelas protegidas;
-- os cinco buckets existem e continuam privados;
-- policies privadas SELECT/INSERT existem em `realtime.messages`;
-- as 14 tabelas de evento estão na publication após `conversation_preferences`;
-- RPCs críticas de busca, mensagem idempotente, denúncia/contexto de moderação, status efetivo, lifecycle, perfil/idade, Home e cleanup de rate limit existem.
-
-Qualquer falha nessas pós-condições levanta erro e deve reverter a transação inteira.
-
-1. **Snapshot repetível**
-   - repetir `scripts/remote-inventory.sql`;
-   - verificar o SHA-256 do snapshot DPAPI pré-promoção e preservar o artefato fora do repositório;
-   - salvar o JSON fora do repositório se contiver dados operacionais;
-   - confirmar que o remoto continua apenas em `20260811040000`;
-   - calcular e registrar SHA-256 de cada migration pendente, na ordem `20260816130000` → `20260816240000`.
-   - depois de `20260816130000`, executar `scripts/supabase-hardening-audit.sql`; todas as 15 contagens devem ser zero antes do `VALIDATE CONSTRAINT` de `20260816170000`.
-
-2. **Gate estático local**
-   - `npm run typecheck`;
-   - executar os testes contratuais de todas as migrations, incluindo Edge workers, Explore, conversa, perfil/idade, Home, antiabuso e notificações;
-   - `npm run audit:secrets` e confirmar que `.env.local` ignorado não é lido nem valores são impressos;
-   - `npm run lint` para os arquivos alterados;
-   - `npm run build`.
-
-3. **Gate SQL real em staging**
-   - usar projeto/branch Supabase descartável com PostgreSQL 17;
-   - confirmar Realtime ativo/private-only e `to_regclass('realtime.messages')` não nulo antes da aplicação;
-   - aplicar a cadeia ledgered, sem saltos: `20260816130000`, `20260816170000`, `20260816180000`, `20260816190000`, `20260816200000`, `20260816210000`, `20260816220000`, `20260816230000` e `20260816240000`;
-   - executar `scripts/supabase-validate.ps1`/`scripts/supabase-validate.sql`;
-   - executar `scripts/supabase-rls-integration.sql`, que cria atores sintéticos para anon, dono, estranho, amigo, bloqueado, membro, moderador de comunidade, `moderator`, `admin`, `super_admin` e `support`, testa RLS/Storage/Realtime e termina em `ROLLBACK`;
-   - verificar download/upload em cada bucket e negação de evidência para denunciante/denunciado;
-   - verificar Postgres Changes e Broadcast/Presence privados;
-   - validar rollback restaurando o snapshot de staging.
-
-4. **Gate de Auth**
-   - conferir allow-list GitHub Pages;
-   - testar signup confirmado, reset e recuperação de sessão;
-   - testar reautenticação real antes de deactivate/delete.
-
-5. **Aplicação controlada**
-   - não usar `db query` como substituto improvisado de migrations sem também registrar o histórico na mesma transação;
-   - preferir o fluxo oficial de migration quando a conexão SQL autenticada estiver disponível;
-   - se Management API for a única via, usar um wrapper revisado que execute migration + registro em `supabase_migrations.schema_migrations` atomicamente;
-   - repetir inventário e contagens após cada migration;
-   - interromper se o snapshot tiver divergido.
+- concluído: snapshot pré-promoção da produção, hashes e isolamento do staging;
+- concluído: 16 migrations ledgered, lint SQL remoto, validação estrutural 19/19 e matriz RLS/Storage/Realtime com rollback;
+- concluído: cinco Edge Functions ativas, CORS/anon 7/7, Cron/Vault e workers com filas vazias;
+- concluído nesta fatia: Auth config sincronizada, política de senha endurecida e contrato do cliente atualizado para `current_password`;
+- pendente: custom SMTP + domínio de envio, CAPTCHA e jornadas reais de confirmação/reenvio/reset;
+- pendente: contas sintéticas A/B/admin e jornadas autenticadas completas, inclusive a prova automatizada de rejeição da senha atual incorreta;
+- pendente: mídia real, Realtime multiusuário, QA native-first/PWA, host definitivo, observabilidade e promoção controlada da produção.
 
 ## Limitações conhecidas do ambiente atual
 

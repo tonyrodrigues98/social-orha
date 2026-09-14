@@ -30,12 +30,12 @@ Este inventário contém somente nomes e estado de disponibilidade. Valores, has
 | `SUPABASE_SERVICE_ROLE_KEY` | secret crítico | não encontrado | Edge Function/servidor; nunca navegador |
 | `ORHA_CRON_SECRET` | secret crítico | provisionado no Edge Runtime e Vault do staging; valor não registrado | Supabase Edge secrets e Vault, com o mesmo valor gerado fora do código |
 | `ORHA_ALLOWED_ORIGINS` | configuração server-side | provisionada no staging com origins exatas, sem wildcard | Supabase Edge secrets/config, lista exata sem `*` |
-| `SMTP_HOST` | configuração sensível | não encontrado | Supabase Auth/Dashboard ou secret manager |
-| `SMTP_PORT` | configuração | não encontrado | Supabase Auth/Dashboard |
-| `SMTP_USER` | secret | não encontrado | Supabase Auth/Dashboard ou secret manager |
-| `SMTP_PASSWORD` | secret crítico | não encontrado | Supabase Auth/Dashboard ou secret manager |
-| `SMTP_FROM_ADDRESS` | configuração | não encontrado | Supabase Auth/Dashboard |
-| `SMTP_FROM_NAME` | configuração | não encontrado | Supabase Auth/Dashboard |
+| `SMTP_HOST` | configuração sensível | não provisionado; custom SMTP confirmado desligado no staging | Supabase Auth/Dashboard ou secret manager |
+| `SMTP_PORT` | configuração | não provisionado; custom SMTP confirmado desligado no staging | Supabase Auth/Dashboard |
+| `SMTP_USER` | secret | não provisionado; custom SMTP confirmado desligado no staging | Supabase Auth/Dashboard ou secret manager |
+| `SMTP_PASSWORD` | secret crítico | não provisionado; custom SMTP confirmado desligado no staging | Supabase Auth/Dashboard ou secret manager |
+| `SMTP_FROM_ADDRESS` | configuração | não provisionado; custom SMTP confirmado desligado no staging | Supabase Auth/Dashboard |
+| `SMTP_FROM_NAME` | configuração | não provisionado; custom SMTP confirmado desligado no staging | Supabase Auth/Dashboard |
 | `SENDGRID_API_KEY` | secret crítico | somente referência no template local; valor não encontrado | Supabase Auth/secret manager, se SendGrid for adotado |
 | `GOOGLE_OAUTH_CLIENT_ID` | configuração sensível | não encontrado; Google desativado | Supabase Auth/Dashboard |
 | `GOOGLE_OAUTH_CLIENT_SECRET` | secret crítico | não encontrado; Google desativado | Supabase Auth/Dashboard |
