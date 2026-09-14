@@ -80,13 +80,43 @@ set full_name = actor.full_name,
     birth_date = date '1990-01-01',
     state_code = 'SP',
     city = 'Sao Paulo',
-    onboarding_step = 6,
-    onboarding_completed_at = timezone('utc', now())
+    bio = actor.bio,
+    onboarding_step = 5
 from (values
-  ('23232323-2323-4323-8323-000000000001'::uuid, 'Rate Owner', 'rate.owner'),
-  ('23232323-2323-4323-8323-000000000002'::uuid, 'Rate Blocked', 'rate.blocked')
-) as actor(id, full_name, username)
+  (
+    '23232323-2323-4323-8323-000000000001'::uuid,
+    'Rate Owner',
+    'rate.owner',
+    'Perfil sintético e transacional do gate de abuso.'
+  ),
+  (
+    '23232323-2323-4323-8323-000000000002'::uuid,
+    'Rate Blocked',
+    'rate.blocked',
+    'Perfil sintético e transacional bloqueado pelo gate.'
+  )
+) as actor(id, full_name, username, bio)
 where profile.id = actor.id;
+
+-- Complete each fixture through the same server-authoritative transition used by
+-- the product. Direct writes to onboarding_completed_at are intentionally denied.
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"23232323-2323-4323-8323-000000000001","role":"authenticated"}',
+  true
+);
+set local role authenticated;
+select public.complete_own_onboarding();
+reset role;
+
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"23232323-2323-4323-8323-000000000002","role":"authenticated"}',
+  true
+);
+set local role authenticated;
+select public.complete_own_onboarding();
+reset role;
 
 -- Lower only the post limits inside this rollback-only transaction so PT429 is
 -- exercised quickly. Enable capacity auditing to prove its payload stays minimal.
