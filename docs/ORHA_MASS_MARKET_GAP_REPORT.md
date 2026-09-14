@@ -10,12 +10,12 @@ Produção Supabase: `iuaczhkfmwpyhtpdmuyt`
 
 A ORHA não é mais somente um protótipo na branch de lançamento: existe uma base de produção ampla, integrada ao Supabase, com rotas reais, repositories reais, schema social, RLS, Storage, Realtime e uma suíte de testes relevante. O staging possui 15 migrations aplicadas, 38 tabelas públicas com RLS, cinco buckets privados, 14 tabelas publicadas no Realtime, lint hospedado sem erros, gate estrutural 18/18 e matriz RLS transacional aprovada.
 
-Mesmo assim, a ORHA **ainda não atende à Definition of Done para lançamento em massa**. Os bloqueadores não são cosméticos: nenhuma Edge Function está implantada; o deploy público ainda executa a `main` legada com `PrototypeProvider` e seeds; deep links retornam HTTP 404; a jornada E2E real não pode iniciar por falta de ambiente/secrets; existem vulnerabilidades de dependências e os serviços externos obrigatórios de Auth, e-mail, domínio e operação ainda não foram comprovados. Os dois erros de ambiguidade SQL encontrados durante a auditoria já foram corrigidos pela migration `20260914070000` e o lint remoto foi repetido sem erros.
+Mesmo assim, a ORHA **ainda não atende à Definition of Done para lançamento em massa**. Os bloqueadores não são cosméticos: o deploy público ainda executa a `main` legada com `PrototypeProvider` e seeds; deep links retornam HTTP 404; a jornada E2E real não pode iniciar por falta de ambiente/secrets; e os serviços externos obrigatórios de Auth, e-mail, domínio e operação ainda não foram comprovados. As cinco Edge Functions já estão ativas no staging, os dois erros SQL foram corrigidos e a superfície de dependências de produção está com audit zero.
 
 Portanto, a classificação correta é:
 
 - **Código candidato a lançamento:** avançado, compilável e sem mocks de runtime na branch auditada.
-- **Staging de dados:** estruturalmente consistente, com RLS e lint validados, mas ainda sem workers implantados.
+- **Staging de dados:** estruturalmente consistente, com RLS e lint validados, cinco Edge Functions ativas e gate anônimo/CORS 7/7; jornadas autenticadas e Cron/Vault ainda pendentes.
 - **Produção:** não promovida.
 - **Produto público atual:** protótipo legado, não equivalente à branch candidata.
 - **Pronto para as massas:** não.
@@ -93,7 +93,7 @@ Critério de aceite:
 
 ### P0.2 Implantar e operar as cinco Edge Functions — implantadas no staging; smoke autenticado pendente
 
-`npx supabase functions list` retornou `[]` tanto no staging quanto na produção. Estão versionadas, mas não implantadas:
+As cinco funções estão versionadas e `ACTIVE` no staging; produção continua sem promoção:
 
 - `supabase/functions/account-export`;
 - `supabase/functions/account-lifecycle-worker`;
@@ -101,12 +101,12 @@ Critério de aceite:
 - `supabase/functions/media-verify`;
 - `supabase/functions/catalog-search`.
 
-Sem elas, upload confiável, catálogo de favoritos, exportação, exclusão final de conta e limpeza física não fecham de ponta a ponta. Os botões existem, mas alguns caminhos necessariamente terminam em erro remoto.
+`ORHA_CRON_SECRET` e `ORHA_ALLOWED_ORIGINS` foram provisionados no staging. O gate `npm run smoke:edge:anonymous` passou 7/7: todas rejeitam acesso anônimo com `401`, o preflight da origem permitida retorna `204` e uma origem externa recebe `403`. Ainda faltam Cron/Vault e as jornadas autenticadas de upload, catálogo, exportação, exclusão e cleanup.
 
 Critério de aceite:
 
-- provisionar `ORHA_CRON_SECRET` e `ORHA_ALLOWED_ORIGINS` em staging;
-- implantar as cinco funções com `verify_jwt` conforme `supabase/config.toml`;
+- manter `ORHA_CRON_SECRET` e `ORHA_ALLOWED_ORIGINS` rotacionáveis por ambiente;
+- manter as cinco funções com `verify_jwt` conforme `supabase/config.toml`;
 - configurar Cron/Vault para lifecycle e cleanup;
 - executar check/test Deno em ambiente com Deno 2;
 - provar reserva → upload → verificação → associação → URL assinada → remoção → cleanup;

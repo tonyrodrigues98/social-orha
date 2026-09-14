@@ -28,8 +28,8 @@ Este inventário contém somente nomes e estado de disponibilidade. Valores, has
 | `SUPABASE_ACCESS_TOKEN` | secret operacional | CLI autenticada, mas variável não encontrada | credential store local ou secret de CI restrito |
 | `SUPABASE_DB_PASSWORD` | secret crítico | não encontrado | secret manager operacional; nunca `VITE_*` |
 | `SUPABASE_SERVICE_ROLE_KEY` | secret crítico | não encontrado | Edge Function/servidor; nunca navegador |
-| `ORHA_CRON_SECRET` | secret crítico | nome definido; valor ainda não provisionado | Supabase Edge secrets e Vault, com o mesmo valor gerado fora do código |
-| `ORHA_ALLOWED_ORIGINS` | configuração server-side | nome definido; valor por ambiente ainda não provisionado | Supabase Edge secrets/config, lista exata sem `*` |
+| `ORHA_CRON_SECRET` | secret crítico | provisionado no Edge Runtime do staging; valor não registrado | Supabase Edge secrets e Vault, com o mesmo valor gerado fora do código |
+| `ORHA_ALLOWED_ORIGINS` | configuração server-side | provisionada no staging com origins exatas, sem wildcard | Supabase Edge secrets/config, lista exata sem `*` |
 | `SMTP_HOST` | configuração sensível | não encontrado | Supabase Auth/Dashboard ou secret manager |
 | `SMTP_PORT` | configuração | não encontrado | Supabase Auth/Dashboard |
 | `SMTP_USER` | secret | não encontrado | Supabase Auth/Dashboard ou secret manager |
@@ -49,7 +49,7 @@ Este inventário contém somente nomes e estado de disponibilidade. Valores, has
 
 - Processo atual: nenhuma variável relevante de GitHub, Supabase, SMTP, Google ou DNS foi encontrada.
 - GitHub Actions: os nomes de variables/secrets do staging estão declarados no workflow, mas nenhum valor é materializado no repositório.
-- Supabase Edge Functions: lista de secrets vazia.
+- Supabase Edge Functions: secrets gerenciados da plataforma presentes; `ORHA_CRON_SECRET` e `ORHA_ALLOWED_ORIGINS` provisionados no staging, com listagem somente de nomes/hashes.
 - Arquivos locais: apenas as duas configurações públicas do Supabase em `.env.local`.
 - Workflow: o job de build/deploy mantém as duas configurações públicas de produção; o job E2E não repete esses valores e consome somente `ORHA_STAGING_*`/`ORHA_E2E_*`. O smoke pós-deploy é público e não recebe contas persistentes.
 - GitHub conectado: sessão disponível com permissão administrativa; a credencial do conector não é exportável nem deve ser registrada.
