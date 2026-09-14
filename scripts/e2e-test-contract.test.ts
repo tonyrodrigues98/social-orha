@@ -18,6 +18,7 @@ const requiredProductionJourneys = [
   "authenticated-profile-journey.spec.ts",
   "authenticated-security-session-journey.spec.ts",
   "authenticated-viewport-matrix.spec.ts",
+  "authenticated-webkit-matrix.spec.ts",
   "multiuser-community-journey.spec.ts",
   "multiuser-friendship-journey.spec.ts",
   "multiuser-messaging-journey.spec.ts",
@@ -122,6 +123,9 @@ describe("E2E production contract", () => {
     );
     expect(productionCommand).toContain(
       "--project=auth-lifecycle-chromium --workers=1",
+    );
+    expect(productionCommand).toContain(
+      "--project=authenticated-webkit-390x844 --workers=1",
     );
     expect(packageJson.scripts?.["test:e2e"]).toBe(
       "npm run test:e2e:production",

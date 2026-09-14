@@ -149,6 +149,18 @@ export default defineConfig({
       },
     },
     {
+      name: "authenticated-webkit-390x844",
+      dependencies: ["auth-setup"],
+      testMatch: /authenticated-webkit-matrix\.spec\.ts/,
+      use: {
+        ...devices["iPhone 13"],
+        viewport: { width: 390, height: 844 },
+        serviceWorkers: "block",
+        trace: "off",
+        video: "off",
+      },
+    },
+    {
       name: "staging-social-smoke-chromium",
       testMatch: /staging-social-browser-smoke\.spec\.ts/,
       use: {

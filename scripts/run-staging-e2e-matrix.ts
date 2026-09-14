@@ -198,17 +198,26 @@ async function cleanupMatrix(
 function runPlaywright(environment: NodeJS.ProcessEnv): Promise<number> {
   const playwrightCli = path.resolve("node_modules", "playwright", "cli.js");
   const requestedTestFile = process.env.ORHA_E2E_MATRIX_TEST_FILE?.trim();
+  const requestedProject =
+    process.env.ORHA_E2E_MATRIX_PROJECT?.trim() || "authenticated-chromium";
   if (
     requestedTestFile &&
     !/^e2e\/[a-z0-9-]+\.spec\.ts$/i.test(requestedTestFile.replaceAll("\\", "/"))
   ) {
     throw new Error("ORHA_E2E_MATRIX_TEST_FILE precisa apontar para um arquivo e2e/*.spec.ts.");
   }
+  if (
+    !["authenticated-chromium", "authenticated-webkit-390x844"].includes(
+      requestedProject,
+    )
+  ) {
+    throw new Error("ORHA_E2E_MATRIX_PROJECT não pertence à allowlist E2E.");
+  }
   const args = [
     playwrightCli,
     "test",
     ...(requestedTestFile ? [requestedTestFile.replaceAll("\\", "/")] : []),
-    "--project=authenticated-chromium",
+    `--project=${requestedProject}`,
     "--workers=1",
     "--trace=retain-on-failure",
   ];
