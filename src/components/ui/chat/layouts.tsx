@@ -480,6 +480,7 @@ type TicketPriority = "low" | "medium" | "high" | "urgent"
 
 interface SupportTicket {
   id: string
+  displayId?: string
   subject: string
   customerName: string
   customerAvatar?: string
@@ -505,6 +506,15 @@ interface SupportTicketsProps {
   onSend: (text: string) => void
   statusFilter?: TicketStatus | "all"
   onStatusFilterChange?: (status: TicketStatus | "all") => void
+  onClaimTicket?: (id: string) => void
+  onTicketStatusChange?: (id: string, status: TicketStatus) => void
+  onTicketPriorityChange?: (id: string, priority: TicketPriority) => void
+  isUpdatingTicket?: boolean
+  hasMoreTickets?: boolean
+  isLoadingMoreTickets?: boolean
+  onLoadMoreTickets?: () => void
+  hasMoreMessages?: boolean
+  onLoadMoreMessages?: () => Promise<void>
   title?: string
   className?: string
 }
@@ -512,9 +522,16 @@ interface SupportTicketsProps {
 // ─── Internal helpers ────────────────────────────────────────────────────────
 
 const ticketStatusConfig: Record<TicketStatus, { icon: typeof Circle; label: string; color: string }> = {
-  open: { icon: Circle, label: "Open", color: "var(--chat-orange)" },
-  "in-progress": { icon: Clock, label: "In Progress", color: "var(--chat-accent)" },
-  resolved: { icon: CheckCircle2, label: "Resolved", color: "var(--chat-green)" },
+  open: { icon: Circle, label: "Aberto", color: "var(--chat-orange)" },
+  "in-progress": { icon: Clock, label: "Em atendimento", color: "var(--chat-accent)" },
+  resolved: { icon: CheckCircle2, label: "Resolvido", color: "var(--chat-green)" },
+}
+
+const ticketPriorityLabels: Record<TicketPriority, string> = {
+  low: "Baixa",
+  medium: "Normal",
+  high: "Alta",
+  urgent: "Urgente",
 }
 
 const ticketPriorityColors: Record<TicketPriority, string> = {
@@ -552,7 +569,7 @@ function TicketPriorityBadge({ priority }: { priority: TicketPriority }) {
       }}
     >
       <AlertCircle className="size-3" />
-      {priority}
+      {ticketPriorityLabels[priority]}
     </span>
   )
 }
@@ -565,18 +582,20 @@ function TicketFilterTabs({
   onChange: (v: TicketStatus | "all") => void
 }) {
   const tabs: { key: TicketStatus | "all"; label: string }[] = [
-    { key: "all", label: "All" },
-    { key: "open", label: "Open" },
-    { key: "in-progress", label: "Active" },
-    { key: "resolved", label: "Resolved" },
+    { key: "all", label: "Todos" },
+    { key: "open", label: "Abertos" },
+    { key: "in-progress", label: "Ativos" },
+    { key: "resolved", label: "Resolvidos" },
   ]
   return (
     <div className="flex gap-1">
       {tabs.map((t) => (
         <button
           key={t.key}
+          type="button"
           onClick={() => onChange(t.key)}
-          className="rounded-md px-2 py-1 text-[10px] font-medium transition-colors"
+          aria-pressed={value === t.key}
+          className="min-h-11 rounded-xl px-3 py-2 text-[12px] font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent)]"
           style={{
             background: value === t.key ? "var(--chat-accent-soft)" : "transparent",
             color: value === t.key ? "var(--chat-accent)" : "var(--chat-text-tertiary)",
@@ -601,9 +620,10 @@ function TicketItem({
   const StatusIcon = ticketStatusConfig[ticket.status].icon
   return (
     <button
+      type="button"
       onClick={onClick}
       className={cn(
-        "flex w-full items-start gap-2.5 border-b border-[var(--chat-border)] px-3 py-2.5 text-left transition-colors",
+        "flex min-h-[76px] w-full items-start gap-2.5 border-b border-[var(--chat-border)] px-3 py-3 text-left transition-colors outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--chat-accent)]",
         isActive ? "bg-[var(--chat-accent-soft)]" : "hover:bg-[var(--chat-accent-soft)]"
       )}
     >
@@ -613,7 +633,7 @@ function TicketItem({
       />
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-1">
-          <span className="text-[10px] font-mono text-[var(--chat-text-tertiary)]">{ticket.id}</span>
+          <span className="text-[10px] font-mono text-[var(--chat-text-tertiary)]">{ticket.displayId ?? ticket.id}</span>
           <span className="shrink-0 text-[9px] text-[var(--chat-text-tertiary)]">{ticket.createdAt}</span>
         </div>
         <p className="mt-0.5 truncate text-[12px] font-medium leading-snug text-[var(--chat-text-primary)]">
@@ -628,7 +648,7 @@ function TicketItem({
               color: ticketPriorityColors[ticket.priority],
             }}
           >
-            {ticket.priority}
+            {ticketPriorityLabels[ticket.priority]}
           </span>
           {ticket.category && (
             <span className="rounded-full bg-[var(--chat-accent-soft)] px-1.5 py-0 text-[9px] font-medium text-[var(--chat-text-secondary)]">
@@ -659,7 +679,16 @@ function SupportTickets({
   onSend,
   statusFilter: controlledFilter,
   onStatusFilterChange,
-  title = "Support Tickets",
+  onClaimTicket,
+  onTicketStatusChange,
+  onTicketPriorityChange,
+  isUpdatingTicket = false,
+  hasMoreTickets = false,
+  isLoadingMoreTickets = false,
+  onLoadMoreTickets,
+  hasMoreMessages = false,
+  onLoadMoreMessages,
+  title = "Atendimento ORHA",
   className,
 }: SupportTicketsProps) {
   const [internalFilter, setInternalFilter] = React.useState<TicketStatus | "all">("all")
@@ -706,12 +735,12 @@ function SupportTickets({
               <div className="flex items-center gap-1.5">
                 {openCount > 0 && (
                   <span className="rounded-full bg-[var(--chat-accent-soft)] px-2 py-0.5 text-[10px] font-medium text-[var(--chat-accent)]">
-                    {openCount} open
+                    {openCount} aberto{openCount === 1 ? "" : "s"}
                   </span>
                 )}
                 {activeCount > 0 && (
                   <span className="rounded-full bg-[var(--chat-accent-soft)] px-2 py-0.5 text-[10px] font-medium text-[var(--chat-text-secondary)]">
-                    {activeCount} active
+                    {activeCount} ativo{activeCount === 1 ? "" : "s"}
                   </span>
                 )}
               </div>
@@ -731,8 +760,18 @@ function SupportTickets({
             ))}
             {filteredTickets.length === 0 && (
               <div className="px-4 py-6 text-center text-[12px] text-[var(--chat-text-tertiary)]">
-                No tickets found
+                Nenhum chamado neste estado
               </div>
+            )}
+            {hasMoreTickets && onLoadMoreTickets && (
+              <button
+                type="button"
+                className="min-h-11 w-full px-4 text-[13px] font-semibold text-[var(--chat-accent)] outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--chat-accent)]"
+                disabled={isLoadingMoreTickets}
+                onClick={onLoadMoreTickets}
+              >
+                {isLoadingMoreTickets ? "Carregando…" : "Carregar chamados anteriores"}
+              </button>
             )}
           </div>
         </aside>
@@ -752,8 +791,10 @@ function SupportTickets({
               <div className="shrink-0 flex items-center gap-3 border-b border-[var(--chat-border)] bg-[var(--chat-bg-header)] px-4 py-2.5 backdrop-blur-[20px] backdrop-saturate-[180%]">
                 {/* Mobile back */}
                 <button
+                  type="button"
+                  aria-label="Voltar para a fila de chamados"
                   onClick={() => onSelectTicket("")}
-                  className="mr-1 text-[var(--chat-text-secondary)] hover:text-[var(--chat-text-primary)] md:hidden"
+                  className="mr-1 grid size-11 shrink-0 place-items-center rounded-full text-[var(--chat-text-secondary)] outline-none hover:text-[var(--chat-text-primary)] focus-visible:ring-2 focus-visible:ring-[var(--chat-accent)] md:hidden"
                 >
                   <ChevronLeft className="size-5" />
                 </button>
@@ -765,7 +806,7 @@ function SupportTickets({
                     {activeTicket.subject}
                   </span>
                   <span className="truncate text-[11px] text-[var(--chat-text-secondary)]">
-                    {activeTicket.id} · {activeTicket.customerName}
+                    {activeTicket.displayId ?? activeTicket.id} · {activeTicket.customerName}
                   </span>
                 </div>
                 <div className="hidden items-center gap-1.5 sm:flex">
@@ -773,14 +814,65 @@ function SupportTickets({
                   <TicketPriorityBadge priority={activeTicket.priority} />
                 </div>
               </div>
-              <ChatMessages messages={messages} typingUsers={typingUsers} />
-              <ChatComposer onSend={onSend} placeholder="Reply to ticket..." />
+              {(onClaimTicket || onTicketStatusChange || onTicketPriorityChange) && (
+                <div className="grid shrink-0 grid-cols-2 gap-2 border-b border-[var(--chat-border)] bg-[var(--chat-bg-sidebar)] p-2 sm:grid-cols-3">
+                  {onClaimTicket && !activeTicket.assignee && (
+                    <button
+                      type="button"
+                      disabled={isUpdatingTicket}
+                      onClick={() => onClaimTicket(activeTicket.id)}
+                      className="min-h-11 rounded-xl bg-[var(--chat-accent)] px-3 text-[13px] font-semibold text-white outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent)] focus-visible:ring-offset-2"
+                    >
+                      Assumir chamado
+                    </button>
+                  )}
+                  {onTicketStatusChange && (
+                    <label className="text-[11px] font-medium text-[var(--chat-text-secondary)]">
+                      Estado
+                      <select
+                        aria-label="Estado do chamado"
+                        value={activeTicket.status}
+                        disabled={isUpdatingTicket}
+                        onChange={(event) => onTicketStatusChange(activeTicket.id, event.target.value as TicketStatus)}
+                        className="mt-1 min-h-11 w-full rounded-xl border border-[var(--chat-border-strong)] bg-[var(--chat-bg-main)] px-3 text-base text-[var(--chat-text-primary)] outline-none focus:ring-2 focus:ring-[var(--chat-accent)]"
+                      >
+                        {Object.entries(ticketStatusConfig).map(([value, item]) => (
+                          <option value={value} key={value}>{item.label}</option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                  {onTicketPriorityChange && (
+                    <label className="text-[11px] font-medium text-[var(--chat-text-secondary)]">
+                      Prioridade
+                      <select
+                        aria-label="Prioridade do chamado"
+                        value={activeTicket.priority}
+                        disabled={isUpdatingTicket}
+                        onChange={(event) => onTicketPriorityChange(activeTicket.id, event.target.value as TicketPriority)}
+                        className="mt-1 min-h-11 w-full rounded-xl border border-[var(--chat-border-strong)] bg-[var(--chat-bg-main)] px-3 text-base text-[var(--chat-text-primary)] outline-none focus:ring-2 focus:ring-[var(--chat-accent)]"
+                      >
+                        {Object.entries(ticketPriorityLabels).map(([value, label]) => (
+                          <option value={value} key={value}>{label}</option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                </div>
+              )}
+              <ChatMessages
+                messages={messages}
+                typingUsers={typingUsers}
+                hasMore={hasMoreMessages}
+                onLoadMore={onLoadMoreMessages}
+              />
+              <ChatComposer onSend={onSend} placeholder="Responder ao chamado…" />
             </>
           ) : (
             <div className="flex flex-1 items-center justify-center">
               <div className="text-center">
                 <Ticket className="mx-auto mb-3 size-12 text-[var(--chat-text-tertiary)]" />
-                <p className="text-[15px] font-medium text-[var(--chat-text-secondary)]">Select a ticket</p>
+                <p className="text-[15px] font-medium text-[var(--chat-text-secondary)]">Selecione um chamado</p>
               </div>
             </div>
           )}

@@ -33,6 +33,7 @@ describe("notification domain", () => {
     expect(categoryForNotificationType("message_received")).toBe("messages");
     expect(categoryForNotificationType("group_invitation")).toBe("messages");
     expect(categoryForNotificationType("security_alert")).toBe("important");
+    expect(categoryForNotificationType("support_ticket_reply")).toBe("important");
     expect(categoryForNotificationType("maintenance")).toBe("system");
   });
 
@@ -83,6 +84,16 @@ describe("notification domain", () => {
         entityType: "account",
       }).targetPath,
     ).toBe("/configuracoes/seguranca");
+    expect(
+      presentNotification({
+        ...notification,
+        type: "support_ticket_reply",
+        entityType: "support_ticket",
+      }),
+    ).toMatchObject({
+      title: "Nova resposta do suporte",
+      targetPath: "/suporte",
+    });
   });
 
   it("mantém cursor determinístico por data e id", () => {

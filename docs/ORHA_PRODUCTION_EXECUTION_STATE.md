@@ -2,14 +2,14 @@
 
 Atualizado em: 2026-09-14  
 Branch: `codex/production-launch`  
-Commit-base publicado antes deste checkpoint: `f9944ba`
+Commit-base publicado antes deste checkpoint: `fb138ef`
 Projeto vinculado durante os gates: `bgeauxljwjbtbwpbzpoo` (ORHA-Staging)  
 Produção: `iuaczhkfmwpyhtpdmuyt` (ORHA), ainda não promovida  
-Estado: **staging saudável e alinhado às 17 migrations locais; cinco Edge Functions ativas, gate anônimo/CORS 7/7 e dois jobs Cron/Vault ativos; Auth remoto sincronizado com senha mínima de 12 caracteres, validação server-side da senha atual e conclusão atômica do onboarding; dependências de produção com audit 0; produção intacta; lint remoto sem erros, gate estrutural 20/20 e matriz RLS transacional aprovados**.
+Estado: **staging saudável e alinhado às 19 migrations locais; 40 tabelas públicas com RLS, 16 tabelas Realtime, cinco Edge Functions ativas, gate anônimo/CORS 7/7 e dois jobs Cron/Vault ativos; Auth remoto sincronizado; onboarding atômico; suporte persistente, paginado, auditado e RPC-only; produção intacta; lint remoto sem erros, gate estrutural 21/21 e matrizes RLS transacionais aprovadas**.
 
 ## Resumo executivo
 
-O banco de produção ainda não recebeu a cadeia social desta branch. No staging isolado `bgeauxljwjbtbwpbzpoo`, as 17 migrations versionadas, de `20260811040000` a `20260914090000`, estão agora aplicadas e registradas no ledger remoto. O lint hospedado passa sem erros, o gate estrutural passou em 20/20 checks e `scripts/supabase-rls-integration.sql` passou integralmente, terminando em `ROLLBACK` sem fixtures residuais.
+O banco de produção ainda não recebeu a cadeia social desta branch. No staging isolado `bgeauxljwjbtbwpbzpoo`, as 19 migrations versionadas, de `20260811040000` a `20260914101000`, estão agora aplicadas e registradas no ledger remoto. O lint hospedado passa sem erros, o gate estrutural passou em 21/21 checks e as matrizes transacionais de RLS/onboarding/suporte passaram integralmente, terminando em `ROLLBACK` sem fixtures residuais.
 
 Em 2026-09-14, ambos os projetos foram confirmados como ativos no control plane e o staging como `Healthy` no Dashboard. A CLI foi autenticada pelo fluxo oficial no navegador e o workspace foi vinculado temporariamente ao staging. A primeira aplicação publicou `1800` a `2200`; `2300` falhou atomicamente por um alias SQL reservado e por uma pós-validação que não aceitava a serialização `search_path=""` do PostgreSQL hospedado. As duas causas foram corrigidas no SQL versionado. A retomada aplicou `2300`, `2400`, `2500` e `20260903010000` com sucesso. O único aviso final foi a impossibilidade de gerar cache local do catálogo porque Docker não está instalado; isso não afetou o commit remoto das migrations.
 
@@ -74,7 +74,7 @@ O primeiro `scripts/supabase-validate.ps1`, executado sobre uma revisão anterio
 - `community_memberships` ainda não estava na publication;
 - as 15 constraints `NOT VALID` do hardening ainda não haviam sido validadas.
 
-As três causas foram corrigidas antes da reconstrução final. No staging `bgeauxljwjbtbwpbzpoo`, `scripts/supabase-validate.sql` retornou 20/20 checks aprovados, incluindo os contratos Cron/pg_net/Vault e conclusão server-authoritative do onboarding. Em seguida, `scripts/supabase-rls-integration.sql` cobriu anon, owner, outro usuário, amigo, bloqueado, membro, moderador comunitário, moderador global, admin, super-admin e suporte, além de introspecção de Storage e Realtime; o script concluiu com `ROLLBACK`, e a verificação posterior confirmou zero linhas residuais das fixtures.
+As três causas foram corrigidas antes da reconstrução final. No staging `bgeauxljwjbtbwpbzpoo`, `scripts/supabase-validate.sql` retorna agora 21/21 checks aprovados, incluindo Cron/pg_net/Vault, onboarding server-authoritative e suporte operacional. `scripts/supabase-rls-integration.sql` cobre anon, owner, outro usuário, amigo, bloqueado, membro, moderador comunitário, moderador global, admin, super-admin e suporte, além de Storage e Realtime; os scripts concluem com `ROLLBACK`, sem fixtures residuais.
 
 No mesmo staging, o smoke de Auth passou: criação administrativa do usuário, login por senha via publishable key, leitura owner-only do perfil sob RLS e cleanup; o perfil novo nasceu corretamente com `onboarding_step = 0` e `onboarding_completed_at = null`.
 
@@ -99,6 +99,8 @@ As migrations forward seguintes já foram aplicadas, na ordem, no staging em 202
 - `20260914070000_resolve_runtime_function_ambiguity.sql`: aplicado;
 - `20260914080000_worker_scheduler_foundation.sql`: aplicado; `pg_cron`, `pg_net` e invocação privada via Vault.
 - `20260914090000_atomic_onboarding_completion.sql`: aplicado; conclusão idempotente via `complete_own_onboarding`, timestamp do servidor e escrita direta da coluna revogada de `authenticated`; SHA-256 `171E4948ED53DE8506BADEF8A30019B9F6D3AC0413191F64A18E511BA6063428`.
+- `20260914100000_support_ticket_operations.sql`: aplicado; tickets/mensagens separados do chat privado, RLS, rate limits, auditoria, notificações, Realtime e mutações RPC-only; SHA-256 `BDF9EB7936A04751D4715BA0D1005A8F5DA2ECD7A72A1D8EF40AF0D5044C451B`.
+- `20260914101000_support_ticket_read_models.sql`: aplicado; projeções privadas com cursor estável e limite máximo para fila e mensagens; SHA-256 `6C7BEB2C24D85D7DDB5A071C7188C37BF2F033A98634C70F65BA62ABEB0087B8`.
 
 Qualquer alteração posterior nesses arquivos invalida o resultado e exige staging descartável novo, reaplicação e repetição integral dos gates. A migration `20260816180000` e suas migrations posteriores estão aplicadas e cobertas pelos gates estruturais/RLS atuais; a execução funcional autenticada dos workers continua separada.
 
@@ -110,12 +112,13 @@ O script de inventário está em `scripts/remote-inventory.sql` e consulta apena
 |---|---|---|---|
 | Auth/onboarding | `20260811040000` | mesma fundação | aplicado |
 | Privacidade de perfis | `20260816130000_security_privacy_hardening.sql` | owner-only + RPC mascarada + amizades | aplicado e validado |
-| Social de lançamento | `20260816170000_social_launch_schema.sql` | 38 tabelas públicas protegidas | aplicado e validado |
+| Social de lançamento | `20260816170000_social_launch_schema.sql` + suporte | 40 tabelas públicas protegidas | aplicado e validado |
 | Workers/lifecycle | `20260816180000_edge_worker_contracts.sql` + cinco Edge Functions | mesma implementação versionada | implantado; jornadas autenticadas pendentes |
 | Explore/chat/perfil/Home | `20260816190000` → `20260816220000` | mesma cadeia | aplicado e validado estruturalmente |
 | Antiabuso/notificações | `20260816230000` → `20260816240000` | mesma cadeia | aplicado e validado estruturalmente |
 | Storage | cinco buckets privados e policies | mesma configuração | aplicado; mídia autenticada pendente |
-| Realtime | 14 tabelas + Broadcast/Presence privados | mesma configuração | aplicado; jornada multiusuário pendente |
+| Realtime | 16 tabelas + Broadcast/Presence privados | mesma configuração | aplicado; jornada multiusuário persistente ainda pendente |
+| Suporte | tickets, mensagens, 6 RPCs, rate limits e audit log | rota `/suporte`, Drawer GodUI e fila chatcn | aplicado e gate transacional aprovado |
 | Jobs privilegiados | Cron/Vault, funções privadas e dois jobs ativos | mesma configuração versionada | implantado e smoke de fila vazia aprovado |
 
 A migration `20260816170000` depende explicitamente das duas anteriores. Ela não deve ser executada isoladamente.
@@ -137,6 +140,7 @@ Ela não contém `BEGIN`, `COMMIT`, índices concorrentes nem chamadas HTTP/Stor
 - não existe follow;
 - amizade aceita e pedido de conversa são domínios independentes;
 - `support` não recebe autoridade de moderação; somente `super_admin`, `admin` e `moderator`;
+- `support`, `admin` e `super_admin` operam exclusivamente a fila de suporte; moderador não herda esse acesso, e nenhum papel recebe promoção pelo browser;
 - restrições/suspensões temporárias vencidas são derivadas como `active` no servidor; `reconcile_expired_profile_restrictions` persiste a transição e audita o evento;
 - browser clients não recebem grants para IDs, roles, status de moderação ou timestamps de auditoria;
 - `audit_logs` é append-only.
@@ -152,6 +156,7 @@ Ela não contém `BEGIN`, `COMMIT`, índices concorrentes nem chamadas HTTP/Stor
 - conversa: `conversations`, `conversation_members`, `conversation_preferences`, `conversation_requests`;
 - mensagens: `messages`, `message_reactions`, `message_attachments`, `message_receipts`;
 - confiança: `notifications`, `reports`, `report_evidence`, `moderation_cases`, `sanctions`, `audit_logs`.
+- suporte: `support_tickets`, `support_ticket_messages`, com leitura paginada e escrita exclusivamente por RPC.
 
 ### Storage privado
 
@@ -183,7 +188,7 @@ Quando moderação remove uma mensagem, o banco marca imediatamente os anexos e 
 
 ### Realtime
 
-- Postgres Changes: 14 tabelas — amizades, bloqueios, memberships/conteúdo comunitário, members/requests/preferences/messages/reactions/attachments/receipts e notificações;
+- Postgres Changes: 16 tabelas — amizades, bloqueios, memberships/conteúdo comunitário, members/requests/preferences/messages/reactions/attachments/receipts, notificações, tickets e mensagens de suporte;
 - Broadcast/Presence: policies em `realtime.messages` aceitam apenas o tópico `conversation:<uuid>` e exigem membership ativo;
 - o lançamento usa Postgres Changes pela simplicidade; Broadcast é o caminho de escala já protegido por RLS.
 - em projeto hosted novo, `realtime.messages` pode aparecer somente depois que o serviço Realtime executa suas migrations; o bootstrap suportado é habilitar/retomar o serviço pela Dashboard/Management API e abrir um canal privado autenticado temporário;
@@ -220,12 +225,13 @@ Evidência obtida no Dashboard e pela CLI oficial, sem copiar secrets para logs:
 ## Gates concluídos e próximos gates
 
 - concluído: snapshot pré-promoção da produção, hashes e isolamento do staging;
-- concluído: 17 migrations ledgered, lint SQL remoto, validação estrutural 20/20 e matriz RLS/Storage/Realtime com rollback;
+- concluído: 19 migrations ledgered, lint SQL remoto, validação estrutural 21/21 e matrizes RLS/Storage/Realtime/onboarding/suporte com rollback;
 - concluído: cinco Edge Functions ativas, CORS/anon 7/7, Cron/Vault e workers com filas vazias;
 - concluído nesta fatia: Auth config sincronizada, política de senha endurecida e contrato do cliente atualizado para `current_password`;
 - concluído nesta fatia: onboarding finalizado somente por RPC autenticada e idempotente; o gate transacional rejeitou perfil incompleto, UF inválida e escrita direta do timestamp, aceitou o perfil válido e preservou o primeiro timestamp no retry;
 - concluído nesta fatia: validação visual e automatizada do Auth/PWA em `320×568`; todos os campos editáveis permanecem em 16 px, o cadastro rejeita senha abaixo de 12 caracteres, o aviso offline não cobre nem intercepta o CTA após o scroll e o botão Voltar conserva pelo menos 44 px durante a animação;
-- gates atuais: matriz E2E pública `111/111` em seis iPhones, tablet retrato/paisagem, dois desktops, WebKit/iPhone e PWA offline; Vitest `303/303`, catálogo, TypeScript, ESLint, secrets, encoding, dívida de produção e build aprovados;
+- concluído nesta fatia: canal de suporte persistente na rota `/suporte`; solicitante vê apenas os próprios tickets, `support`/`admin`/`super_admin` operam a fila, moderador não herda acesso, respostas e estados notificam sem copiar o corpo privado; o gate transacional terminou em `ROLLBACK`.
+- gates atuais: matriz E2E pública completa anterior `111/111`; guard/deep link de `/suporte` revalidado em `66/66` nos 11 projetos públicos; Vitest `307/307`, catálogo, TypeScript, ESLint, secrets, encoding, dívida de produção e build PWA com 97 entradas aprovados;
 - pendente: custom SMTP + domínio de envio, CAPTCHA e jornadas reais de confirmação/reenvio/reset;
 - pendente: contas sintéticas A/B/admin e jornadas autenticadas completas, inclusive a prova automatizada de rejeição da senha atual incorreta;
 - pendente: mídia real, Realtime multiusuário, QA native-first/PWA, host definitivo, observabilidade e promoção controlada da produção.
@@ -233,8 +239,8 @@ Evidência obtida no Dashboard e pela CLI oficial, sem copiar secrets para logs:
 ## Limitações conhecidas do ambiente atual
 
 - Docker/Podman não está disponível neste workspace; `supabase status/db reset` não pode executar o banco local;
-- os testes locais continuam sendo estáticos/contratuais, mas o schema social também passou por aplicação SQL real, 20/20 validações, gate RLS transacional e gate específico do onboarding com `ROLLBACK` no staging `bgeauxljwjbtbwpbzpoo`;
-- todas as migrations locais estão aplicadas no staging; produção permanece sem promoção;
+- os testes locais continuam sendo estáticos/contratuais, mas o schema social também passou por aplicação SQL real, 21/21 validações e gates transacionais de RLS, onboarding e suporte com `ROLLBACK` no staging `bgeauxljwjbtbwpbzpoo`;
+- todas as 19 migrations locais estão aplicadas no staging; produção permanece sem promoção;
 - buckets, publication e policies do staging foram criados pelas migrations e cobertos pela repetição integral dos gates estrutural e RLS/Storage/Realtime;
 - os workers estão implantados, protegidos por bearer próprio, agendados por Cron/Vault e aprovados com filas vazias no staging; jornadas autenticadas de exportação, delete final, purge e retenção ainda precisam ser comprovadas antes do lançamento público;
 - as Edge Functions de mídia estão implantadas e passam o gate anônimo/CORS; PDF/arquivo genérico permanece fora do lançamento até existir quarentena e antimalware.

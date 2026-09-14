@@ -89,6 +89,8 @@ const IMPORTANT_TYPES = new Set([
   "security_alert",
   "account_warning",
   "moderation_action",
+  "support_ticket_reply",
+  "support_ticket_updated",
 ]);
 
 export function notificationTypesForCategory(
@@ -212,6 +214,15 @@ export function presentNotification(notification: Notification): NotificationPre
         title: "Atualização da conta",
         description: "Há uma informação importante sobre sua conta.",
         targetPath: "/configuracoes/conta",
+      };
+    case "support_ticket_reply":
+    case "support_ticket_updated":
+      return {
+        title: notification.type === "support_ticket_reply"
+          ? "Nova resposta do suporte"
+          : "Chamado atualizado",
+        description: "Confira o andamento do seu atendimento na ORHA.",
+        targetPath: "/suporte",
       };
     default:
       return {

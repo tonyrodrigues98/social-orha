@@ -29,6 +29,7 @@ export const ROUTE_PATHS = {
   publicProfile: "/perfil/$username",
   report: "/denunciar/$targetType/$targetId",
   adminModeration: "/admin/moderacao",
+  support: "/suporte",
 } as const;
 
 export const LEGACY_AUTH_PATHS = {
@@ -210,6 +211,7 @@ export function parsePostAuthRedirect(value: unknown): string | undefined {
       ROUTE_PATHS.help,
       ROUTE_PATHS.contact,
       ROUTE_PATHS.adminModeration,
+      ROUTE_PATHS.support,
     ];
     const isUtilityRoute = utilityPaths.includes(pathname);
     const isConversation = /^\/conversas\/[^/]+$/.test(pathname);

@@ -59,6 +59,8 @@ const loadReportPage = () => import("./pages/report-page")
   .then((module) => ({ default: module.ReportPage }));
 const loadAdminModerationPage = () => import("./pages/admin-moderation-page")
   .then((module) => ({ default: module.AdminModerationPage }));
+const loadSupportPage = () => import("./pages/support-page")
+  .then((module) => ({ default: module.SupportPage }));
 const loadPublicProfilePage = () => import("./pages/public-profile-page")
   .then((module) => ({ default: module.PublicProfilePage }));
 const loadCommunityDetailPage = () => import("./pages/community-detail-page")
@@ -73,6 +75,7 @@ const HelpPage = lazy(() => loadSettingsInfoPages().then((module) => ({ default:
 const ContactPage = lazy(() => loadSettingsInfoPages().then((module) => ({ default: module.ContactPage })));
 const ReportPage = lazy(loadReportPage);
 const AdminModerationPage = lazy(loadAdminModerationPage);
+const SupportPage = lazy(loadSupportPage);
 const PublicProfilePage = lazy(loadPublicProfilePage);
 const CommunityDetailPage = lazy(loadCommunityDetailPage);
 
@@ -281,7 +284,19 @@ function HelpRoutePage() {
 
 function ContactRoutePage() {
   const goBack = useRouteBack(ROUTE_PATHS.settings);
-  return <ContactPage onBack={goBack} />;
+  return (
+    <ContactPage
+      onBack={goBack}
+      onOpenSupport={() => void navigateToAppPath(ROUTE_PATHS.support, false)}
+    />
+  );
+}
+
+function SupportRoutePage() {
+  const auth = useAuth();
+  const goBack = useRouteBack(ROUTE_PATHS.settings);
+  if (!auth.identity) return <RouterLoadingScreen />;
+  return <SupportPage identity={auth.identity} onBack={goBack} />;
 }
 
 const reportTargetLabels = {
@@ -650,6 +665,11 @@ const adminModerationRoute = createRoute({
   },
   component: AdminModerationRoutePage,
 });
+const supportRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: ROUTE_PATHS.support,
+  component: SupportRoutePage,
+});
 
 export const routeTree = rootRoute.addChildren([
   entryRoute,
@@ -682,6 +702,7 @@ export const routeTree = rootRoute.addChildren([
     contactRoute,
     reportRoute,
     adminModerationRoute,
+    supportRoute,
   ]),
 ]);
 
@@ -752,6 +773,7 @@ export function preloadAuthenticatedUtilities() {
     loadSettingsInfoPages(),
     loadReportPage(),
     loadAdminModerationPage(),
+    loadSupportPage(),
   ]);
 }
 

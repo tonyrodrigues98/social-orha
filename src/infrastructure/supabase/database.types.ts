@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.15"
+    PostgrestVersion: "14.5"
   }
   graphql_public: {
     Tables: {
@@ -39,6 +39,81 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_deletion_tombstones: {
+        Row: {
+          content_prepared_at: string | null
+          request_id: string
+          started_at: string
+          storage_object_count: number
+          user_id: string
+        }
+        Insert: {
+          content_prepared_at?: string | null
+          request_id: string
+          started_at?: string
+          storage_object_count?: number
+          user_id: string
+        }
+        Update: {
+          content_prepared_at?: string | null
+          request_id?: string
+          started_at?: string
+          storage_object_count?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      account_export_artifacts: {
+        Row: {
+          bucket_id: string
+          byte_size: number
+          created_at: string
+          expires_at: string
+          id: string
+          object_path: string
+          request_id: string
+          sha256: string
+          user_id: string
+        }
+        Insert: {
+          bucket_id?: string
+          byte_size: number
+          created_at?: string
+          expires_at: string
+          id?: string
+          object_path: string
+          request_id: string
+          sha256: string
+          user_id: string
+        }
+        Update: {
+          bucket_id?: string
+          byte_size?: number
+          created_at?: string
+          expires_at?: string
+          id?: string
+          object_path?: string
+          request_id?: string
+          sha256?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_export_artifacts_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: true
+            referencedRelation: "account_lifecycle_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_export_artifacts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       account_lifecycle_requests: {
         Row: {
           cancelled_at: string | null
@@ -167,6 +242,7 @@ export type Database = {
         Row: {
           archived_at: string | null
           avatar_path: string | null
+          category: string
           cover_path: string | null
           created_at: string
           description: string
@@ -180,6 +256,7 @@ export type Database = {
         Insert: {
           archived_at?: string | null
           avatar_path?: string | null
+          category?: string
           cover_path?: string | null
           created_at?: string
           description?: string
@@ -193,6 +270,7 @@ export type Database = {
         Update: {
           archived_at?: string | null
           avatar_path?: string | null
+          category?: string
           cover_path?: string | null
           created_at?: string
           description?: string
@@ -206,6 +284,101 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "communities_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_branding_cleanup: {
+        Row: {
+          bucket_id: string
+          id: string
+          object_path: string
+          owner_id: string | null
+          requested_at: string
+        }
+        Insert: {
+          bucket_id?: string
+          id?: string
+          object_path: string
+          owner_id?: string | null
+          requested_at?: string
+        }
+        Update: {
+          bucket_id?: string
+          id?: string
+          object_path?: string
+          owner_id?: string | null
+          requested_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_branding_cleanup_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_branding_media: {
+        Row: {
+          bucket_id: string
+          byte_size: number
+          community_id: string
+          created_at: string
+          height: number
+          id: string
+          mime_type: string
+          object_path: string
+          owner_id: string
+          purpose: string
+          status: Database["public"]["Enums"]["media_processing_status"]
+          updated_at: string
+          width: number
+        }
+        Insert: {
+          bucket_id?: string
+          byte_size: number
+          community_id: string
+          created_at?: string
+          height: number
+          id?: string
+          mime_type: string
+          object_path: string
+          owner_id: string
+          purpose: string
+          status?: Database["public"]["Enums"]["media_processing_status"]
+          updated_at?: string
+          width: number
+        }
+        Update: {
+          bucket_id?: string
+          byte_size?: number
+          community_id?: string
+          created_at?: string
+          height?: number
+          id?: string
+          mime_type?: string
+          object_path?: string
+          owner_id?: string
+          purpose?: string
+          status?: Database["public"]["Enums"]["media_processing_status"]
+          updated_at?: string
+          width?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_branding_media_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_branding_media_owner_id_fkey"
             columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -503,6 +676,8 @@ export type Database = {
       }
       conversations: {
         Row: {
+          closed_at: string | null
+          closed_by: string | null
           created_at: string
           created_by: string | null
           direct_user_high: string | null
@@ -513,6 +688,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          closed_at?: string | null
+          closed_by?: string | null
           created_at?: string
           created_by?: string | null
           direct_user_high?: string | null
@@ -523,6 +700,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          closed_at?: string | null
+          closed_by?: string | null
           created_at?: string
           created_by?: string | null
           direct_user_high?: string | null
@@ -533,6 +712,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "conversations_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "conversations_created_by_fkey"
             columns: ["created_by"]
@@ -605,6 +791,7 @@ export type Database = {
         Row: {
           bucket_id: string
           byte_size: number
+          cleanup_requested_at: string | null
           created_at: string
           duration_seconds: number | null
           forwarded_from_attachment_id: string | null
@@ -614,12 +801,14 @@ export type Database = {
           mime_type: string
           object_path: string
           owner_id: string
+          removed_at: string | null
           waveform: Json | null
           width: number | null
         }
         Insert: {
           bucket_id?: string
           byte_size: number
+          cleanup_requested_at?: string | null
           created_at?: string
           duration_seconds?: number | null
           forwarded_from_attachment_id?: string | null
@@ -629,12 +818,14 @@ export type Database = {
           mime_type: string
           object_path: string
           owner_id: string
+          removed_at?: string | null
           waveform?: Json | null
           width?: number | null
         }
         Update: {
           bucket_id?: string
           byte_size?: number
+          cleanup_requested_at?: string | null
           created_at?: string
           duration_seconds?: number | null
           forwarded_from_attachment_id?: string | null
@@ -644,6 +835,7 @@ export type Database = {
           mime_type?: string
           object_path?: string
           owner_id?: string
+          removed_at?: string | null
           waveform?: Json | null
           width?: number | null
         }
@@ -918,36 +1110,42 @@ export type Database = {
       notifications: {
         Row: {
           actor_id: string | null
+          community_id: string | null
           created_at: string
           dedupe_key: string | null
           entity_id: string | null
           entity_type: string | null
           id: string
           payload: Json
+          post_id: string | null
           read_at: string | null
           recipient_id: string
           type: string
         }
         Insert: {
           actor_id?: string | null
+          community_id?: string | null
           created_at?: string
           dedupe_key?: string | null
           entity_id?: string | null
           entity_type?: string | null
           id?: string
           payload?: Json
+          post_id?: string | null
           read_at?: string | null
           recipient_id: string
           type: string
         }
         Update: {
           actor_id?: string | null
+          community_id?: string | null
           created_at?: string
           dedupe_key?: string | null
           entity_id?: string | null
           entity_type?: string | null
           id?: string
           payload?: Json
+          post_id?: string | null
           read_at?: string | null
           recipient_id?: string
           type?: string
@@ -961,6 +1159,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "notifications_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "community_posts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "notifications_recipient_id_fkey"
             columns: ["recipient_id"]
             isOneToOne: false
@@ -968,6 +1180,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      orphan_media_cleanup_claims: {
+        Row: {
+          bucket_id: string
+          claimed_at: string
+          object_path: string
+        }
+        Insert: {
+          bucket_id: string
+          claimed_at?: string
+          object_path: string
+        }
+        Update: {
+          bucket_id?: string
+          claimed_at?: string
+          object_path?: string
+        }
+        Relationships: []
       }
       post_comments: {
         Row: {
@@ -1036,6 +1266,8 @@ export type Database = {
           owner_id: string
           post_id: string
           sort_order: number
+          status: Database["public"]["Enums"]["media_processing_status"]
+          updated_at: string
           width: number | null
         }
         Insert: {
@@ -1049,6 +1281,8 @@ export type Database = {
           owner_id: string
           post_id: string
           sort_order?: number
+          status?: Database["public"]["Enums"]["media_processing_status"]
+          updated_at?: string
           width?: number | null
         }
         Update: {
@@ -1062,6 +1296,8 @@ export type Database = {
           owner_id?: string
           post_id?: string
           sort_order?: number
+          status?: Database["public"]["Enums"]["media_processing_status"]
+          updated_at?: string
           width?: number | null
         }
         Relationships: [
@@ -1390,7 +1626,9 @@ export type Database = {
           mime_type: string
           object_path: string
           report_id: string
-          uploader_id: string
+          retention_until: string
+          status: Database["public"]["Enums"]["media_processing_status"]
+          uploader_id: string | null
         }
         Insert: {
           bucket_id?: string
@@ -1400,7 +1638,9 @@ export type Database = {
           mime_type: string
           object_path: string
           report_id: string
-          uploader_id: string
+          retention_until?: string
+          status?: Database["public"]["Enums"]["media_processing_status"]
+          uploader_id?: string | null
         }
         Update: {
           bucket_id?: string
@@ -1410,7 +1650,9 @@ export type Database = {
           mime_type?: string
           object_path?: string
           report_id?: string
-          uploader_id?: string
+          retention_until?: string
+          status?: Database["public"]["Enums"]["media_processing_status"]
+          uploader_id?: string | null
         }
         Relationships: [
           {
@@ -1429,6 +1671,75 @@ export type Database = {
           },
         ]
       }
+      report_target_attachments: {
+        Row: {
+          bucket_id: string
+          byte_size: number
+          created_at: string
+          duration_seconds: number | null
+          height: number | null
+          id: string
+          mime_type: string
+          object_path: string
+          report_id: string
+          retention_until: string
+          source_id: string
+          source_kind: string
+          target_owner_id: string | null
+          waveform: Json | null
+          width: number | null
+        }
+        Insert: {
+          bucket_id: string
+          byte_size: number
+          created_at?: string
+          duration_seconds?: number | null
+          height?: number | null
+          id?: string
+          mime_type: string
+          object_path: string
+          report_id: string
+          retention_until?: string
+          source_id: string
+          source_kind: string
+          target_owner_id?: string | null
+          waveform?: Json | null
+          width?: number | null
+        }
+        Update: {
+          bucket_id?: string
+          byte_size?: number
+          created_at?: string
+          duration_seconds?: number | null
+          height?: number | null
+          id?: string
+          mime_type?: string
+          object_path?: string
+          report_id?: string
+          retention_until?: string
+          source_id?: string
+          source_kind?: string
+          target_owner_id?: string | null
+          waveform?: Json | null
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_target_attachments_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_target_attachments_target_owner_id_fkey"
+            columns: ["target_owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reports: {
         Row: {
           assigned_to: string | null
@@ -1436,11 +1747,13 @@ export type Database = {
           created_at: string
           details: string | null
           id: string
-          reporter_id: string
+          reporter_id: string | null
           resolution: string | null
           resolved_at: string | null
           status: Database["public"]["Enums"]["report_status"]
           target_id: string
+          target_owner_id: string | null
+          target_snapshot: Json
           target_type: Database["public"]["Enums"]["report_target_type"]
           updated_at: string
         }
@@ -1450,11 +1763,13 @@ export type Database = {
           created_at?: string
           details?: string | null
           id?: string
-          reporter_id: string
+          reporter_id?: string | null
           resolution?: string | null
           resolved_at?: string | null
           status?: Database["public"]["Enums"]["report_status"]
           target_id: string
+          target_owner_id?: string | null
+          target_snapshot: Json
           target_type: Database["public"]["Enums"]["report_target_type"]
           updated_at?: string
         }
@@ -1464,11 +1779,13 @@ export type Database = {
           created_at?: string
           details?: string | null
           id?: string
-          reporter_id?: string
+          reporter_id?: string | null
           resolution?: string | null
           resolved_at?: string | null
           status?: Database["public"]["Enums"]["report_status"]
           target_id?: string
+          target_owner_id?: string | null
+          target_snapshot?: Json
           target_type?: Database["public"]["Enums"]["report_target_type"]
           updated_at?: string
         }
@@ -1483,6 +1800,13 @@ export type Database = {
           {
             foreignKeyName: "reports_reporter_id_fkey"
             columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_target_owner_id_fkey"
+            columns: ["target_owner_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -1556,6 +1880,102 @@ export type Database = {
           {
             foreignKeyName: "sanctions_revoked_by_fkey"
             columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_ticket_messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          sender_id: string
+          ticket_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          sender_id: string
+          ticket_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          sender_id?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_ticket_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_ticket_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_tickets: {
+        Row: {
+          assigned_to: string | null
+          category: Database["public"]["Enums"]["support_ticket_category"]
+          created_at: string
+          id: string
+          last_message_at: string
+          priority: Database["public"]["Enums"]["support_ticket_priority"]
+          requester_id: string
+          resolved_at: string | null
+          status: Database["public"]["Enums"]["support_ticket_status"]
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          category: Database["public"]["Enums"]["support_ticket_category"]
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          priority?: Database["public"]["Enums"]["support_ticket_priority"]
+          requester_id: string
+          resolved_at?: string | null
+          status?: Database["public"]["Enums"]["support_ticket_status"]
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          category?: Database["public"]["Enums"]["support_ticket_category"]
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          priority?: Database["public"]["Enums"]["support_ticket_priority"]
+          requester_id?: string
+          resolved_at?: string | null
+          status?: Database["public"]["Enums"]["support_ticket_status"]
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_tickets_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_requester_id_fkey"
+            columns: ["requester_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -1656,26 +2076,47 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      complete_own_onboarding: {
-        Args: Record<PropertyKey, never>
+      archive_community: {
+        Args: { p_community_id: string }
         Returns: {
+          archived_at: string | null
           avatar_path: string | null
-          bio: string | null
-          birth_date: string | null
-          church: string | null
-          city: string | null
+          category: string
+          cover_path: string | null
           created_at: string
-          full_name: string | null
+          description: string
           id: string
-          onboarding_completed_at: string | null
-          onboarding_step: number
-          state_code: string | null
+          name: string
+          owner_id: string | null
+          slug: string
           updated_at: string
-          username: string | null
+          visibility: Database["public"]["Enums"]["community_visibility"]
         }
         SetofOptions: {
           from: "*"
-          to: "profiles"
+          to: "communities"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      ban_community_member: {
+        Args: {
+          p_community_id: string
+          p_profile_id: string
+          p_reason?: string
+        }
+        Returns: {
+          community_id: string
+          created_at: string
+          joined_at: string | null
+          profile_id: string
+          role: Database["public"]["Enums"]["community_role"]
+          status: Database["public"]["Enums"]["community_membership_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "community_memberships"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -1696,29 +2137,32 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      clear_conversation_for_me: {
-        Args: { p_conversation_id: string }
+      cancel_account_lifecycle: {
+        Args: { p_request_id: string }
         Returns: {
-          archived_at: string | null
-          cleared_before: string | null
-          conversation_id: string
-          created_at: string
-          favorited_at: string | null
-          muted_until: string | null
-          notifications_enabled: boolean
-          profile_id: string
-          read_receipts_enabled: boolean
+          cancelled_at: string | null
+          completed_at: string | null
+          execute_after: string
+          id: string
+          kind: Database["public"]["Enums"]["account_lifecycle_kind"]
+          requested_at: string
+          status: Database["public"]["Enums"]["account_lifecycle_status"]
           updated_at: string
+          user_id: string
         }
         SetofOptions: {
           from: "*"
-          to: "conversation_preferences"
+          to: "account_lifecycle_requests"
           isOneToOne: true
           isSetofReturn: false
         }
       }
-      cancel_account_lifecycle: {
-        Args: { p_request_id: string }
+      claim_account_lifecycle_request: {
+        Args: {
+          p_kind: Database["public"]["Enums"]["account_lifecycle_kind"]
+          p_request_id?: string
+          p_user_id?: string
+        }
         Returns: {
           cancelled_at: string | null
           completed_at: string | null
@@ -1757,12 +2201,184 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      claim_orphan_media_upload_cleanup: {
+        Args: { p_bucket_id: string; p_object_path: string }
+        Returns: boolean
+      }
+      claim_support_ticket: {
+        Args: { p_ticket_id: string }
+        Returns: {
+          assigned_to: string | null
+          category: Database["public"]["Enums"]["support_ticket_category"]
+          created_at: string
+          id: string
+          last_message_at: string
+          priority: Database["public"]["Enums"]["support_ticket_priority"]
+          requester_id: string
+          resolved_at: string | null
+          status: Database["public"]["Enums"]["support_ticket_status"]
+          subject: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "support_tickets"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      cleanup_actor_rate_limit_windows: {
+        Args: { p_limit?: number }
+        Returns: number
+      }
+      clear_conversation_for_me: {
+        Args: { p_conversation_id: string }
+        Returns: {
+          archived_at: string | null
+          cleared_before: string | null
+          conversation_id: string
+          created_at: string
+          favorited_at: string | null
+          muted_until: string | null
+          notifications_enabled: boolean
+          profile_id: string
+          read_receipts_enabled: boolean
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "conversation_preferences"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      close_group_conversation: {
+        Args: { p_conversation_id: string }
+        Returns: {
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string
+          created_by: string | null
+          direct_user_high: string | null
+          direct_user_low: string | null
+          id: string
+          kind: Database["public"]["Enums"]["conversation_kind"]
+          title: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "conversations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      complete_account_export_cleanup: {
+        Args: { p_artifact_id: string }
+        Returns: undefined
+      }
+      complete_account_lifecycle_request: {
+        Args: { p_metadata?: Json; p_request_id: string }
+        Returns: {
+          cancelled_at: string | null
+          completed_at: string | null
+          execute_after: string
+          id: string
+          kind: Database["public"]["Enums"]["account_lifecycle_kind"]
+          requested_at: string
+          status: Database["public"]["Enums"]["account_lifecycle_status"]
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "account_lifecycle_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      complete_community_branding_cleanup: {
+        Args: { p_cleanup_id: string; p_cleanup_kind: string }
+        Returns: undefined
+      }
+      complete_message_attachment_cleanup: {
+        Args: { p_attachment_id: string }
+        Returns: undefined
+      }
+      complete_orphan_media_upload_cleanup: {
+        Args: { p_bucket_id: string; p_object_path: string }
+        Returns: undefined
+      }
+      complete_own_onboarding: {
+        Args: never
+        Returns: {
+          avatar_path: string | null
+          bio: string | null
+          birth_date: string | null
+          church: string | null
+          city: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          onboarding_completed_at: string | null
+          onboarding_step: number
+          state_code: string | null
+          updated_at: string
+          username: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      complete_post_media_cleanup: {
+        Args: { p_media_id: string }
+        Returns: undefined
+      }
       complete_profile_media_cleanup: {
         Args: { p_media_id: string }
         Returns: undefined
       }
+      complete_report_evidence_cleanup: {
+        Args: { p_evidence_id: string }
+        Returns: undefined
+      }
+      complete_report_target_attachment_cleanup: {
+        Args: { p_attachment_id: string }
+        Returns: undefined
+      }
+      create_account_export_artifact: {
+        Args: {
+          p_byte_size: number
+          p_expires_at: string
+          p_object_path: string
+          p_request_id: string
+          p_sha256: string
+          p_user_id: string
+        }
+        Returns: {
+          bucket_id: string
+          byte_size: number
+          created_at: string
+          expires_at: string
+          id: string
+          object_path: string
+          request_id: string
+          sha256: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "account_export_artifacts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_community: {
         Args: {
+          p_category?: string
           p_description?: string
           p_name: string
           p_slug: string
@@ -1771,6 +2387,7 @@ export type Database = {
         Returns: {
           archived_at: string | null
           avatar_path: string | null
+          category: string
           cover_path: string | null
           created_at: string
           description: string
@@ -1791,6 +2408,8 @@ export type Database = {
       create_group_conversation: {
         Args: { p_member_ids: string[]; p_title: string }
         Returns: {
+          closed_at: string | null
+          closed_by: string | null
           created_at: string
           created_by: string | null
           direct_user_high: string | null
@@ -1815,22 +2434,61 @@ export type Database = {
           p_target_type: Database["public"]["Enums"]["report_target_type"]
         }
         Returns: {
-          assigned_to: string | null
+          assigned_to: string
           category: string
           created_at: string
-          details: string | null
+          details: string
           id: string
           reporter_id: string
-          resolution: string | null
-          resolved_at: string | null
+          resolution: string
+          resolved_at: string
           status: Database["public"]["Enums"]["report_status"]
           target_id: string
           target_type: Database["public"]["Enums"]["report_target_type"]
           updated_at: string
+        }[]
+      }
+      create_support_ticket: {
+        Args: {
+          p_category: Database["public"]["Enums"]["support_ticket_category"]
+          p_message: string
+          p_subject: string
+        }
+        Returns: {
+          assigned_to: string | null
+          category: Database["public"]["Enums"]["support_ticket_category"]
+          created_at: string
+          id: string
+          last_message_at: string
+          priority: Database["public"]["Enums"]["support_ticket_priority"]
+          requester_id: string
+          resolved_at: string | null
+          status: Database["public"]["Enums"]["support_ticket_status"]
+          subject: string
+          updated_at: string
         }
         SetofOptions: {
           from: "*"
-          to: "reports"
+          to: "support_tickets"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      delete_community_rule: {
+        Args: { p_rule_id: string }
+        Returns: {
+          community_id: string
+          created_at: string
+          created_by: string | null
+          description: string
+          id: string
+          sort_order: number
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "community_rules"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -1879,6 +2537,26 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      fail_account_lifecycle_request: {
+        Args: { p_error_code: string; p_request_id: string }
+        Returns: {
+          cancelled_at: string | null
+          completed_at: string | null
+          execute_after: string
+          id: string
+          kind: Database["public"]["Enums"]["account_lifecycle_kind"]
+          requested_at: string
+          status: Database["public"]["Enums"]["account_lifecycle_status"]
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "account_lifecycle_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       favorite_payload_is_valid: {
         Args: {
           candidate: Json
@@ -1887,6 +2565,30 @@ export type Database = {
           maximum_items: number
         }
         Returns: boolean
+      }
+      finalize_post_media: {
+        Args: { p_media_id: string }
+        Returns: {
+          bucket_id: string
+          byte_size: number
+          created_at: string
+          height: number | null
+          id: string
+          mime_type: string
+          object_path: string
+          owner_id: string
+          post_id: string
+          sort_order: number
+          status: Database["public"]["Enums"]["media_processing_status"]
+          updated_at: string
+          width: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "post_media"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       finalize_profile_media: {
         Args: { p_media_id: string }
@@ -1908,6 +2610,99 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "profile_media"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      finalize_validated_community_branding: {
+        Args: { p_media_id: string; p_owner_id: string }
+        Returns: {
+          bucket_id: string
+          byte_size: number
+          community_id: string
+          created_at: string
+          height: number
+          id: string
+          mime_type: string
+          object_path: string
+          owner_id: string
+          purpose: string
+          status: Database["public"]["Enums"]["media_processing_status"]
+          updated_at: string
+          width: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "community_branding_media"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      finalize_validated_post_media: {
+        Args: { p_media_id: string; p_owner_id: string }
+        Returns: {
+          bucket_id: string
+          byte_size: number
+          created_at: string
+          height: number | null
+          id: string
+          mime_type: string
+          object_path: string
+          owner_id: string
+          post_id: string
+          sort_order: number
+          status: Database["public"]["Enums"]["media_processing_status"]
+          updated_at: string
+          width: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "post_media"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      finalize_validated_profile_media: {
+        Args: { p_media_id: string; p_profile_id: string }
+        Returns: {
+          bucket_id: string
+          byte_size: number
+          created_at: string
+          height: number
+          id: string
+          mime_type: string
+          object_path: string
+          profile_id: string
+          purpose: Database["public"]["Enums"]["profile_media_purpose"]
+          sort_order: number
+          status: Database["public"]["Enums"]["media_processing_status"]
+          updated_at: string
+          width: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "profile_media"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      finalize_validated_report_evidence: {
+        Args: { p_evidence_id: string; p_owner_id: string }
+        Returns: {
+          bucket_id: string
+          byte_size: number
+          created_at: string
+          id: string
+          mime_type: string
+          object_path: string
+          report_id: string
+          retention_until: string
+          status: Database["public"]["Enums"]["media_processing_status"]
+          uploader_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "report_evidence"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -1938,10 +2733,95 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      get_community_discovery: {
+        Args: { p_community_id: string }
+        Returns: {
+          active_member_count: number
+          active_post_count: number
+          avatar_path: string
+          category: string
+          community_id: string
+          cover_path: string
+          description: string
+          name: string
+          slug: string
+          visibility: Database["public"]["Enums"]["community_visibility"]
+        }[]
+      }
+      get_home_dashboard_summary: {
+        Args: { p_recent_limit?: number }
+        Returns: Json
+      }
+      get_moderation_report_attachment: {
+        Args: { p_attachment_id: string; p_report_id: string }
+        Returns: {
+          attachment_id: string
+          bucket_id: string
+          byte_size: number
+          duration_seconds: number
+          height: number
+          mime_type: string
+          object_path: string
+          source_kind: string
+          waveform: Json
+          width: number
+        }[]
+      }
+      get_moderation_report_context: {
+        Args: { p_report_id: string }
+        Returns: {
+          attachment_ids: string[]
+          content_created_at: string
+          content_kind: string
+          content_text: string
+          report_id: string
+          target_id: string
+          target_owner_id: string
+          target_type: Database["public"]["Enums"]["report_target_type"]
+        }[]
+      }
+      get_own_account_status: {
+        Args: never
+        Returns: {
+          access_enabled: boolean
+          effective_status: Database["public"]["Enums"]["profile_account_status"]
+          recorded_status: Database["public"]["Enums"]["profile_account_status"]
+          restricted_until: string
+        }[]
+      }
+      get_own_blocked_profile_by_username: {
+        Args: { p_username: string }
+        Returns: {
+          avatar_path: string
+          block_id: string
+          blocked_profile_id: string
+          full_name: string
+          username: string
+        }[]
+      }
+      get_visible_community_post: {
+        Args: { p_post_id: string }
+        Returns: {
+          author_avatar_path: string
+          author_full_name: string
+          author_id: string
+          author_username: string
+          body: string
+          comment_count: number
+          community_id: string
+          created_at: string
+          post_id: string
+          reaction_count: number
+          status: Database["public"]["Enums"]["content_status"]
+          updated_at: string
+          viewer_reaction: Database["public"]["Enums"]["reaction_kind"]
+          visibility: Database["public"]["Enums"]["content_visibility"]
+        }[]
+      }
       get_visible_profile_age: {
         Args: { p_profile_id: string }
         Returns: {
-          age_years: number | null
+          age_years: number
           can_view_age: boolean
           profile_id: string
         }[]
@@ -1999,6 +2879,10 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      is_report_target_attachment_retained: {
+        Args: { p_bucket_id: string; p_object_path: string }
+        Returns: boolean
+      }
       join_community: {
         Args: { p_community_id: string }
         Returns: {
@@ -2035,6 +2919,116 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      leave_group_conversation: {
+        Args: { p_conversation_id: string }
+        Returns: {
+          conversation_id: string
+          created_at: string
+          joined_at: string | null
+          profile_id: string
+          role: Database["public"]["Enums"]["conversation_member_role"]
+          status: Database["public"]["Enums"]["conversation_member_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "conversation_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      list_account_deletion_reconciliation: {
+        Args: { p_limit?: number }
+        Returns: {
+          content_prepared_at: string | null
+          request_id: string
+          started_at: string
+          storage_object_count: number
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "account_deletion_tombstones"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      list_account_export_cleanup: {
+        Args: { p_limit?: number }
+        Returns: {
+          bucket_id: string
+          byte_size: number
+          created_at: string
+          expires_at: string
+          id: string
+          object_path: string
+          request_id: string
+          sha256: string
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "account_export_artifacts"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      list_community_branding_cleanup: {
+        Args: { p_limit?: number }
+        Returns: {
+          bucket_id: string
+          cleanup_id: string
+          cleanup_kind: string
+          object_path: string
+        }[]
+      }
+      list_message_attachment_cleanup: {
+        Args: { p_limit?: number }
+        Returns: {
+          attachment_id: string
+          bucket_id: string
+          delete_object: boolean
+          object_path: string
+        }[]
+      }
+      list_orphan_media_cleanup_reconciliation: {
+        Args: { p_limit?: number }
+        Returns: {
+          bucket_id: string
+          object_path: string
+        }[]
+      }
+      list_orphan_media_upload_cleanup: {
+        Args: { p_limit?: number }
+        Returns: {
+          bucket_id: string
+          object_path: string
+        }[]
+      }
+      list_post_media_cleanup: {
+        Args: { p_limit?: number }
+        Returns: {
+          bucket_id: string
+          byte_size: number
+          created_at: string
+          height: number | null
+          id: string
+          mime_type: string
+          object_path: string
+          owner_id: string
+          post_id: string
+          sort_order: number
+          status: Database["public"]["Enums"]["media_processing_status"]
+          updated_at: string
+          width: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "post_media"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       list_profile_media_cleanup: {
         Args: { p_limit?: number }
         Returns: {
@@ -2058,6 +3052,84 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      list_report_evidence_cleanup: {
+        Args: { p_limit?: number }
+        Returns: {
+          bucket_id: string
+          byte_size: number
+          created_at: string
+          id: string
+          mime_type: string
+          object_path: string
+          report_id: string
+          retention_until: string
+          status: Database["public"]["Enums"]["media_processing_status"]
+          uploader_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "report_evidence"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      list_report_target_attachment_cleanup: {
+        Args: { p_limit?: number }
+        Returns: {
+          attachment_id: string
+          bucket_id: string
+          delete_object: boolean
+          object_path: string
+        }[]
+      }
+      list_support_ticket_messages: {
+        Args: {
+          p_before_created_at?: string
+          p_before_id?: string
+          p_limit?: number
+          p_ticket_id: string
+        }
+        Returns: {
+          body: string
+          created_at: string
+          id: string
+          sender_avatar_path: string
+          sender_id: string
+          sender_name: string
+          ticket_id: string
+        }[]
+      }
+      list_support_tickets: {
+        Args: {
+          p_before_activity?: string
+          p_before_id?: string
+          p_limit?: number
+          p_status?: Database["public"]["Enums"]["support_ticket_status"]
+        }
+        Returns: {
+          assigned_to: string
+          assignee_full_name: string
+          category: Database["public"]["Enums"]["support_ticket_category"]
+          created_at: string
+          id: string
+          last_message_at: string
+          priority: Database["public"]["Enums"]["support_ticket_priority"]
+          requester_avatar_path: string
+          requester_full_name: string
+          requester_id: string
+          resolved_at: string
+          status: Database["public"]["Enums"]["support_ticket_status"]
+          subject: string
+          updated_at: string
+        }[]
+      }
+      list_user_storage_objects: {
+        Args: { p_user_id: string }
+        Returns: {
+          bucket_id: string
+          object_path: string
+        }[]
       }
       mark_message_delivered: {
         Args: { p_message_id: string }
@@ -2093,6 +3165,99 @@ export type Database = {
         Args: { p_notification_ids?: string[] }
         Returns: number
       }
+      prepare_account_deletion: {
+        Args: { p_request_id: string }
+        Returns: Json
+      }
+      reconcile_expired_profile_restrictions: {
+        Args: { p_limit?: number }
+        Returns: {
+          created_at: string
+          profile_id: string
+          public_reason: string | null
+          restricted_until: string | null
+          status: Database["public"]["Enums"]["profile_account_status"]
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "profile_moderation_state"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      record_account_deletion_completed: {
+        Args: {
+          p_request_id: string
+          p_storage_object_count: number
+          p_user_id: string
+        }
+        Returns: undefined
+      }
+      record_account_deletion_started: {
+        Args: { p_request_id: string; p_storage_object_count: number }
+        Returns: string
+      }
+      record_account_lifecycle_retry: {
+        Args: { p_error_code: string; p_request_id: string }
+        Returns: {
+          cancelled_at: string | null
+          completed_at: string | null
+          execute_after: string
+          id: string
+          kind: Database["public"]["Enums"]["account_lifecycle_kind"]
+          requested_at: string
+          status: Database["public"]["Enums"]["account_lifecycle_status"]
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "account_lifecycle_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      reject_community_branding_validation: {
+        Args: { p_media_id: string; p_owner_id: string; p_reason_code: string }
+        Returns: undefined
+      }
+      reject_media_validation: {
+        Args: {
+          p_media_id: string
+          p_owner_id: string
+          p_reason_code: string
+          p_scope: string
+        }
+        Returns: undefined
+      }
+      reject_report_evidence_validation: {
+        Args: {
+          p_evidence_id: string
+          p_owner_id: string
+          p_reason_code: string
+        }
+        Returns: undefined
+      }
+      remove_community_post: {
+        Args: { p_post_id: string }
+        Returns: {
+          author_id: string | null
+          body: string
+          community_id: string | null
+          created_at: string
+          id: string
+          status: Database["public"]["Enums"]["content_status"]
+          updated_at: string
+          visibility: Database["public"]["Enums"]["content_visibility"]
+        }
+        SetofOptions: {
+          from: "*"
+          to: "community_posts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       remove_friendship: { Args: { friendship_id: string }; Returns: undefined }
       remove_group_member: {
         Args: { p_conversation_id: string; p_profile_id: string }
@@ -2108,6 +3273,49 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "conversation_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      remove_post_comment: {
+        Args: { p_comment_id: string }
+        Returns: {
+          author_id: string | null
+          body: string
+          created_at: string
+          id: string
+          parent_comment_id: string | null
+          post_id: string
+          status: Database["public"]["Enums"]["content_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "post_comments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      remove_post_media: {
+        Args: { p_media_id: string }
+        Returns: {
+          bucket_id: string
+          byte_size: number
+          created_at: string
+          height: number | null
+          id: string
+          mime_type: string
+          object_path: string
+          owner_id: string
+          post_id: string
+          sort_order: number
+          status: Database["public"]["Enums"]["media_processing_status"]
+          updated_at: string
+          width: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "post_media"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -2158,6 +3366,22 @@ export type Database = {
           to: "profile_media"
           isOneToOne: false
           isSetofReturn: true
+        }
+      }
+      reply_support_ticket: {
+        Args: { p_message: string; p_ticket_id: string }
+        Returns: {
+          body: string
+          created_at: string
+          id: string
+          sender_id: string
+          ticket_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "support_ticket_messages"
+          isOneToOne: true
+          isSetofReturn: false
         }
       }
       request_account_lifecycle: {
@@ -2220,6 +3444,70 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      reserve_community_branding_media: {
+        Args: {
+          p_byte_size: number
+          p_community_id: string
+          p_height: number
+          p_mime_type: string
+          p_object_path: string
+          p_purpose: string
+          p_width: number
+        }
+        Returns: {
+          bucket_id: string
+          byte_size: number
+          community_id: string
+          created_at: string
+          height: number
+          id: string
+          mime_type: string
+          object_path: string
+          owner_id: string
+          purpose: string
+          status: Database["public"]["Enums"]["media_processing_status"]
+          updated_at: string
+          width: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "community_branding_media"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      reserve_post_media: {
+        Args: {
+          p_byte_size: number
+          p_height: number
+          p_mime_type: string
+          p_object_path: string
+          p_post_id: string
+          p_sort_order: number
+          p_width: number
+        }
+        Returns: {
+          bucket_id: string
+          byte_size: number
+          created_at: string
+          height: number | null
+          id: string
+          mime_type: string
+          object_path: string
+          owner_id: string
+          post_id: string
+          sort_order: number
+          status: Database["public"]["Enums"]["media_processing_status"]
+          updated_at: string
+          width: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "post_media"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       reserve_profile_media: {
         Args: {
           p_byte_size: number
@@ -2246,6 +3534,32 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "profile_media"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      reserve_report_evidence: {
+        Args: {
+          p_byte_size: number
+          p_mime_type: string
+          p_object_path: string
+          p_report_id: string
+        }
+        Returns: {
+          bucket_id: string
+          byte_size: number
+          created_at: string
+          id: string
+          mime_type: string
+          object_path: string
+          report_id: string
+          retention_until: string
+          status: Database["public"]["Enums"]["media_processing_status"]
+          uploader_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "report_evidence"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -2327,6 +3641,32 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      search_discoverable_interests: {
+        Args: { p_limit?: number; p_offset?: number; p_search?: string }
+        Returns: {
+          interest: string
+          profile_count: number
+        }[]
+      }
+      search_discoverable_posts: {
+        Args: { p_limit?: number; p_offset?: number; p_search?: string }
+        Returns: {
+          author_avatar_path: string
+          author_id: string
+          author_name: string
+          author_username: string
+          body: string
+          comment_count: number
+          community_id: string
+          community_name: string
+          community_slug: string
+          created_at: string
+          media_count: number
+          post_id: string
+          reaction_count: number
+          viewer_reaction: Database["public"]["Enums"]["reaction_kind"]
+        }[]
+      }
       search_visible_profiles: {
         Args: { page_offset?: number; page_size?: number; search_term?: string }
         Returns: {
@@ -2358,32 +3698,6 @@ export type Database = {
           weekend_preferences: string[]
         }[]
       }
-      search_discoverable_interests: {
-        Args: { p_limit?: number; p_offset?: number; p_search?: string }
-        Returns: {
-          interest: string
-          profile_count: number
-        }[]
-      }
-      search_discoverable_posts: {
-        Args: { p_limit?: number; p_offset?: number; p_search?: string }
-        Returns: {
-          author_avatar_path: string | null
-          author_id: string
-          author_name: string
-          author_username: string
-          body: string
-          comment_count: number
-          community_id: string | null
-          community_name: string | null
-          community_slug: string | null
-          created_at: string
-          media_count: number
-          post_id: string
-          reaction_count: number
-          viewer_reaction: Database["public"]["Enums"]["reaction_kind"] | null
-        }[]
-      }
       send_message: {
         Args: {
           p_body?: string
@@ -2412,24 +3726,60 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      set_group_member_role: {
+      send_validated_message_media: {
         Args: {
+          p_body: string
+          p_byte_size: number
+          p_client_message_id: string
           p_conversation_id: string
-          p_profile_id: string
-          p_role: Database["public"]["Enums"]["conversation_member_role"]
+          p_duration_seconds?: number
+          p_height?: number
+          p_kind: Database["public"]["Enums"]["message_kind"]
+          p_mime_type: string
+          p_object_path: string
+          p_owner_id: string
+          p_reply_to_message_id: string
+          p_waveform?: Json
+          p_width?: number
         }
         Returns: {
+          body: string | null
+          client_message_id: string | null
           conversation_id: string
+          created_at: string
+          deleted_at: string | null
+          edited_at: string | null
+          forwarded_from_message_id: string | null
+          id: string
+          kind: Database["public"]["Enums"]["message_kind"]
+          reply_to_message_id: string | null
+          sender_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "messages"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_community_member_role: {
+        Args: {
+          p_community_id: string
+          p_profile_id: string
+          p_role: Database["public"]["Enums"]["community_role"]
+        }
+        Returns: {
+          community_id: string
           created_at: string
           joined_at: string | null
           profile_id: string
-          role: Database["public"]["Enums"]["conversation_member_role"]
-          status: Database["public"]["Enums"]["conversation_member_status"]
+          role: Database["public"]["Enums"]["community_role"]
+          status: Database["public"]["Enums"]["community_membership_status"]
           updated_at: string
         }
         SetofOptions: {
           from: "*"
-          to: "conversation_members"
+          to: "community_memberships"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -2455,6 +3805,28 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      set_group_member_role: {
+        Args: {
+          p_conversation_id: string
+          p_profile_id: string
+          p_role: Database["public"]["Enums"]["conversation_member_role"]
+        }
+        Returns: {
+          conversation_id: string
+          created_at: string
+          joined_at: string | null
+          profile_id: string
+          role: Database["public"]["Enums"]["conversation_member_role"]
+          status: Database["public"]["Enums"]["conversation_member_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "conversation_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       text_array_payload_is_valid: {
         Args: {
           candidate_values: string[]
@@ -2463,6 +3835,77 @@ export type Database = {
           maximum_items: number
         }
         Returns: boolean
+      }
+      transfer_group_ownership: {
+        Args: { p_conversation_id: string; p_new_owner_id: string }
+        Returns: {
+          conversation_id: string
+          created_at: string
+          joined_at: string | null
+          profile_id: string
+          role: Database["public"]["Enums"]["conversation_member_role"]
+          status: Database["public"]["Enums"]["conversation_member_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "conversation_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      unban_community_member: {
+        Args: { p_community_id: string; p_profile_id: string }
+        Returns: {
+          community_id: string
+          created_at: string
+          joined_at: string | null
+          profile_id: string
+          role: Database["public"]["Enums"]["community_role"]
+          status: Database["public"]["Enums"]["community_membership_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "community_memberships"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      unblock_profile: {
+        Args: { p_target_profile_id: string }
+        Returns: undefined
+      }
+      update_community_details: {
+        Args: {
+          p_avatar_path?: string
+          p_category: string
+          p_community_id: string
+          p_cover_path?: string
+          p_description: string
+          p_name: string
+          p_visibility: Database["public"]["Enums"]["community_visibility"]
+        }
+        Returns: {
+          archived_at: string | null
+          avatar_path: string | null
+          category: string
+          cover_path: string | null
+          created_at: string
+          description: string
+          id: string
+          name: string
+          owner_id: string | null
+          slug: string
+          updated_at: string
+          visibility: Database["public"]["Enums"]["community_visibility"]
+        }
+        SetofOptions: {
+          from: "*"
+          to: "communities"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       update_own_profile_details: {
         Args: { p_patch: Json }
@@ -2492,9 +3935,56 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      unblock_profile: {
-        Args: { p_target_profile_id: string }
-        Returns: undefined
+      update_support_ticket_state: {
+        Args: {
+          p_priority: Database["public"]["Enums"]["support_ticket_priority"]
+          p_status: Database["public"]["Enums"]["support_ticket_status"]
+          p_ticket_id: string
+        }
+        Returns: {
+          assigned_to: string | null
+          category: Database["public"]["Enums"]["support_ticket_category"]
+          created_at: string
+          id: string
+          last_message_at: string
+          priority: Database["public"]["Enums"]["support_ticket_priority"]
+          requester_id: string
+          resolved_at: string | null
+          status: Database["public"]["Enums"]["support_ticket_status"]
+          subject: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "support_tickets"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      upsert_community_rule: {
+        Args: {
+          p_community_id: string
+          p_description: string
+          p_rule_id?: string
+          p_sort_order: number
+          p_title: string
+        }
+        Returns: {
+          community_id: string
+          created_at: string
+          created_by: string | null
+          description: string
+          id: string
+          sort_order: number
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "community_rules"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       username_is_available: { Args: { candidate: string }; Returns: boolean }
     }
@@ -2542,6 +4032,15 @@ export type Database = {
         | "community_post"
         | "post_comment"
         | "message"
+      support_ticket_category:
+        | "account"
+        | "access"
+        | "security"
+        | "privacy"
+        | "technical"
+        | "other"
+      support_ticket_priority: "low" | "normal" | "high" | "urgent"
+      support_ticket_status: "open" | "in_progress" | "resolved"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2557,12 +4056,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2586,11 +4085,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2611,11 +4110,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2636,11 +4135,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2653,11 +4152,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2719,6 +4218,16 @@ export const Constants = {
         "post_comment",
         "message",
       ],
+      support_ticket_category: [
+        "account",
+        "access",
+        "security",
+        "privacy",
+        "technical",
+        "other",
+      ],
+      support_ticket_priority: ["low", "normal", "high", "urgent"],
+      support_ticket_status: ["open", "in_progress", "resolved"],
     },
   },
 } as const

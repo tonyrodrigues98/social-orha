@@ -24,7 +24,9 @@ expected_migrations(version) as (
     ('20260914060000'),
     ('20260914070000'),
     ('20260914080000'),
-    ('20260914090000')
+    ('20260914090000'),
+    ('20260914100000'),
+    ('20260914101000')
 ),
 missing_migrations as (
   select expected.version
@@ -72,7 +74,9 @@ expected_tables(table_name) as (
     ('community_branding_media'),
     ('community_branding_cleanup'),
     ('orphan_media_cleanup_claims'),
-    ('report_target_attachments')
+    ('report_target_attachments'),
+    ('support_tickets'),
+    ('support_ticket_messages')
 ),
 missing_tables as (
   select expected.table_name
@@ -149,7 +153,9 @@ expected_realtime_tables(table_name) as (
     ('message_reactions'),
     ('message_attachments'),
     ('message_receipts'),
-    ('notifications')
+    ('notifications'),
+    ('support_tickets'),
+    ('support_ticket_messages')
 ),
 missing_realtime_tables as (
   select expected.table_name
@@ -226,7 +232,13 @@ expected_functions(function_signature) as (
     ('public.update_own_profile_details(jsonb)'),
     ('public.get_visible_profile_age(uuid)'),
     ('public.get_home_dashboard_summary(integer)'),
-    ('public.cleanup_actor_rate_limit_windows(integer)')
+    ('public.cleanup_actor_rate_limit_windows(integer)'),
+    ('public.create_support_ticket(text,public.support_ticket_category,text)'),
+    ('public.reply_support_ticket(uuid,text)'),
+    ('public.claim_support_ticket(uuid)'),
+    ('public.update_support_ticket_state(uuid,public.support_ticket_status,public.support_ticket_priority)'),
+    ('public.list_support_tickets(public.support_ticket_status,integer,timestamptz,uuid)'),
+    ('public.list_support_ticket_messages(uuid,integer,timestamptz,uuid)')
 ),
 missing_functions as (
   select function_signature
@@ -324,6 +336,30 @@ onboarding_completion_contract as (
       'public.profiles',
       'onboarding_completed_at',
       'UPDATE'
+    ) as present
+),
+support_operations_contract as (
+  select
+    to_regprocedure('private.is_support_operator(uuid)') is not null
+    and to_regprocedure('private.can_access_support_ticket(uuid,uuid)') is not null
+    and (
+      select count(*) = 2
+      from pg_policies
+      where schemaname = 'public'
+        and tablename in ('support_tickets', 'support_ticket_messages')
+    )
+    and not has_table_privilege('authenticated', 'public.support_tickets', 'INSERT')
+    and not has_table_privilege('authenticated', 'public.support_tickets', 'UPDATE')
+    and not has_table_privilege('authenticated', 'public.support_ticket_messages', 'INSERT')
+    and exists (
+      select 1
+      from private.actor_rate_limit_policies
+      where action = 'support_ticket_create'
+    )
+    and exists (
+      select 1
+      from private.actor_rate_limit_policies
+      where action = 'support_ticket_reply'
     ) as present
 ),
 username_unique_index as (
@@ -489,6 +525,16 @@ checks(check_order, check_name, passed, details) as (
       when (select present from onboarding_completion_contract)
         then 'onboarding completion is authenticated, RPC-only, and server-authoritative'
       else 'onboarding completion RPC or least-privilege grants are incomplete'
+    end
+  union all
+  select
+    180,
+    'support_operations_contract',
+    (select present from support_operations_contract),
+    case
+      when (select present from support_operations_contract)
+        then 'support tickets are persistent, RLS-protected, RPC-only, rate-limited, and operator-scoped'
+      else 'support tables, policies, RPC authority, or abuse controls are incomplete'
     end
 )
 select check_name, passed, details

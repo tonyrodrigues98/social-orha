@@ -2,12 +2,14 @@ import type { ExploreRepository } from "@/domains/explore";
 import type { MessagingServices } from "@/domains/messaging";
 import type { NotificationRepository } from "@/domains/notifications";
 import type { SocialRepository } from "@/domains/social";
+import type { SupportRepository } from "@/domains/support";
 import type { TrustRepository } from "@/domains/trust";
 import { getSupabaseClient } from "@/infrastructure/supabase/client";
 import { createSupabaseExploreRepository } from "@/infrastructure/supabase/explore";
 import { createSupabaseMessagingServices } from "@/infrastructure/supabase/messaging";
 import { SupabaseNotificationRepository } from "@/infrastructure/supabase/notifications";
 import { createSupabaseSocialRepository } from "@/infrastructure/supabase/social";
+import { createSupabaseSupportRepository } from "@/infrastructure/supabase/support";
 import { SupabaseTrustRepository } from "@/infrastructure/supabase/trust";
 
 export type AppRuntimeAdapters = {
@@ -15,6 +17,7 @@ export type AppRuntimeAdapters = {
   social: SocialRepository;
   notifications: NotificationRepository;
   trust: TrustRepository;
+  support: SupportRepository;
   messaging: MessagingServices;
 };
 
@@ -25,6 +28,7 @@ export function createSupabaseAppRuntimeAdapters(): AppRuntimeAdapters {
     social: createSupabaseSocialRepository(client),
     notifications: new SupabaseNotificationRepository(client),
     trust: new SupabaseTrustRepository(client),
+    support: createSupabaseSupportRepository(client),
     messaging: createSupabaseMessagingServices(client),
   };
 }

@@ -8,7 +8,7 @@ Produção Supabase: `iuaczhkfmwpyhtpdmuyt`
 
 ## Veredito
 
-A ORHA não é mais somente um protótipo na branch de lançamento: existe uma base de produção ampla, integrada ao Supabase, com rotas reais, repositories reais, schema social, RLS, Storage, Realtime e uma suíte de testes relevante. O staging possui 17 migrations aplicadas, 38 tabelas públicas com RLS, cinco buckets privados, 14 tabelas publicadas no Realtime, lint hospedado sem erros, gate estrutural 20/20 e matriz RLS transacional aprovada.
+A ORHA não é mais somente um protótipo na branch de lançamento: existe uma base de produção ampla, integrada ao Supabase, com rotas reais, repositories reais, schema social, RLS, Storage, Realtime e uma suíte de testes relevante. O staging possui 19 migrations aplicadas, 40 tabelas públicas com RLS, cinco buckets privados, 16 tabelas publicadas no Realtime, lint hospedado sem erros, gate estrutural 21/21 e matrizes RLS/onboarding/suporte transacionais aprovadas.
 
 Mesmo assim, a ORHA **ainda não atende à Definition of Done para lançamento em massa**. Os bloqueadores não são cosméticos: o deploy público ainda executa a `main` legada com `PrototypeProvider` e seeds; deep links retornam HTTP 404; a jornada E2E real não pode iniciar por falta de ambiente/secrets; e os serviços externos obrigatórios de Auth, e-mail, domínio e operação ainda não foram comprovados. As cinco Edge Functions já estão ativas no staging, os dois erros SQL foram corrigidos e a superfície de dependências de produção está com audit zero.
 
@@ -38,6 +38,7 @@ Portanto, a classificação correta é:
 | Home real | `src/app/pages/home-page.tsx` e `src/infrastructure/supabase/home/home-dashboard-repository.ts` usam resumo server-side, sem conteúdo falso | Implementado |
 | Explore real | `src/app/explore/*` e `src/infrastructure/supabase/explore/*` usam busca server-side de perfis, comunidades, interesses e posts | Implementado; destinos futuros estão claramente marcados como planejamento |
 | Confiança e moderação | `src/domains/trust/*`, `src/infrastructure/supabase/trust/*`, `src/app/pages/report-page.tsx` e `src/app/pages/admin-moderation-page.tsx` cobrem bloqueio, denúncia, contexto limitado, sanção e auditoria | Implementado; operação E2E pendente |
+| Suporte | `src/domains/support/*`, `src/infrastructure/supabase/support/*`, `src/app/pages/support-page.tsx` e migrations `20260914100000`/`101000` cobrem chamado, fila, resposta, atribuição, prioridade, notificação e Realtime | Implementado e validado transacionalmente no staging |
 | PWA e native-first | `vite.config.ts`, `scripts/pwa-manifest.ts`, `src/app/pwa-runtime.ts`, `src/styles/index.css` e `public/brand/*` | Build PWA aprovado |
 | Base de bibliotecas | `src/infrastructure/libraries/library-catalog.ts`, `docs/LIBRARY-INVENTORY.md`, `components.json` e `package.json` | 43 itens, 66 pacotes/fontes conferidos, cinco pacotes em quarentena sem imports de runtime |
 
@@ -45,12 +46,12 @@ Portanto, a classificação correta é:
 
 As leituras autenticadas da CLI confirmaram:
 
-- 17 migrations locais/remotas alinhadas, de `20260811040000` a `20260914090000`;
-- 38 tabelas públicas e as mesmas 38 com RLS;
+- 19 migrations locais/remotas alinhadas, de `20260811040000` a `20260914101000`;
+- 40 tabelas públicas e as mesmas 40 com RLS;
 - cinco buckets privados: `profile-media`, `community-media`, `chat-media`, `report-evidence` e `account-exports`;
-- 14 tabelas na publication `supabase_realtime`;
+- 16 tabelas na publication `supabase_realtime`;
 - PostgreSQL 17.6;
-- `scripts/supabase-validate.sql`: 20/20 verificações aprovadas;
+- `scripts/supabase-validate.sql`: 21/21 verificações aprovadas;
 - `scripts/supabase-rls-integration.sql`: matriz completa aprovada com rollback e sem fixtures residuais.
 
 Fontes versionadas: `scripts/remote-inventory.sql`, `scripts/supabase-validate.sql`, `scripts/supabase-rls-integration.sql`, `supabase/migrations/*` e `docs/ORHA_PRODUCTION_EXECUTION_STATE.md`.
@@ -61,8 +62,8 @@ Fontes versionadas: `scripts/remote-inventory.sql`, `scripts/supabase-validate.s
 |---|---|
 | `npm run typecheck` | Aprovado fora do sandbox |
 | `npm run lint` | Aprovado |
-| `npm test` | 67 arquivos e 290 testes aprovados |
-| `npm run build` | Aprovado; 5.956 módulos, manifest e service worker gerados, precache de 86 entradas |
+| `npm test` | 71 arquivos e 307 testes aprovados |
+| `npm run build` | Aprovado; 5.967 módulos, manifest e service worker gerados, precache de 97 entradas |
 | `npm run check:catalog` | Aprovado |
 | `npm run audit:production-debt` | Aprovado; zero mock, seed, TODO e localStorage; ocorrências legadas explicitamente allowlisted |
 | `npm run audit:secrets` | Aprovado |
@@ -246,13 +247,13 @@ Aceite: manter o recurso invisível no lançamento ou criar pipeline de quarente
 
 `20260914090000_atomic_onboarding_completion.sql` removeu do papel `authenticated` a escrita direta de `onboarding_completed_at` e introduziu `complete_own_onboarding()`. A RPC valida o ator, o estado efetivo da conta, 18+, username, UF, cidade, bio e nome; deriva o timestamp no servidor e preserva o primeiro valor em retries. O cliente deixou de enviar relógio local para concluir o fluxo.
 
-Evidência: ledger remoto com 17/17 migrations; lint SQL sem erros; gate estrutural 20/20; `scripts/supabase-onboarding-integration.sql` passou com rollback, rejeitando perfil incompleto, UF inválida e escrita direta da coluna, além de provar conclusão válida e idempotência.
+Evidência: ledger remoto alinhado; lint SQL sem erros; gate estrutural 21/21; `scripts/supabase-onboarding-integration.sql` passou com rollback, rejeitando perfil incompleto, UF inválida e escrita direta da coluna, além de provar conclusão válida e idempotência.
 
-### P2.4 Superfícies administrativas por papel
+### P2.4 Superfície operacional de suporte — concluída em staging; atribuição global de papéis pendente
 
-A moderação autoriza corretamente `super_admin`, `admin` e `moderator`; `support` não recebe autoridade de moderação. Ainda falta comprovar uma superfície de suporte compatível com seu papel e fluxos controlados de atribuição de roles.
+A moderação autoriza corretamente `super_admin`, `admin` e `moderator`; `support` não recebe autoridade de moderação. A rota `/suporte` reutiliza a fila chatcn e o Drawer GodUI sobre um domínio persistente separado de conversas privadas. Usuários leem apenas os próprios tickets; `support`, `admin` e `super_admin` podem listar, assumir, responder e atualizar. O gate `scripts/supabase-support-integration.sql` provou RLS, negação a outro usuário e ao moderador, escrita RPC-only, rate limits, auditoria e notificações, terminando em `ROLLBACK`.
 
-Aceite: matriz de permissões explicitada por papel, atribuição somente trusted backend, trilha de auditoria, rota de suporte mínima e testes de negação para usuário comum/suporte.
+Restante: comprovar o fluxo operacional de atribuição global de roles somente por trusted backend, com auditoria e teste negativo do navegador; não criar promoção de papel no frontend.
 
 ## P3 — pós-lançamento controlado
 

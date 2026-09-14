@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { ExploreRepositoryProvider } from "@/domains/explore";
 import { NotificationRepositoryProvider } from "@/domains/notifications";
 import { SocialRepositoryProvider } from "@/domains/social";
+import { SupportRepositoryProvider } from "@/domains/support";
 import { TrustRepositoryProvider } from "@/domains/trust";
 import { SupabaseMessagingProvider } from "@/infrastructure/supabase/messaging";
 import {
@@ -27,9 +28,11 @@ export function AppRuntimeProviders({
         <SocialRepositoryProvider repository={adapters.social}>
           <NotificationRepositoryProvider repository={adapters.notifications}>
             <TrustRepositoryProvider repository={adapters.trust}>
-              <SupabaseMessagingProvider services={adapters.messaging}>
-                {children}
-              </SupabaseMessagingProvider>
+              <SupportRepositoryProvider repository={adapters.support}>
+                <SupabaseMessagingProvider services={adapters.messaging}>
+                  {children}
+                </SupabaseMessagingProvider>
+              </SupportRepositoryProvider>
             </TrustRepositoryProvider>
           </NotificationRepositoryProvider>
         </SocialRepositoryProvider>

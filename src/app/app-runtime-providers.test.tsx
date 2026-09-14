@@ -18,6 +18,10 @@ import {
   type SocialRepository,
 } from "@/domains/social";
 import {
+  useSupportRepository,
+  type SupportRepository,
+} from "@/domains/support";
+import {
   useTrustRepository,
   type TrustRepository,
 } from "@/domains/trust";
@@ -31,6 +35,7 @@ describe("AppRuntimeProviders", () => {
       social: Object.create(null) as SocialRepository,
       notifications: Object.create(null) as NotificationRepository,
       trust: Object.create(null) as TrustRepository,
+      support: Object.create(null) as SupportRepository,
       messaging: Object.create(null) as MessagingServices,
     };
     let observed: AppRuntimeAdapters | undefined;
@@ -42,6 +47,7 @@ describe("AppRuntimeProviders", () => {
         social: useSocialRepository(),
         notifications: useNotificationRepository(),
         trust: useTrustRepository(),
+        support: useSupportRepository(),
         messaging: useMessagingServices(),
       };
       hasQueryClient = Boolean(useQueryClient());

@@ -204,6 +204,7 @@ describe("ORHA route policy", () => {
     expect(parsePostAuthRedirect("/configuracoes/privacidade")).toBe(ROUTE_PATHS.privacyPolicy);
     expect(parsePostAuthRedirect("/configuracoes/ajuda")).toBe(ROUTE_PATHS.help);
     expect(parsePostAuthRedirect("/configuracoes/contato")).toBe(ROUTE_PATHS.contact);
+    expect(parsePostAuthRedirect("/suporte")).toBe(ROUTE_PATHS.support);
     expect(parsePostAuthRedirect("/denunciar/message/123e4567-e89b-42d3-a456-426614174000")).toBe(
       "/denunciar/message/123e4567-e89b-42d3-a456-426614174000",
     );

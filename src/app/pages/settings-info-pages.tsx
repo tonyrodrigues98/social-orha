@@ -5,6 +5,7 @@ import {
   CircleHelp,
   FileText,
   HeartHandshake,
+  Headphones,
   LockKeyhole,
   Mail,
   MessageCircleWarning,
@@ -289,8 +290,9 @@ export function HelpPage({ onBack, onNavigate }: LinkedInfoPageProps) {
 
 export function ContactPage({
   onBack,
+  onOpenSupport,
   supportEmail = import.meta.env.VITE_ORHA_SUPPORT_EMAIL,
-}: SettingsInfoPageProps & { supportEmail?: string | null }) {
+}: SettingsInfoPageProps & { supportEmail?: string | null; onOpenSupport?: () => void }) {
   const normalizedEmail = normalizeSupportEmail(supportEmail);
   const mailtoHref = buildSupportMailto(normalizedEmail);
 
@@ -298,10 +300,25 @@ export function ContactPage({
     <InfoPageShell
       title="Contato"
       eyebrow="Escolha o canal correto"
-      summary="A ORHA não exibe confirmação falsa: o contato por e-mail só aparece quando há um endereço público válido para este ambiente."
+      summary="Abra um chamado persistente dentro da ORHA. O contato por e-mail só aparece quando há um endereço público válido para este ambiente."
       icon={<Mail aria-hidden size={23} />}
       onBack={onBack}
     >
+      <section className="rounded-3xl border border-violet-200 bg-violet-50 p-5">
+        <span className="grid size-11 place-items-center rounded-2xl bg-violet-700 text-white">
+          <Headphones aria-hidden size={21} />
+        </span>
+        <h2 className="mt-3 font-semibold">Atendimento dentro da ORHA</h2>
+        <p className="mt-1 text-sm leading-6 text-gray-600">
+          Seu chamado e as respostas ficam salvos na sua conta. Apenas você e a equipe autorizada de suporte podem ler a conversa.
+        </p>
+        {onOpenSupport && (
+          <Button color="primary" size="lg" className="mt-4 w-full" iconLeading={Headphones} onPress={onOpenSupport}>
+            Abrir suporte
+          </Button>
+        )}
+      </section>
+
       <section className="rounded-3xl border border-gray-200 bg-white p-5">
         <span className="grid size-11 place-items-center rounded-2xl bg-violet-50 text-violet-700">
           <Mail aria-hidden size={21} />
@@ -347,7 +364,7 @@ export function ContactPage({
           <UserRoundCheck aria-hidden className="mt-0.5 shrink-0 text-emerald-700" size={21} />
           <p>Informe o @username e uma descrição objetiva. Nunca envie senha, código de confirmação, dados bancários ou cópias excessivas de conversas privadas.</p>
         </div>
-        <p>Não existe prazo de resposta prometido enquanto um canal operacional de suporte e seu processo de atendimento não forem publicados.</p>
+        <p>O andamento do chamado fica visível na própria fila: aberto, em atendimento ou resolvido.</p>
       </DocumentSection>
     </InfoPageShell>
   );
