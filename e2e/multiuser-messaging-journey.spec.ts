@@ -53,6 +53,56 @@ async function waitForPrivateChat(page: Page): Promise<void> {
   });
 }
 
+async function expectContractedChatViewport(page: Page): Promise<void> {
+  const chat = privateChat(page);
+  const header = chat.locator(".orha-private-chat > header");
+  const composer = chat.locator(".chat-composer");
+  const input = chat.getByPlaceholder("Mensagem");
+
+  await input.focus();
+  try {
+    await page.setViewportSize({ width: 390, height: 520 });
+    await expect(header).toBeInViewport();
+    await expect(composer).toBeInViewport();
+    await expect(input).toBeFocused();
+
+    const geometry = await chat.evaluate((root) => {
+      const chatHeader = root.querySelector<HTMLElement>(
+        ".orha-private-chat > header",
+      );
+      const chatComposer = root.querySelector<HTMLElement>(".chat-composer");
+      const composerInput = root.querySelector<HTMLTextAreaElement>(
+        '.chat-composer textarea[placeholder="Mensagem"]',
+      );
+      if (!chatHeader || !chatComposer || !composerInput) return null;
+      const headerBox = chatHeader.getBoundingClientRect();
+      const composerBox = chatComposer.getBoundingClientRect();
+      return {
+        viewportHeight: window.innerHeight,
+        headerTop: headerBox.top,
+        headerBottom: headerBox.bottom,
+        composerTop: composerBox.top,
+        composerBottom: composerBox.bottom,
+        inputFontSize: Number.parseFloat(
+          window.getComputedStyle(composerInput).fontSize,
+        ),
+      };
+    });
+
+    expect(geometry).not.toBeNull();
+    expect(geometry!.headerTop).toBeGreaterThanOrEqual(-1);
+    expect(geometry!.headerBottom).toBeLessThan(geometry!.composerTop);
+    expect(geometry!.composerBottom).toBeLessThanOrEqual(
+      geometry!.viewportHeight + 1,
+    );
+    expect(geometry!.inputFontSize).toBeGreaterThanOrEqual(16);
+  } finally {
+    await page.setViewportSize({ width: 390, height: 844 });
+  }
+  await expect(header).toBeInViewport();
+  await expect(composer).toBeInViewport();
+}
+
 async function openConversations(page: Page): Promise<void> {
   await openAppPath(page, "/conversas");
   await waitForConversations(page);
@@ -435,6 +485,8 @@ test.describe("jornada real de mensagens entre duas contas", () => {
         credentialsB.expectedProfileText!,
         runToken,
       );
+
+      await expectContractedChatViewport(pageA);
 
       await sendTextMessage(pageA, textMessage);
       sentMessages.push(textMessage);

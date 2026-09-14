@@ -153,6 +153,7 @@ As jornadas autenticadas cobrem, pela UI e contra o Supabase real:
 - matriz de rotas de Usuário, Suporte, Moderador e Admin;
 - troca reversível de senha, logout, troca de conta sem cache cruzado e deep links.
 - contenção de foco por Tab/Shift+Tab e devolução ao acionador ao fechar os Drawers GodUI com Escape.
+- contração do chat focado de 390×844 para 390×520, mantendo header, composer, foco e fonte de 16 px sem sobreposição; o teclado virtual físico continua um gate manual separado.
 
 ## Política contra falsos positivos
 
