@@ -9,7 +9,11 @@ import {
   PWA_REGISTER_TYPE,
   createAppManifest,
 } from "./scripts/pwa-manifest";
-import { createSiteMetadata, normalizeAppBase } from "./scripts/site-config";
+import {
+  createSiteMetadata,
+  normalizeAppBase,
+  resolvePublicOrigin,
+} from "./scripts/site-config";
 
 const rootDirectory = path.dirname(fileURLToPath(import.meta.url));
 
@@ -46,7 +50,7 @@ export default defineConfig(({ mode }) => {
   const appBase = normalizeAppBase(environment.VITE_ORHA_BASE_PATH);
   const metadata = createSiteMetadata({
     appBase,
-    publicOrigin: environment.VITE_ORHA_PUBLIC_ORIGIN,
+    publicOrigin: resolvePublicOrigin(environment) ?? undefined,
   });
 
   return {

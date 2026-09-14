@@ -9,6 +9,36 @@ export type OrhaSiteMetadata = {
   socialImageUrl: string | null;
 };
 
+type SiteEnvironment = Partial<Record<
+  | "VITE_ORHA_PUBLIC_ORIGIN"
+  | "VERCEL_PROJECT_PRODUCTION_URL"
+  | "VERCEL_URL",
+  string
+>>;
+
+function normalizeVercelHostname(value?: string): string | null {
+  const candidate = value?.trim().toLowerCase();
+  if (!candidate || candidate.includes("://") || /[/?#@\s]/.test(candidate)) {
+    return null;
+  }
+  try {
+    const url = new URL(`https://${candidate}`);
+    return url.hostname === candidate && url.port === "" ? candidate : null;
+  } catch {
+    return null;
+  }
+}
+
+export function resolvePublicOrigin(environment: SiteEnvironment): string | null {
+  if (environment.VITE_ORHA_PUBLIC_ORIGIN?.trim()) {
+    return normalizePublicOrigin(environment.VITE_ORHA_PUBLIC_ORIGIN);
+  }
+  const vercelHostname = normalizeVercelHostname(
+    environment.VERCEL_PROJECT_PRODUCTION_URL ?? environment.VERCEL_URL,
+  );
+  return vercelHostname ? `https://${vercelHostname}` : null;
+}
+
 export function normalizeAppBase(configuredBase?: string): string {
   const candidate = configuredBase?.trim() || "/";
   if (
@@ -74,4 +104,3 @@ export function createSiteMetadata({
       : null,
   };
 }
-

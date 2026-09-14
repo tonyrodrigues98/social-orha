@@ -211,7 +211,16 @@ Portanto, a migração para um host com rewrite de SPA continua sendo um bloquea
 externo explícito; o fallback atual melhora a navegação humana, mas não satisfaz
 o contrato HTTP de produção.
 
-Vercel é o host selecionado para substituir Pages. O contrato versionado em `vercel.json` usa Vite, saída `dist`, `cleanUrls` e rewrite de todas as rotas para `/`, preservando a URL solicitada. Com `cleanUrls: true`, o destino não pode conter `.html`. Ainda é necessário autenticar uma conta Vercel autorizada, importar o repositório e provar o resultado com `npm run audit:host` antes de qualquer promoção.
+Vercel é o host selecionado para substituir Pages. O contrato versionado em `vercel.json` usa Vite, saída `dist`, `cleanUrls` e rewrite de todas as rotas para `/`, preservando a URL solicitada. Com `cleanUrls: true`, o destino não pode conter `.html`. O build configurado é obrigatoriamente `npm run build:vercel`, que executa `npm run audit:vercel-config` antes do Vite.
+
+Configurar as variáveis por ambiente, sem copiar valores entre escopos:
+
+| Escopo Vercel | Base | Supabase | Origin | Gate adicional |
+| --- | --- | --- | --- | --- |
+| Preview | `VITE_ORHA_BASE_PATH=/` | `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY` do staging `bgeauxljwjbtbwpbzpoo` | derivado de `VERCEL_URL`/`VERCEL_PROJECT_PRODUCTION_URL`, salvo override explícito | Preview é rejeitado se apontar para produção |
+| Production | `VITE_ORHA_BASE_PATH=/` | `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY` de produção `iuaczhkfmwpyhtpdmuyt` | system variable da Vercel ou domínio definitivo explícito | exige também os sete valores públicos jurídico/suporte |
+
+Nunca fornecer `service_role`, senha do banco, SMTP secret ou OAuth secret a `VITE_*` ou ao build público da Vercel. Ainda é necessário importar o repositório, provisionar os valores reais e provar o resultado com `npm run audit:host` antes de qualquer promoção.
 
 ## 10. Domínio e PWA
 

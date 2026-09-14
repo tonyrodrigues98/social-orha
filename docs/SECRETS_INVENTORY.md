@@ -10,6 +10,8 @@ Este inventário contém somente nomes e estado de disponibilidade. Valores, has
 - `service_role`, senha do banco, SMTP e OAuth secret ficam apenas em superfícies server-side autorizadas.
 - `.env.local`, dumps, snapshots e logs não entram no Git.
 - O GitHub deve usar environments/secrets/variables por escopo; não repetir credenciais em YAML.
+- A Vercel deve separar Preview e Production: Preview usa exclusivamente o Supabase de staging e Production usa exclusivamente o Supabase de produção.
+- Nenhum secret server-side pode ser provisionado como `VITE_*` nem herdado por um build público da Vercel.
 - Rotação precisa registrar owner, consumidores e data, sem registrar o valor.
 
 ## Inventário verificado
@@ -55,6 +57,7 @@ Este inventário contém somente nomes e estado de disponibilidade. Valores, has
 - Supabase Edge Functions: secrets gerenciados da plataforma presentes; `ORHA_CRON_SECRET` e `ORHA_ALLOWED_ORIGINS` provisionados no staging, com listagem somente de nomes/hashes. Vault contém os nomes `orha_project_url` e `orha_cron_secret`; dois jobs Cron privados estão ativos.
 - Arquivos locais: apenas as duas configurações públicas do Supabase em `.env.local`.
 - Workflow: o job de build/deploy mantém as duas configurações públicas de produção; o job E2E não repete esses valores e consome somente `ORHA_STAGING_*`/`ORHA_E2E_*`. O smoke pós-deploy é público e não recebe contas persistentes.
+- Vercel: o contrato versionado exige preflight por ambiente antes do build; os valores reais de Preview/Production ainda não foram provisionados.
 - GitHub conectado: sessão disponível com permissão administrativa; a credencial do conector não é exportável nem deve ser registrada.
 - Supabase CLI: sessão disponível e projeto vinculado; a credencial local não deve ser copiada para o repositório.
 

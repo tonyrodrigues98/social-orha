@@ -2,7 +2,7 @@
 
 Atualizado em: 2026-09-14  
 Branch: `codex/production-launch`  
-Commit-base publicado antes deste checkpoint: `45a9eb0`
+Commit-base publicado antes deste checkpoint: `14e29bd`
 Projeto vinculado durante os gates: `bgeauxljwjbtbwpbzpoo` (ORHA-Staging)  
 Produção: `iuaczhkfmwpyhtpdmuyt` (ORHA), ainda não promovida  
 Estado: **staging saudável e alinhado às 22 migrations locais; 40 tabelas públicas com RLS, 16 tabelas Realtime, cinco Edge Functions ativas, gate anônimo/CORS 7/7 e dois jobs Cron/Vault ativos; Auth remoto sincronizado; onboarding atômico; suporte persistente, gestão global de papéis RPC-only e consentimento de analytics owner-only; produção intacta; lint remoto sem erros, gate estrutural 23/23 e matrizes RLS transacionais aprovadas**.
@@ -245,11 +245,13 @@ Evidência obtida no Dashboard e pela CLI oficial, sem copiar secrets para logs:
 - concluído nesta fatia: o setup das cinco sessões E2E valida o `sub` real, rejeita subjects duplicados e consulta no processo Node o onboarding e o papel exato de cada conta em `user_roles`; divergência entre nome configurado e autoridade do backend interrompe o gate antes das jornadas.
 - concluído nesta fatia: termos, privacidade e contato consomem uma configuração pública tipada e validada; o workflow exige operador, controlador, endereço, foro, data de vigência, e-mail de suporte e e-mail de privacidade antes do build de deploy. Desenvolvimento sem esses dados continua exibindo avisos honestos, mas a publicação falha fechada em vez de liberar placeholders.
 - concluído nesta fatia: Vercel foi selecionado como host rewrite-capable usando o contrato já existente, sem adicionar infraestrutura paralela; `cleanUrls` e o rewrite SPA foram corrigidos para o destino oficial `/`. A inspeção no Chrome confirmou que não há sessão Vercel autenticada, então nenhum projeto externo foi criado e o gate HTTP continua pendente.
-- gates atuais: matriz E2E pública completa `111/111`, inclusive WebKit 390×844 após reforço dos alvos de toque canônicos contra arredondamento subpixel; guards/deep links de `/suporte` e `/admin/funcoes` revalidados em `66/66` nos 11 projetos públicos; Playwright descobre 128 execuções em 16 arquivos — 111 públicas, 12 jornadas autenticadas e cinco setups de sessão —; Vitest `345/345` em 79 arquivos, catálogo, TypeScript, ESLint, secrets, encoding, dívida de produção, auditoria de dependências, orçamento de bundle e build PWA com 103 entradas aprovados;
+- concluído nesta fatia: o build da Vercel agora falha fechado antes do Vite. Preview aceita somente o Supabase de staging, Production aceita somente o Supabase de produção, ambos exigem `VITE_ORHA_BASE_PATH=/` e publishable key; Production também exige os sete valores públicos jurídico/suporte. Canonical e Open Graph derivam com segurança das system environment variables da Vercel quando não existe override explícito. O build sintético de Preview passou e gerou `https://orha-preview.example/` em ambos os metadados.
+- gates atuais: matriz E2E pública completa `111/111`, inclusive WebKit 390×844 após reforço dos alvos de toque canônicos contra arredondamento subpixel; guards/deep links de `/suporte` e `/admin/funcoes` revalidados em `66/66` nos 11 projetos públicos; Playwright descobre 128 execuções em 16 arquivos — 111 públicas, 12 jornadas autenticadas e cinco setups de sessão —; Vitest `352/352` em 80 arquivos, catálogo, TypeScript, ESLint, secrets, encoding, dívida de produção, auditoria de dependências, orçamento de bundle e build PWA com 103 entradas aprovados;
 - pendente: fornecer e aprovar os sete valores públicos reais do gate jurídico/de suporte; nenhuma identidade, endereço, foro ou e-mail foi inventado ou presumido;
 - pendente: custom SMTP + domínio de envio, CAPTCHA e jornadas reais de confirmação/reenvio/reset;
 - pendente: contas sintéticas A/B/Admin/Moderador/Suporte e execução das jornadas autenticadas completas já contratadas, inclusive suporte, autoridade por papel e rejeição da senha atual incorreta;
-- pendente: mídia real, Realtime multiusuário, QA native-first/PWA, host definitivo, provisionamento do PostHog/dashboards/alertas, prova de carga, escala humana e promoção controlada da produção.
+- pendente: autenticar/importar o repositório na Vercel, provisionar os valores reais por escopo Preview/Production e provar root/deep links por HTTP 200;
+- pendente: mídia real, Realtime multiusuário, QA native-first/PWA, domínio definitivo, provisionamento do PostHog/dashboards/alertas, prova de carga, escala humana e promoção controlada da produção.
 
 ## Limitações conhecidas do ambiente atual
 

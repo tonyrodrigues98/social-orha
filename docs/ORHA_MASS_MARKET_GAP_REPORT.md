@@ -182,13 +182,16 @@ Verificação HTTP em 2026-09-14:
 - `/social-orha/auth/login`: 404;
 - `/social-orha/conversas/<uuid>`: 404.
 
-Vercel foi selecionado como o próximo host por já existir um contrato versionado em `vercel.json`, sem dependência adicional de runtime. A configuração usa o preset Vite, `dist`, rewrite SPA e headers de cache/segurança. Em 2026-09-14, o rewrite foi reconciliado com a regra oficial de `cleanUrls`: o destino agora é `/`, sem a extensão `.html`. A sessão do Chrome chegou à tela de login da Vercel, portanto nenhum projeto ou deploy foi criado e o host ainda não possui evidência HTTP pública.
+Vercel foi selecionado como o próximo host por já existir um contrato versionado em `vercel.json`, sem dependência adicional de runtime. A configuração usa o preset Vite, `dist`, rewrite SPA e headers de cache/segurança. Em 2026-09-14, o rewrite foi reconciliado com a regra oficial de `cleanUrls`: o destino agora é `/`, sem a extensão `.html`.
+
+O comando obrigatório `npm run build:vercel` passou a executar um preflight fail-closed: Preview só pode apontar para o projeto Supabase de staging; Production só pode apontar para o projeto Supabase de produção e também exige a configuração jurídica/de suporte pública. Ambos exigem raiz `/` e publishable key. O origin público pode ser derivado das system environment variables da Vercel, e um build sintético de Preview confirmou canonical e `og:url` corretos. Esse gate elimina promoção cruzada acidental, mas não substitui a prova no host. A sessão do Chrome chegou à tela de login da Vercel; nenhum deploy foi criado até a autorização explícita de conexão com o GitHub.
 
 O `public/404.html` pode recuperar a navegação depois do 404, mas não satisfaz deep link, crawler, OAuth nem gate de host. O projeto já possui `scripts/host-capability-audit.ts` para impedir falso positivo.
 
 Próxima fatia vertical:
 
 - autenticar uma conta Vercel autorizada e importar `tonyrodrigues98/social-orha`;
+- provisionar variáveis separadas por escopo, mantendo Preview em staging e Production em produção;
 - configurar domínio, HTTPS, canonical, OG, PWA `id/scope/start_url` e callbacks Auth;
 - exigir HTTP 200 no root e em todas as rotas diretas;
 - executar smoke após deploy e rollback testado.

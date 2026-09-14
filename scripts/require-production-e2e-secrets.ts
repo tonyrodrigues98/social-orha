@@ -1,5 +1,6 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { ORHA_PRODUCTION_SUPABASE_HOST } from "./deployment-targets";
 
 export const requiredProductionE2ESecrets = [
   "ORHA_STAGING_SUPABASE_URL",
@@ -25,8 +26,6 @@ export const requiredProductionE2ESecrets = [
   "ORHA_E2E_EMAIL_DOMAIN",
   "ORHA_E2E_SMTP_DELIVERY_VERIFIED",
 ] as const;
-
-const PRODUCTION_SUPABASE_HOST = "iuaczhkfmwpyhtpdmuyt.supabase.co";
 
 export function missingProductionE2ESecrets(
   environment: NodeJS.ProcessEnv,
@@ -76,8 +75,8 @@ export function productionE2ESecretIssues(
   }
 
   if (
-    configuredStagingHost === PRODUCTION_SUPABASE_HOST ||
-    stagingUrl?.host.toLowerCase() === PRODUCTION_SUPABASE_HOST
+    configuredStagingHost === ORHA_PRODUCTION_SUPABASE_HOST ||
+    stagingUrl?.host.toLowerCase() === ORHA_PRODUCTION_SUPABASE_HOST
   ) {
     issues.push("invalid:staging-supabase:production-target-forbidden");
   }

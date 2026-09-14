@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --configLoader runner",
     "build": "tsc -b && vite build --configLoader runner",
+    "build:vercel": "npm run audit:vercel-config && npm run build",
     "preview": "vite preview --configLoader runner",
     "typecheck": "tsc -b",
     "lint": "eslint .",
@@ -15,6 +16,7 @@
     "test:e2e:production": "tsx scripts/require-production-e2e-secrets.ts && playwright test --project=public-* && playwright test --project=auth-lifecycle-chromium --workers=1 && playwright test --project=authenticated-chromium --workers=1",
     "audit:production-debt": "tsx scripts/audit-production-debt.ts",
     "audit:host": "tsx scripts/host-capability-audit.ts",
+    "audit:vercel-config": "tsx scripts/require-vercel-build-configuration.ts",
     "audit:launch-config": "tsx scripts/require-launch-configuration.ts",
     "audit:bundle": "tsx scripts/bundle-budget.ts",
     "smoke:edge:anonymous": "tsx scripts/edge-functions-smoke.ts",

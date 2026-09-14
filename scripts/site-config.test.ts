@@ -3,6 +3,7 @@ import {
   createSiteMetadata,
   normalizeAppBase,
   normalizePublicOrigin,
+  resolvePublicOrigin,
 } from "./site-config";
 
 describe("environment-driven site configuration", () => {
@@ -37,6 +38,19 @@ describe("environment-driven site configuration", () => {
     }));
   });
 
+  it("derives the Vercel production origin without exposing system values to runtime", () => {
+    expect(resolvePublicOrigin({
+      VERCEL_PROJECT_PRODUCTION_URL: "orha-social.vercel.app",
+    })).toBe("https://orha-social.vercel.app");
+    expect(resolvePublicOrigin({
+      VERCEL_URL: "orha-preview.vercel.app",
+    })).toBe("https://orha-preview.vercel.app");
+    expect(resolvePublicOrigin({
+      VITE_ORHA_PUBLIC_ORIGIN: "https://orha.example",
+      VERCEL_PROJECT_PRODUCTION_URL: "ignored.vercel.app",
+    })).toBe("https://orha.example");
+  });
+
   it("switches to a root custom domain without source changes", () => {
     expect(createSiteMetadata({
       appBase: "/",
@@ -47,4 +61,3 @@ describe("environment-driven site configuration", () => {
     }));
   });
 });
-
