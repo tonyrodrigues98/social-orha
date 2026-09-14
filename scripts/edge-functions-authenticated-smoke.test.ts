@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   parseExportArtifact,
+  parseProfileMedia,
   validateStagingSupabaseUrl,
 } from "./edge-functions-authenticated-smoke";
 
@@ -66,5 +67,38 @@ describe("authenticated Edge Function smoke guards", () => {
         requestId,
       ),
     ).toThrow("untrusted download URL");
+  });
+
+  it("validates the profile-media owner, bucket, path and id", () => {
+    const userId = "10000000-0000-4000-8000-000000000001";
+    const mediaId = "20000000-0000-4000-8000-000000000002";
+    expect(
+      parseProfileMedia(
+        {
+          media: {
+            id: mediaId,
+            profile_id: userId,
+            bucket_id: "profile-media",
+            object_path: `${userId}/${mediaId}.png`,
+            status: "ready",
+          },
+        },
+        userId,
+        mediaId,
+      ),
+    ).toMatchObject({ id: mediaId, status: "ready" });
+    expect(() =>
+      parseProfileMedia(
+        {
+          id: mediaId,
+          profile_id: "30000000-0000-4000-8000-000000000003",
+          bucket_id: "profile-media",
+          object_path: `${userId}/${mediaId}.png`,
+          status: "ready",
+        },
+        userId,
+        mediaId,
+      ),
+    ).toThrow("Invalid profile media ownership contract");
   });
 });

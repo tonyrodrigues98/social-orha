@@ -94,7 +94,7 @@ Critério de aceite:
 - `supabase db lint` sem erros;
 - repetir aceite de conversa, marcação individual e marcação total de notificações com dois usuários reais.
 
-### P0.2 Implantar e operar as cinco Edge Functions — implantadas; catálogo/export autenticados aprovados
+### P0.2 Implantar e operar as cinco Edge Functions — implantadas; catálogo/export/mídia autenticados aprovados
 
 As cinco funções estão versionadas e `ACTIVE` no staging; produção continua sem promoção:
 
@@ -106,7 +106,7 @@ As cinco funções estão versionadas e `ACTIVE` no staging; produção continua
 
 `ORHA_CRON_SECRET` e `ORHA_ALLOWED_ORIGINS` foram provisionados no staging. O gate `npm run smoke:edge:anonymous` passou 7/7: todas rejeitam acesso anônimo com `401`, o preflight da origem permitida retorna `204` e uma origem externa recebe `403`. `pg_cron`, `pg_net`, Vault e os jobs de 5/10 minutos estão ativos; ambos os workers retornaram `200` em filas vazias. O teste revelou e corrigiu o parsing de um composto SQL nulo que antes causava retry inválido. Em 2026-09-14, Deno 2.8 também verificou os cinco entrypoints e executou 11/11 testes; esse gate encontrou e corrigiu o contrato `ArrayBuffer` do SHA-256 e um teste Vitest que estava indevidamente dentro da suíte Deno. `npm run check:edge` e `npm run test:edge` agora são obrigatórios no CI.
 
-O novo gate `npm run smoke:edge:authenticated`, restrito por código ao projeto staging, passou 8/8. Ele criou uma conta efêmera confirmada, obteve sessão real por senha, consultou `catalog-search` com provedor externo, persistiu uma solicitação `data_export`, gerou e baixou o artefato privado, conferiu tamanho, SHA-256, schema, request e owner, repetiu a chamada idempotente e removeu objeto + usuário no `finally`. Nenhum e-mail, senha, token, signed URL ou path privado foi impresso. Ainda faltam mídia autenticada completa, lifecycle destrutivo/cleanup com artefatos e a jornada multiusuário permanente.
+O novo gate `npm run smoke:edge:authenticated`, restrito por código ao projeto staging, passou 14/14. Ele criou uma conta efêmera confirmada, obteve sessão real por senha, consultou `catalog-search` com provedor externo, persistiu uma solicitação `data_export`, gerou e baixou o artefato privado, conferiu tamanho, SHA-256, schema, request e owner e repetiu a chamada idempotente. Na mesma execução, reservou mídia de perfil, realizou upload privado, comprovou inspeção binária/promoção pela Edge Function, signed URL, integridade do download, remoção assíncrona e cleanup físico + metadata. Objeto, export e usuário foram removidos no `finally`. Nenhum e-mail, senha, token, signed URL ou path privado foi impresso. Ainda faltam lifecycle destrutivo completo e a jornada multiusuário permanente.
 
 Critério de aceite:
 
@@ -158,7 +158,7 @@ O audit produtivo foi reexecutado em 2026-09-14 e retornou `found 0 vulnerabilit
 Evidência preservada:
 
 - `npm audit --omit=dev --audit-level=high`: zero vulnerabilidades;
-- catálogo, TypeScript, ESLint, 352 testes, orçamento de bundle e build PWA verdes;
+- catálogo, TypeScript, ESLint, 353 testes, orçamento de bundle e build PWA verdes;
 - E2E autenticado continua sendo um gate separado e não foi inferido deste resultado.
 
 ## Bloqueadores P1 — produto completo e operável

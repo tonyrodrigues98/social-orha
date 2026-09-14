@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import path from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
@@ -11,6 +12,14 @@ type ExportArtifact = {
   downloadUrl: string;
   byteSize: number;
   sha256: string;
+};
+
+type ProfileMedia = {
+  id: string;
+  profile_id: string;
+  bucket_id: string;
+  object_path: string;
+  status: string;
 };
 
 export type AuthenticatedEdgeSmokeResult = {
@@ -83,6 +92,33 @@ export function parseExportArtifact(
   };
 }
 
+export function parseProfileMedia(
+  value: unknown,
+  expectedUserId: string,
+  expectedMediaId?: string,
+): ProfileMedia {
+  const candidate =
+    value && typeof value === "object" && "media" in value
+      ? (value as { media?: unknown }).media
+      : value;
+  const row = Array.isArray(candidate) ? candidate[0] : candidate;
+  if (!row || typeof row !== "object")
+    throw new Error("Missing profile media contract.");
+  const media = row as Record<string, unknown>;
+  if (
+    typeof media.id !== "string" ||
+    (expectedMediaId && media.id !== expectedMediaId) ||
+    media.profile_id !== expectedUserId ||
+    media.bucket_id !== "profile-media" ||
+    typeof media.object_path !== "string" ||
+    !media.object_path.startsWith(`${expectedUserId}/`) ||
+    typeof media.status !== "string"
+  ) {
+    throw new Error("Invalid profile media ownership contract.");
+  }
+  return media as ProfileMedia;
+}
+
 function client(url: string, key: string): SupabaseClient {
   return createClient(url, key, {
     auth: {
@@ -132,6 +168,20 @@ async function cleanupEphemeralAccount(
       throw new Error("Could not remove a temporary export artifact.");
   }
 
+  const profileMedia = await admin
+    .from("profile_media")
+    .select("bucket_id,object_path")
+    .eq("profile_id", userId);
+  if (profileMedia.error)
+    throw new Error("Could not enumerate temporary profile media for cleanup.");
+  for (const row of profileMedia.data ?? []) {
+    const removal = await admin.storage
+      .from(row.bucket_id)
+      .remove([row.object_path]);
+    if (removal.error)
+      throw new Error("Could not remove temporary profile media.");
+  }
+
   const deletion = await admin.auth.admin.deleteUser(userId, false);
   if (deletion.error)
     throw new Error("Could not delete the temporary authenticated smoke user.");
@@ -178,26 +228,38 @@ export async function runAuthenticatedEdgeFunctionSmoke(
       throw new Error("Temporary smoke user could not authenticate.");
     checks.push("password-session-issued");
 
-    const catalogResponse = await invoke(
-      normalized,
-      "catalog-search",
-      accessToken,
-      {
-        category: "books",
-        query: "Narnia",
-        limit: 3,
-      },
-    );
-    const catalogBody = (await catalogResponse.json().catch(() => null)) as {
-      items?: unknown;
-    } | null;
+    let catalogResponse: Response | null = null;
+    let catalogBody: { items?: unknown } | null = null;
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      catalogResponse = await invoke(
+        normalized,
+        "catalog-search",
+        accessToken,
+        {
+          category: "books",
+          query: "Narnia",
+          limit: 3,
+        },
+      );
+      catalogBody = (await catalogResponse.json().catch(() => null)) as {
+        items?: unknown;
+      } | null;
+      if (catalogResponse.ok && Array.isArray(catalogBody?.items)) break;
+      if (
+        ![429, 502, 503, 504].includes(catalogResponse.status) ||
+        attempt === 3
+      )
+        break;
+      await delay(attempt * 500);
+    }
     if (
+      !catalogResponse ||
       !catalogResponse.ok ||
       !Array.isArray(catalogBody?.items) ||
       catalogBody.items.length < 1
     ) {
       throw new Error(
-        `catalog-search contract failed with status ${catalogResponse.status}.`,
+        `catalog-search contract failed with status ${catalogResponse?.status ?? "no_response"}.`,
       );
     }
     checks.push("catalog-search-real-provider");
@@ -272,6 +334,103 @@ export async function runAuthenticatedEdgeFunctionSmoke(
       );
     parseExportArtifact(repeatedBody, requestId);
     checks.push("account-export-idempotent-retry");
+
+    const png = Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+      "base64",
+    );
+    const reserved = await userClient.rpc("reserve_profile_media", {
+      p_purpose: "gallery",
+      p_mime_type: "image/png",
+      p_byte_size: png.byteLength,
+      p_width: 1,
+      p_height: 1,
+    });
+    if (reserved.error)
+      throw new Error("Could not reserve temporary profile media.");
+    const reservedMedia = parseProfileMedia(reserved.data, userId);
+    if (reservedMedia.status !== "pending")
+      throw new Error("Profile media reservation was not pending.");
+    checks.push("profile-media-reserved");
+
+    const upload = await userClient.storage
+      .from(reservedMedia.bucket_id)
+      .upload(reservedMedia.object_path, png, {
+        contentType: "image/png",
+        cacheControl: "private, max-age=0, no-store",
+        upsert: false,
+      });
+    if (upload.error)
+      throw new Error("Could not upload temporary profile media.");
+    checks.push("profile-media-uploaded-private");
+
+    const mediaResponse = await invoke(
+      normalized,
+      "media-verify",
+      accessToken,
+      { scope: "profile", mediaId: reservedMedia.id },
+    );
+    const mediaBody: unknown = await mediaResponse.json().catch(() => null);
+    if (!mediaResponse.ok)
+      throw new Error(
+        `media-verify failed with status ${mediaResponse.status}.`,
+      );
+    const verifiedMedia = parseProfileMedia(
+      mediaBody,
+      userId,
+      reservedMedia.id,
+    );
+    if (verifiedMedia.status !== "ready")
+      throw new Error("Verified profile media was not promoted.");
+    checks.push("profile-media-binary-verified");
+
+    const signedUrl = await userClient.storage
+      .from(verifiedMedia.bucket_id)
+      .createSignedUrl(verifiedMedia.object_path, 60);
+    if (signedUrl.error || !signedUrl.data.signedUrl)
+      throw new Error("Could not authorize temporary profile media download.");
+    const mediaDownload = await fetch(signedUrl.data.signedUrl, {
+      signal: AbortSignal.timeout(20_000),
+    });
+    const downloadedMedia = Buffer.from(await mediaDownload.arrayBuffer());
+    if (!mediaDownload.ok || !downloadedMedia.equals(png))
+      throw new Error(
+        "Private profile media download failed integrity validation.",
+      );
+    checks.push("profile-media-signed-download");
+
+    const removed = await userClient.rpc("remove_profile_media", {
+      p_media_id: verifiedMedia.id,
+    });
+    if (removed.error)
+      throw new Error("Could not schedule temporary profile media removal.");
+    const deletingMedia = parseProfileMedia(
+      removed.data,
+      userId,
+      verifiedMedia.id,
+    );
+    if (deletingMedia.status !== "deleting")
+      throw new Error("Profile media removal was not queued.");
+    checks.push("profile-media-removal-queued");
+
+    const objectRemoval = await admin.storage
+      .from(deletingMedia.bucket_id)
+      .remove([deletingMedia.object_path]);
+    if (objectRemoval.error)
+      throw new Error("Could not remove queued profile media object.");
+    const metadataRemoval = await admin.rpc("complete_profile_media_cleanup", {
+      p_media_id: deletingMedia.id,
+    });
+    if (metadataRemoval.error)
+      throw new Error("Could not complete queued profile media cleanup.");
+    const remaining = await admin
+      .from("profile_media")
+      .select("id")
+      .eq("id", deletingMedia.id)
+      .maybeSingle();
+    if (remaining.error || remaining.data)
+      throw new Error("Profile media metadata remained after cleanup.");
+    checks.push("profile-media-storage-metadata-cleanup");
   } finally {
     await userClient.auth.signOut().catch(() => undefined);
     if (userId) {
