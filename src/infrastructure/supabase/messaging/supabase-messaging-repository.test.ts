@@ -40,10 +40,20 @@ const persistedRow = {
   reply_to: null,
 };
 
+const profileSummary = {
+  profile_id: "user-2",
+  full_name: "Ana",
+  username: "ana",
+  avatar_path: null,
+};
+
 describe("SupabaseMessagingRepository", () => {
   it("maps the authoritative message schema and a stable cursor", async () => {
     const query = queryResult([persistedRow]);
-    const client = { from: vi.fn(() => query) } as unknown as SupabaseClient;
+    const client = {
+      from: vi.fn(() => query),
+      rpc: vi.fn().mockResolvedValue({ data: [profileSummary], error: null }),
+    } as unknown as SupabaseClient;
     const repository = new SupabaseMessagingRepository(client, mediaRepository());
 
     const page = await repository.listMessages({ conversationId: "conversation-1", userId: "user-1", limit: 1 });
@@ -59,7 +69,9 @@ describe("SupabaseMessagingRepository", () => {
   });
 
   it("sends through the idempotent security-definer RPC", async () => {
-    const rpc = vi.fn().mockResolvedValue({ data: { id: "message-1" }, error: null });
+    const rpc = vi.fn((name: string) => Promise.resolve(name === "get_messaging_profile_summaries"
+      ? { data: [{ ...profileSummary, profile_id: "user-1", full_name: "Pessoa" }], error: null }
+      : { data: { id: "message-1" }, error: null }));
     const query = queryResult({ ...persistedRow, sender_id: "user-1", sender: { full_name: "Pessoa" } });
     const client = { rpc, from: vi.fn(() => query) } as unknown as SupabaseClient;
     const repository = new SupabaseMessagingRepository(client, mediaRepository());
@@ -85,7 +97,10 @@ describe("SupabaseMessagingRepository", () => {
 
   it("sends media through the atomic verification worker without pre-creating a message", async () => {
     const invoke = vi.fn().mockResolvedValue({ data: { message: { id: "message-1" } }, error: null });
-    const rpc = vi.fn();
+    const rpc = vi.fn().mockResolvedValue({
+      data: [{ ...profileSummary, profile_id: "user-1", full_name: "Pessoa" }],
+      error: null,
+    });
     const query = queryResult({ ...persistedRow, kind: "audio", sender_id: "user-1", sender: { full_name: "Pessoa" } });
     const client = { rpc, functions: { invoke }, from: vi.fn(() => query) } as unknown as SupabaseClient;
     const repository = new SupabaseMessagingRepository(client, mediaRepository());
@@ -112,7 +127,7 @@ describe("SupabaseMessagingRepository", () => {
       }],
     });
 
-    expect(rpc).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalledWith("send_message", expect.anything());
     expect(invoke).toHaveBeenCalledWith("media-verify", { body: expect.objectContaining({
       scope: "message",
       conversationId: "conversation-1",
@@ -192,6 +207,7 @@ describe("SupabaseMessagingRepository", () => {
     const messagesQuery = queryResult([persistedRow]);
     const client = {
       from: vi.fn((table: string) => table === "conversation_preferences" ? preferenceQuery : messagesQuery),
+      rpc: vi.fn().mockResolvedValue({ data: [profileSummary], error: null }),
     } as unknown as SupabaseClient;
     const repository = new SupabaseMessagingRepository(client, mediaRepository());
 
@@ -201,9 +217,13 @@ describe("SupabaseMessagingRepository", () => {
   });
 
   it("uses the dedicated delivered/read and forward RPCs", async () => {
-    const rpc = vi.fn()
-      .mockResolvedValueOnce({ data: {}, error: null })
-      .mockResolvedValueOnce({ data: { id: "message-1" }, error: null });
+    const rpc = vi.fn((name: string) => Promise.resolve(
+      name === "get_messaging_profile_summaries"
+        ? { data: [profileSummary], error: null }
+        : name === "forward_message"
+          ? { data: { id: "message-1" }, error: null }
+          : { data: {}, error: null },
+    ));
     const query = queryResult(persistedRow);
     const client = { rpc, from: vi.fn(() => query) } as unknown as SupabaseClient;
     const repository = new SupabaseMessagingRepository(client, mediaRepository());

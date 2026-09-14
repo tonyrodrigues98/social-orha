@@ -6,7 +6,11 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import type { MessagingRealtimeEvent, MessagingRealtimeSession } from "./contracts";
+import type {
+  MessagingInboxRealtimeEvent,
+  MessagingRealtimeEvent,
+  MessagingRealtimeSession,
+} from "./contracts";
 import { mergeMessagePage } from "./cache";
 import {
   createClientMessageId,
@@ -69,6 +73,30 @@ export function useConversationRequestsQuery(userId: string, status: Conversatio
     enabled: Boolean(userId),
     staleTime: 20_000,
   });
+}
+
+export function useMessagingInboxRealtime(userId: string) {
+  const { realtime } = useMessagingServices();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!userId) return;
+    const handleEvent = (event: MessagingInboxRealtimeEvent) => {
+      if (event.entity === "request" || event.entity === "sync") {
+        void queryClient.invalidateQueries({ queryKey: messagingKeys.requestLists(userId) });
+      }
+      if (event.entity !== "request") {
+        void queryClient.invalidateQueries({ queryKey: messagingKeys.conversationLists(userId) });
+      }
+      if (event.conversationId) {
+        void queryClient.invalidateQueries({
+          queryKey: messagingKeys.conversation(userId, event.conversationId),
+        });
+      }
+    };
+    const session = realtime.subscribeInbox({ userId, onEvent: handleEvent });
+    return () => session.unsubscribe();
+  }, [queryClient, realtime, userId]);
 }
 
 export function useMessagesQuery(conversationId: string, userId: string) {
@@ -277,7 +305,7 @@ export function useConversationRequestMutation() {
   return useMutation({
     mutationFn: (input: { userId: string; targetUserId: string; openingMessage?: string | null }) => repository.requestConversation(input),
     onSuccess: (_request, input) => {
-      void queryClient.invalidateQueries({ queryKey: messagingKeys.requests(input.userId) });
+      void queryClient.invalidateQueries({ queryKey: messagingKeys.requestLists(input.userId) });
       void queryClient.invalidateQueries({ queryKey: messagingKeys.conversationLists(input.userId) });
     },
   });
@@ -289,7 +317,7 @@ export function useRespondConversationRequestMutation() {
   return useMutation({
     mutationFn: (input: { userId: string; requestId: string; accept: boolean }) => repository.respondToConversationRequest(input),
     onSuccess: (_request, input) => {
-      void queryClient.invalidateQueries({ queryKey: messagingKeys.requests(input.userId) });
+      void queryClient.invalidateQueries({ queryKey: messagingKeys.requestLists(input.userId) });
       void queryClient.invalidateQueries({ queryKey: messagingKeys.conversationLists(input.userId) });
     },
   });

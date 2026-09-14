@@ -13,6 +13,7 @@ import { validateSocialSmokeTarget } from "../scripts/social-domain-smoke-target
 import { signInThroughPublicUi } from "./support/auth-ui";
 import {
   createAnonymousBrowserContext,
+  currentAppPath,
   openApp,
   openAppPath,
 } from "./support/environment";
@@ -34,6 +35,8 @@ type EphemeralPrincipal = {
 
 const principals: EphemeralPrincipal[] = [];
 let admin: SupabaseClient;
+const UI_TIMEOUT = 30_000;
+const MUTATION_TIMEOUT = 45_000;
 
 function requiredEnvironment(name: string): string {
   const value = process.env[name]?.trim();
@@ -132,6 +135,49 @@ function postByText(page: Page, text: string): Locator {
     .first();
 }
 
+function privateChat(page: Page): Locator {
+  return page.getByRole("dialog", { name: "Conversa privada" });
+}
+
+function chatMessage(page: Page, text: string): Locator {
+  return privateChat(page)
+    .locator(".chat-message")
+    .filter({ hasText: text })
+    .last();
+}
+
+async function waitForConversations(page: Page): Promise<void> {
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Conversas" }),
+  ).toBeVisible({ timeout: UI_TIMEOUT });
+  await expect(
+    page.getByText("Carregando suas conversas…", { exact: true }),
+  ).toBeHidden({ timeout: UI_TIMEOUT });
+}
+
+async function waitForPrivateChat(page: Page): Promise<void> {
+  await expect(privateChat(page)).toBeVisible({ timeout: UI_TIMEOUT });
+  await expect(privateChat(page).getByPlaceholder("Mensagem")).toBeVisible({
+    timeout: UI_TIMEOUT,
+  });
+}
+
+async function expectSuccessfulMutation(
+  page: Page,
+  endpoint: RegExp,
+  action: () => Promise<unknown>,
+): Promise<void> {
+  const responsePromise = page.waitForResponse(
+    (response) =>
+      endpoint.test(new URL(response.url()).pathname) &&
+      response.request().method() === "POST",
+    { timeout: MUTATION_TIMEOUT },
+  );
+  await action();
+  const response = await responsePromise;
+  expect(response.ok()).toBe(true);
+}
+
 test.describe("staging social browser smoke", () => {
   test.describe.configure({ mode: "serial" });
 
@@ -157,6 +203,31 @@ test.describe("staging social browser smoke", () => {
   test.afterAll(async () => {
     const principalIds = principals.map((principal) => principal.id);
     if (principalIds.length) {
+      const memberships = await admin
+        .from("conversation_members")
+        .select("conversation_id")
+        .in("profile_id", principalIds);
+      if (memberships.error) {
+        throw new Error("Could not inspect browser-smoke conversations.");
+      }
+      const conversationIds = Array.from(
+        new Set(
+          (memberships.data ?? []).flatMap((membership) =>
+            typeof membership.conversation_id === "string"
+              ? [membership.conversation_id]
+              : [],
+          ),
+        ),
+      );
+      if (conversationIds.length) {
+        const conversations = await admin
+          .from("conversations")
+          .delete()
+          .in("id", conversationIds);
+        if (conversations.error) {
+          throw new Error("Could not clean browser-smoke conversations.");
+        }
+      }
       const communities = await admin
         .from("communities")
         .delete()
@@ -369,6 +440,123 @@ test.describe("staging social browser smoke", () => {
         thread.locator("article").filter({ hasText: commentText }),
       ).toBeVisible({
         timeout: 30_000,
+      });
+
+      qualityA.expectClean();
+      qualityB.expectClean();
+    } finally {
+      await closeBrowserContexts(contexts);
+    }
+  });
+
+  test("conversation consent, realtime text and reload persistence work", async ({
+    browser,
+  }) => {
+    test.setTimeout(180_000);
+    const [principalA, principalB] = principals;
+    if (!principalA || !principalB) {
+      throw new Error("Ephemeral principals missing.");
+    }
+    const contexts = await Promise.all([
+      createAnonymousBrowserContext(browser),
+      createAnonymousBrowserContext(browser),
+    ]);
+    const [contextA, contextB] = contexts;
+    const [pageA, pageB] = await Promise.all([
+      authenticatedPage(contextA, principalA),
+      authenticatedPage(contextB, principalB),
+    ]);
+    const qualityA = observeRuntimeQuality(pageA);
+    const qualityB = observeRuntimeQuality(pageB);
+    const openingMessage = marker("Solicitação Browser Smoke");
+    const messageText = marker("Mensagem Browser Smoke");
+
+    try {
+      await Promise.all([
+        openAppPath(pageA, "/conversas"),
+        openAppPath(pageB, "/conversas"),
+      ]);
+      await Promise.all([
+        waitForConversations(pageA),
+        waitForConversations(pageB),
+      ]);
+
+      await pageA.getByRole("button", { name: "Nova conversa" }).click();
+      const newConversation = pageA.getByRole("dialog", {
+        name: "Nova conversa",
+      });
+      await newConversation
+        .getByPlaceholder("Nome ou @username")
+        .fill(principalB.fullName);
+      await expect(
+        newConversation.getByText("Carregando pessoas…", { exact: true }),
+      ).toBeHidden({ timeout: UI_TIMEOUT });
+      const profile = newConversation
+        .locator('[aria-label="Pessoas disponíveis"] button[aria-pressed]')
+        .filter({ hasText: principalB.fullName })
+        .first();
+      await expect(profile).toBeVisible({ timeout: UI_TIMEOUT });
+      await profile.click();
+      await newConversation
+        .getByLabel("Mensagem de apresentação (opcional)")
+        .fill(openingMessage);
+      await expectSuccessfulMutation(
+        pageA,
+        /\/rest\/v1\/rpc\/request_conversation$/,
+        () =>
+          newConversation
+            .getByRole("button", { name: "Continuar" })
+            .click(),
+      );
+      await expect(newConversation).toBeHidden({ timeout: UI_TIMEOUT });
+
+      await pageB
+        .getByRole("button", { name: /^Solicitações(?: \(\d+\))?$/ })
+        .click();
+      const requests = pageB.getByRole("dialog", {
+        name: "Solicitações de conversa",
+      });
+      await expect(requests).toBeVisible();
+      await expect(
+        requests.getByText("Carregando solicitações…", { exact: true }),
+      ).toBeHidden({ timeout: UI_TIMEOUT });
+      const request = requests
+        .locator("article")
+        .filter({ hasText: principalA.fullName })
+        .first();
+      await expect(request).toBeVisible({ timeout: UI_TIMEOUT });
+      await expect(request.getByText(openingMessage)).toBeVisible();
+      await expectSuccessfulMutation(
+        pageB,
+        /\/rest\/v1\/rpc\/respond_to_conversation_request$/,
+        () => request.getByRole("button", { name: "Aceitar" }).click(),
+      );
+      await waitForPrivateChat(pageB);
+      const conversationPath = currentAppPath(pageB);
+      expect(conversationPath).toMatch(/^\/conversas\/[0-9a-f-]{36}$/i);
+
+      await openAppPath(pageA, conversationPath);
+      await waitForPrivateChat(pageA);
+      await privateChat(pageA).getByPlaceholder("Mensagem").fill(messageText);
+      await expectSuccessfulMutation(
+        pageA,
+        /\/rest\/v1\/rpc\/send_message$/,
+        () =>
+          privateChat(pageA)
+            .getByRole("button", { name: "Enviar mensagem" })
+            .click(),
+      );
+      await expect(chatMessage(pageA, messageText)).toBeVisible({
+        timeout: UI_TIMEOUT,
+      });
+      await expect(chatMessage(pageB, messageText)).toBeVisible({
+        timeout: UI_TIMEOUT,
+      });
+
+      await pageB.reload({ waitUntil: "domcontentloaded" });
+      await waitForPrivateChat(pageB);
+      await expect(chatMessage(pageB, messageText)).toBeVisible({
+        timeout: UI_TIMEOUT,
       });
 
       qualityA.expectClean();

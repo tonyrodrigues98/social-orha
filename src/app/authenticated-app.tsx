@@ -6,7 +6,9 @@ import {
   useRouterState,
 } from "@tanstack/react-router";
 import { motion, useReducedMotion } from "motion/react";
+import { useMessagingInboxRealtime } from "@/domains/messaging";
 import { revokeAllRecordedAudioUrls } from "@/infrastructure/media/browser-audio-recorder";
+import { useAuth } from "./auth/auth-context";
 import { BottomNavigation } from "./components/bottom-navigation";
 import { AppDrawer } from "./components/app-drawer";
 import { CommunityPage } from "./pages/community-page";
@@ -53,6 +55,7 @@ function ChatLoadingSurface() {
 }
 
 export function AuthenticatedApp() {
+  const { user } = useAuth();
   const reduceMotion = useReducedMotion();
   const navigate = useNavigate();
   const router = useRouter();
@@ -62,6 +65,7 @@ export function AuthenticatedApp() {
   const activeConversationId = getConversationIdFromPathname(pathname, ROUTER_BASE_PATH);
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const previousConversationId = useRef<string | null>(activeConversationId);
+  useMessagingInboxRealtime(user?.id ?? "");
 
   useEffect(() => {
     if (activeConversationId) return;

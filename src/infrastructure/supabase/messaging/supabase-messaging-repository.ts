@@ -24,24 +24,18 @@ import type {
   UpdateConversationPreferences,
 } from "@/domains/messaging";
 
-const PROFILE_SELECT = "id,full_name,username,avatar_path";
 const CONVERSATION_SELECT = `
   id,kind,title,created_by,direct_user_low,direct_user_high,created_at,updated_at,
   viewer_membership:conversation_members!inner(profile_id,role,status,created_at,updated_at),
-  members:conversation_members(profile_id,role,status,profile:profiles(${PROFILE_SELECT})),
-  preferences:conversation_preferences(profile_id,muted_until,archived_at,favorited_at,cleared_before,notifications_enabled,read_receipts_enabled,created_at,updated_at),
+  members:conversation_members(profile_id,role,status),
   recent_messages:messages(id,sender_id,kind,body,created_at)
 `;
 const REQUEST_SELECT = `
-  id,requester_id,recipient_id,opening_message,status,conversation_id,created_at,responded_at,
-  requester:profiles!conversation_requests_requester_id_fkey(${PROFILE_SELECT}),
-  recipient:profiles!conversation_requests_recipient_id_fkey(${PROFILE_SELECT})
+  id,requester_id,recipient_id,opening_message,status,conversation_id,created_at,responded_at
 `;
 const MESSAGE_SELECT = `
   id,client_message_id,conversation_id,sender_id,kind,body,reply_to_message_id,forwarded_from_message_id,created_at,edited_at,deleted_at,
-  sender:profiles!messages_sender_id_fkey(${PROFILE_SELECT}),
   attachments:message_attachments(id,owner_id,bucket_id,object_path,mime_type,byte_size,duration_seconds,waveform,width,height),
-  reply_to:messages!messages_reply_to_message_id_fkey(id,sender_id,kind,body,sender:profiles!messages_sender_id_fkey(full_name,username)),
   reactions:message_reactions(reactor_id,kind),
   receipts:message_receipts(profile_id,delivered_at,read_at)
 `;
@@ -195,8 +189,15 @@ export class SupabaseMessagingRepository implements MessagingRepository {
     const { data, error } = await query;
     if (error) throw error;
     const rows = records(data);
-    const unreadCounts = await this.loadUnreadCounts(rows.map((row) => stringValue(row.id)), input.userId);
-    const items = await Promise.all(rows.map((row) => this.mapConversation(row, input.userId, unreadCounts)));
+    const conversationIds = rows.map((row) => stringValue(row.id)).filter(Boolean);
+    const [unreadCounts, profileSummaries, preferences] = await Promise.all([
+      this.loadUnreadCounts(conversationIds, input.userId),
+      this.loadProfileSummaries(rows.flatMap((row) =>
+        records(row.members).map((membership) => stringValue(membership.profile_id)))),
+      this.loadConversationPreferences(conversationIds, input.userId),
+    ]);
+    const items = await Promise.all(rows.map((row) =>
+      this.mapConversation(row, input.userId, unreadCounts, profileSummaries, preferences)));
     const last = rows.at(-1);
     return {
       items,
@@ -218,8 +219,13 @@ export class SupabaseMessagingRepository implements MessagingRepository {
       .maybeSingle();
     if (error) throw error;
     if (!data) return null;
-    const unreadCounts = await this.loadUnreadCounts([conversationId], userId);
-    return this.mapConversation(record(data), userId, unreadCounts);
+    const row = record(data);
+    const [unreadCounts, profileSummaries, preferences] = await Promise.all([
+      this.loadUnreadCounts([conversationId], userId),
+      this.loadProfileSummaries(records(row.members).map((membership) => stringValue(membership.profile_id))),
+      this.loadConversationPreferences([conversationId], userId),
+    ]);
+    return this.mapConversation(row, userId, unreadCounts, profileSummaries, preferences);
   }
 
   async listConversationRequests(input: ConversationRequestListInput): Promise<CursorPage<ConversationRequest>> {
@@ -236,7 +242,11 @@ export class SupabaseMessagingRepository implements MessagingRepository {
     const { data, error } = await query;
     if (error) throw error;
     const rows = records(data);
-    const items = await Promise.all(rows.map((row) => this.mapConversationRequest(row)));
+    const profileSummaries = await this.loadProfileSummaries(rows.flatMap((row) => [
+      stringValue(row.requester_id),
+      stringValue(row.recipient_id),
+    ]));
+    const items = await Promise.all(rows.map((row) => this.mapConversationRequest(row, profileSummaries)));
     const last = rows.at(-1);
     return {
       items,
@@ -342,7 +352,9 @@ export class SupabaseMessagingRepository implements MessagingRepository {
     const { data, error } = await query;
     if (error) throw error;
     const rows = records(data);
-    const mapped = await Promise.all(rows.map((row) => this.mapMessage(row)));
+    const replies = await this.loadReplyMessages(rows);
+    const profileSummaries = await this.loadProfileSummaries(this.messageProfileIds(rows, replies));
+    const mapped = await Promise.all(rows.map((row) => this.mapMessage(row, profileSummaries, replies)));
     const last = rows.at(-1);
     return {
       items: mapped.reverse(),
@@ -373,7 +385,9 @@ export class SupabaseMessagingRepository implements MessagingRepository {
     const { data, error } = await query;
     if (error) throw error;
     const rows = records(data);
-    const mapped = await Promise.all(rows.map((row) => this.mapMessage(row)));
+    const replies = await this.loadReplyMessages(rows);
+    const profileSummaries = await this.loadProfileSummaries(this.messageProfileIds(rows, replies));
+    const mapped = await Promise.all(rows.map((row) => this.mapMessage(row, profileSummaries, replies)));
     const titleById = new Map<string, string>();
     await Promise.all([...new Set(mapped.map((message) => message.conversationId))].map(async (id) => {
       const conversation = await this.getConversation(id, input.userId);
@@ -394,7 +408,11 @@ export class SupabaseMessagingRepository implements MessagingRepository {
   async getMessage(messageId: string): Promise<Message | null> {
     const { data, error } = await this.client.from("messages").select(MESSAGE_SELECT).eq("id", messageId).maybeSingle();
     if (error) throw error;
-    return data ? this.mapMessage(record(data)) : null;
+    if (!data) return null;
+    const row = record(data);
+    const replies = await this.loadReplyMessages([row]);
+    const profileSummaries = await this.loadProfileSummaries(this.messageProfileIds([row], replies));
+    return this.mapMessage(row, profileSummaries, replies);
   }
 
   async sendMessage(command: PersistMessageCommand): Promise<Message> {
@@ -556,14 +574,24 @@ export class SupabaseMessagingRepository implements MessagingRepository {
     if (!requestId) throw new Error("O Supabase não retornou a solicitação de conversa.");
     const { data, error } = await this.client.from("conversation_requests").select(REQUEST_SELECT).eq("id", requestId).single();
     if (error) throw error;
-    return this.mapConversationRequest(record(data));
+    const row = record(data);
+    const profileSummaries = await this.loadProfileSummaries([
+      stringValue(row.requester_id),
+      stringValue(row.recipient_id),
+    ]);
+    return this.mapConversationRequest(row, profileSummaries);
   }
 
-  private async mapConversationRequest(row: DataRecord): Promise<ConversationRequest> {
+  private async mapConversationRequest(
+    row: DataRecord,
+    profileSummaries: Map<string, DataRecord>,
+  ): Promise<ConversationRequest> {
+    const requesterId = stringValue(row.requester_id);
+    const recipientId = stringValue(row.recipient_id);
     return {
       id: stringValue(row.id),
-      requester: await this.mapParticipant(record(row.requester), { profile_id: row.requester_id, role: "member", status: "active" }),
-      recipient: await this.mapParticipant(record(row.recipient), { profile_id: row.recipient_id, role: "member", status: "active" }),
+      requester: await this.mapParticipant(profileSummaries.get(requesterId) ?? {}, { profile_id: requesterId, role: "member", status: "active" }),
+      recipient: await this.mapParticipant(profileSummaries.get(recipientId) ?? {}, { profile_id: recipientId, role: "member", status: "active" }),
       openingMessage: nullableString(row.opening_message),
       status: row.status === "accepted" || row.status === "declined" || row.status === "cancelled" ? row.status : "pending",
       conversationId: nullableString(row.conversation_id),
@@ -589,14 +617,76 @@ export class SupabaseMessagingRepository implements MessagingRepository {
     return counts;
   }
 
-  private async mapConversation(row: DataRecord, userId: string, unreadCounts = new Map<string, number>()): Promise<Conversation> {
+  private async loadConversationPreferences(conversationIds: string[], userId: string) {
+    const preferences = new Map<string, ConversationPreferences>();
+    if (!conversationIds.length) return preferences;
+    const { data, error } = await this.client
+      .from("conversation_preferences")
+      .select("*")
+      .eq("profile_id", userId)
+      .in("conversation_id", conversationIds);
+    if (error) throw error;
+    for (const row of records(data)) {
+      const conversationId = stringValue(row.conversation_id);
+      if (conversationId) preferences.set(conversationId, mapPreferences(row, conversationId, userId));
+    }
+    return preferences;
+  }
+
+  private async loadProfileSummaries(profileIds: string[]) {
+    const uniqueIds = [...new Set(profileIds.filter(Boolean))];
+    const summaries = new Map<string, DataRecord>();
+    for (let offset = 0; offset < uniqueIds.length; offset += 100) {
+      const { data, error } = await this.client.rpc("get_messaging_profile_summaries", {
+        p_profile_ids: uniqueIds.slice(offset, offset + 100),
+      });
+      if (error) throw error;
+      for (const row of records(data)) {
+        const profileId = stringValue(row.profile_id);
+        if (profileId) summaries.set(profileId, row);
+      }
+    }
+    return summaries;
+  }
+
+  private async loadReplyMessages(rows: DataRecord[]) {
+    const replyIds = [...new Set(rows.map((row) => stringValue(row.reply_to_message_id)).filter(Boolean))];
+    const replies = new Map<string, DataRecord>();
+    if (!replyIds.length) return replies;
+    const { data, error } = await this.client
+      .from("messages")
+      .select("id,sender_id,kind,body")
+      .in("id", replyIds);
+    if (error) throw error;
+    for (const row of records(data)) {
+      const messageId = stringValue(row.id);
+      if (messageId) replies.set(messageId, row);
+    }
+    return replies;
+  }
+
+  private messageProfileIds(rows: DataRecord[], replies = new Map<string, DataRecord>()) {
+    return [
+      ...rows.map((row) => stringValue(row.sender_id)),
+      ...[...replies.values()].map((reply) => stringValue(reply.sender_id)),
+    ];
+  }
+
+  private async mapConversation(
+    row: DataRecord,
+    userId: string,
+    unreadCounts = new Map<string, number>(),
+    profileSummaries = new Map<string, DataRecord>(),
+    preferencesByConversation = new Map<string, ConversationPreferences>(),
+  ): Promise<Conversation> {
     const id = stringValue(row.id);
-    const participants = await Promise.all(records(row.members).map((membership) =>
-      this.mapParticipant(record(membership.profile), membership)));
+    const participants = await Promise.all(records(row.members).map((membership) => {
+      const profileId = stringValue(membership.profile_id);
+      return this.mapParticipant(profileSummaries.get(profileId) ?? {}, membership);
+    }));
     const otherParticipant = participants.find((participant) => participant.userId !== userId);
     const viewerMembership = records(row.viewer_membership).find((item) => stringValue(item.profile_id) === userId) ?? {};
-    const preferenceRow = records(row.preferences).find((item) => stringValue(item.profile_id) === userId);
-    const preferences = preferenceRow ? mapPreferences(preferenceRow, id, userId) : null;
+    const preferences = preferencesByConversation.get(id) ?? null;
     const clearedBeforeMs = preferences?.clearedBefore ? Date.parse(preferences.clearedBefore) : Number.NEGATIVE_INFINITY;
     const last = records(row.recent_messages).find((message) => {
       const createdAt = Date.parse(stringValue(message.created_at));
@@ -638,7 +728,11 @@ export class SupabaseMessagingRepository implements MessagingRepository {
     };
   }
 
-  private async mapMessage(row: DataRecord): Promise<Message> {
+  private async mapMessage(
+    row: DataRecord,
+    profileSummaries = new Map<string, DataRecord>(),
+    replies = new Map<string, DataRecord>(),
+  ): Promise<Message> {
     const mediaWithoutUrls: Omit<MessageMedia, "signedUrl">[] = records(row.attachments).map((item) => {
       const mimeType = stringValue(item.mime_type, "application/octet-stream");
       const storagePath = stringValue(item.object_path);
@@ -658,9 +752,9 @@ export class SupabaseMessagingRepository implements MessagingRepository {
           : null,
       };
     });
-    const sender = record(row.sender);
+    const sender = profileSummaries.get(stringValue(row.sender_id)) ?? {};
     const senderAvatarPath = nullableString(sender.avatar_path);
-    const reply = records(row.reply_to)[0];
+    const reply = replies.get(stringValue(row.reply_to_message_id));
     const receipts = records(row.receipts).reduce<MessageReceipt[]>((result, item) => {
       const readAt = nullableString(item.read_at);
       const deliveredAt = nullableString(item.delivered_at);
@@ -686,7 +780,10 @@ export class SupabaseMessagingRepository implements MessagingRepository {
       replyTo: reply ? {
         id: stringValue(reply.id),
         senderId: stringValue(reply.sender_id),
-        senderName: stringValue(record(reply.sender).full_name, stringValue(record(reply.sender).username, "Pessoa ORHA")),
+        senderName: stringValue(
+          profileSummaries.get(stringValue(reply.sender_id))?.full_name,
+          stringValue(profileSummaries.get(stringValue(reply.sender_id))?.username, "Pessoa ORHA"),
+        ),
         kind: messageKind(reply.kind),
         body: nullableString(reply.body),
       } : null,

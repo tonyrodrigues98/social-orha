@@ -24,6 +24,81 @@ const persistedMessage: Message = {
 };
 
 describe("SupabaseMessagingRealtimeRepository", () => {
+  it("subscribes a private inbox to consent and conversation changes", () => {
+    const handlers: Array<{
+      config: { event: string; table: string; filter?: string };
+      callback: (payload: unknown) => void;
+    }> = [];
+    let statusCallback: ((status: string) => void) | undefined;
+    let systemCallback: ((payload: { extension: string; status: string }) => void) | undefined;
+    const channel: Record<string, unknown> = {};
+    channel.on = vi.fn((type: string, config: unknown, callback: (payload: never) => void) => {
+      if (type === "postgres_changes") {
+        handlers.push({
+          config: config as { event: string; table: string; filter?: string },
+          callback: callback as (payload: unknown) => void,
+        });
+      }
+      if (type === "system") systemCallback = callback as typeof systemCallback;
+      return channel;
+    });
+    channel.subscribe = vi.fn((callback: (status: string) => void) => {
+      statusCallback = callback;
+      return channel;
+    });
+    const removeChannel = vi.fn().mockResolvedValue("ok");
+    const createChannel = vi.fn(() => channel);
+    const client = { channel: createChannel, removeChannel } as unknown as SupabaseClient;
+    const realtime = new SupabaseMessagingRealtimeRepository(
+      client,
+      { getMessage: vi.fn() } as unknown as MessagingRepository,
+    );
+    const onEvent = vi.fn();
+
+    const session = realtime.subscribeInbox({ userId: "user-1", onEvent });
+
+    expect(createChannel).toHaveBeenCalledWith("messaging-inbox:user-1", expect.objectContaining({
+      config: expect.objectContaining({ private: true }),
+    }));
+    expect(handlers).toEqual(expect.arrayContaining([
+      expect.objectContaining({ config: expect.objectContaining({ table: "conversation_requests", filter: "recipient_id=eq.user-1" }) }),
+      expect.objectContaining({ config: expect.objectContaining({ table: "conversation_requests", filter: "requester_id=eq.user-1" }) }),
+      expect.objectContaining({ config: expect.objectContaining({ table: "conversation_members", filter: "profile_id=eq.user-1" }) }),
+      expect.objectContaining({ config: expect.objectContaining({ table: "messages" }) }),
+    ]));
+
+    statusCallback?.("SUBSCRIBED");
+    expect(onEvent).not.toHaveBeenCalled();
+    systemCallback?.({ extension: "system", status: "ok" });
+    expect(onEvent).toHaveBeenCalledWith({ entity: "sync", operation: "ready" });
+
+    const request = handlers.find((handler) =>
+      handler.config.table === "conversation_requests"
+      && handler.config.filter === "recipient_id=eq.user-1");
+    request?.callback({
+      eventType: "INSERT",
+      new: { id: "request-1", recipient_id: "user-1", created_at: "2026-09-14T12:00:00.000Z" },
+      old: {},
+    });
+    expect(onEvent).toHaveBeenLastCalledWith({ entity: "request", operation: "insert" });
+
+    const message = handlers.find((handler) => handler.config.table === "messages");
+    message?.callback({
+      eventType: "INSERT",
+      new: { id: "message-1", conversation_id: "conversation-1", created_at: "2026-09-14T12:01:00.000Z" },
+      old: {},
+    });
+    expect(onEvent).toHaveBeenLastCalledWith({
+      entity: "message",
+      operation: "insert",
+      conversationId: "conversation-1",
+    });
+
+    session.unsubscribe();
+    session.unsubscribe();
+    expect(removeChannel).toHaveBeenCalledTimes(1);
+  });
+
   it("deduplicates repeated events and removes the channel exactly once", async () => {
     const handlers: Array<{
       config: { event: string; table: string };

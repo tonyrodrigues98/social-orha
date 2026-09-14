@@ -258,6 +258,53 @@ export async function runSocialDomainSmoke(
     }
     checks.push("profile-discovery");
 
+    const unrelatedSummary = await principalA.client.rpc(
+      "get_messaging_profile_summaries",
+      { p_profile_ids: [principalB.id] },
+    );
+    if (unrelatedSummary.error || unrelatedSummary.data.length !== 0) {
+      throw new Error(
+        "Messaging identity leaked without a request or shared conversation.",
+      );
+    }
+    checks.push("messaging-identity-denied-without-contact");
+
+    const conversationRequest = await principalA.client.rpc(
+      "request_conversation",
+      {
+        p_target_profile_id: principalB.id,
+        p_opening_message: "Pedido efêmero de validação de identidade.",
+      },
+    );
+    if (conversationRequest.error) {
+      throw new Error("Could not create a temporary conversation request.");
+    }
+    const conversationRequestId = requiredId(
+      rpcRow(conversationRequest.data).id,
+      "Conversation request",
+    );
+    const relatedSummary = await principalB.client.rpc(
+      "get_messaging_profile_summaries",
+      { p_profile_ids: [principalA.id] },
+    );
+    if (
+      relatedSummary.error
+      || relatedSummary.data.length !== 1
+      || relatedSummary.data[0]?.profile_id !== principalA.id
+    ) {
+      throw new Error(
+        "Conversation recipient could not resolve the requester's identity.",
+      );
+    }
+    const declinedConversation = await principalB.client.rpc(
+      "respond_to_conversation_request",
+      { p_request_id: conversationRequestId, p_accept: false },
+    );
+    if (declinedConversation.error) {
+      throw new Error("Could not close the temporary conversation request.");
+    }
+    checks.push("messaging-identity-authorized-by-consent-context");
+
     await expectRejected(
       () => principalA.social.requestFriendship(principalA.id),
       "Self friendship",

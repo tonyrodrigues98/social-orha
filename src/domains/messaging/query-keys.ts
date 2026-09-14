@@ -7,8 +7,9 @@ export const messagingKeys = {
     [...messagingKeys.conversationLists(userId), kind ?? "all"] as const,
   conversation: (userId: string, conversationId: string) =>
     [...messagingKeys.root, "conversation", userId, conversationId] as const,
+  requestLists: (userId: string) => [...messagingKeys.root, "requests", userId] as const,
   requests: (userId: string, status = "all") =>
-    [...messagingKeys.root, "requests", userId, status] as const,
+    [...messagingKeys.requestLists(userId), status] as const,
   messages: (userId: string, conversationId: string) =>
     [...messagingKeys.root, "messages", userId, conversationId] as const,
   searches: (userId: string) => [...messagingKeys.root, "search", userId] as const,

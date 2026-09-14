@@ -2,20 +2,20 @@
 
 Data da verificação: 2026-09-14  
 Branch auditada: `codex/production-launch`  
-Commit-base auditado antes deste checkpoint: `779507a`
+Commit-base auditado antes deste checkpoint: `f482bc4`
 Staging auditado: `bgeauxljwjbtbwpbzpoo`  
 Produção Supabase: `iuaczhkfmwpyhtpdmuyt`
 
 ## Veredito
 
-A ORHA não é mais somente um protótipo na branch de lançamento: existe uma base de produção ampla, integrada ao Supabase, com rotas reais, repositories reais, schema social, RLS, Storage, Realtime e uma suíte de testes relevante. O staging possui 25 migrations aplicadas, 40 tabelas públicas com RLS, cinco buckets privados, 16 tabelas publicadas no Realtime, lint hospedado sem achados, gate estrutural 23/23 e matrizes RLS/onboarding/suporte/papéis globais/consentimento transacionais aprovadas.
+A ORHA não é mais somente um protótipo na branch de lançamento: existe uma base de produção ampla, integrada ao Supabase, com rotas reais, repositories reais, schema social, RLS, Storage, Realtime e uma suíte de testes relevante. O staging possui 27 migrations aplicadas, 40 tabelas públicas com RLS, cinco buckets privados, 17 tabelas publicadas no Realtime, lint hospedado sem achados, gate estrutural 23/23 e matrizes RLS/onboarding/suporte/papéis globais/consentimento transacionais aprovadas.
 
 Mesmo assim, a ORHA **ainda não atende à Definition of Done para lançamento em massa**. Os bloqueadores não são cosméticos: o deploy público ainda executa a `main` legada com `PrototypeProvider` e seeds; deep links retornam HTTP 404; a jornada E2E real não pode iniciar por falta de ambiente/secrets; e os serviços externos obrigatórios de Auth, e-mail, domínio e operação ainda não foram comprovados. As cinco Edge Functions já estão ativas no staging, os dois erros SQL foram corrigidos e a superfície de dependências de produção está com audit zero.
 
 Portanto, a classificação correta é:
 
 - **Código candidato a lançamento:** avançado, compilável e sem mocks de runtime na branch auditada.
-- **Staging de dados:** estruturalmente consistente, com RLS e lint validados, cinco Edge Functions ativas, gate anônimo/CORS 7/7, catálogo/export/mídia autenticados 14/14, ciclo de conta 17/17, mensageria/mídia privada 18/18 e domínio social multiusuário 18/18; a matriz E2E permanente de cinco contas ainda está pendente.
+- **Staging de dados:** estruturalmente consistente, com RLS e lint validados, cinco Edge Functions ativas, gate anônimo/CORS 7/7, catálogo/export/mídia autenticados 14/14, ciclo de conta 17/17, mensageria/mídia privada 18/18 e domínio social multiusuário 20/20; a matriz E2E permanente de cinco contas ainda está pendente.
 - **Produção:** não promovida.
 - **Produto público atual:** protótipo legado, não equivalente à branch candidata.
 - **Pronto para as massas:** não.
@@ -30,7 +30,7 @@ Portanto, a classificação correta é:
 | Rotas recuperáveis                | `src/app/router.tsx` e `src/app/router-policy.ts` definem Auth, onboarding, cinco áreas principais, conversas, comunidades, perfil público, notificações, configurações, denúncia e moderação                                               | Implementado na branch                                                                              |
 | Auth por e-mail                   | `src/infrastructure/supabase/email-auth.ts` contém cadastro, login, logout, resend, recovery e troca de senha; `src/app/auth/auth-provider.tsx` observa a sessão real                                                                       | Implementado; entrega externa não comprovada                                                        |
 | Onboarding persistente            | `src/app/onboarding/onboarding-flow.tsx` retoma `onboarding_step` e persiste identidade, localidade, detalhes e favoritos                                                                                                                   | Implementado; fechamento E2E pendente                                                               |
-| Domínios sociais                  | `src/domains/social/repository.ts`, `src/infrastructure/supabase/social/social-repository.ts`, `scripts/social-domain-smoke.ts` e `e2e/staging-social-browser-smoke.spec.ts` comprovam perfis, amizades, comunidades, memberships, posts, comentários, reações e bloqueio | Implementado; domínio staging 18/18 e navegador multiusuário efêmero 2/2                            |
+| Domínios sociais                  | `src/domains/social/repository.ts`, `src/infrastructure/supabase/social/social-repository.ts`, `scripts/social-domain-smoke.ts` e `e2e/staging-social-browser-smoke.spec.ts` comprovam perfis, amizades, comunidades, memberships, posts, comentários, reações, bloqueio e conversa textual | Implementado; domínio staging 20/20 e navegador multiusuário efêmero 3/3                       |
 | Comunidade administrativa         | `src/infrastructure/supabase/community-management-repository.ts` e `src/app/community/community-manager-drawer.tsx` cobrem edição, regras, roles, banimento, branding e arquivamento                                                        | Implementado; mídia depende de Edge                                                                 |
 | Mensageria persistente            | `src/domains/messaging/contracts.ts` e `src/infrastructure/supabase/messaging/*` cobrem pedidos, grupos, texto, imagem, áudio, reply, reaction, forward, delete, receipts, busca, preferências e Realtime                                   | Implementado; pedido/aceite, texto, receipts, mídia e Realtime privado comprovados 18/18 no staging |
 | Waveform e gravação               | `src/app/pages/private-chat-page.tsx`, `src/infrastructure/media/browser-audio-recorder.ts` e `src/components/ui/chat/*` usam gravação real, waveform e primitives do chat                                                                  | Implementado; WAV remoto, inspeção Edge, waveform persistida e download entre usuários comprovados  |
@@ -47,10 +47,10 @@ Portanto, a classificação correta é:
 
 As leituras autenticadas da CLI confirmaram:
 
-- 25 migrations locais/remotas alinhadas, de `20260811040000` a `20260914107000`;
+- 27 migrations locais/remotas alinhadas, de `20260811040000` a `20260914109000`;
 - 40 tabelas públicas e as mesmas 40 com RLS;
 - cinco buckets privados: `profile-media`, `community-media`, `chat-media`, `report-evidence` e `account-exports`;
-- 16 tabelas na publication `supabase_realtime`;
+- 17 tabelas na publication `supabase_realtime`;
 - PostgreSQL 17.6;
 - `scripts/supabase-validate.sql`: 23/23 verificações aprovadas;
 - `scripts/supabase-rls-integration.sql`: matriz completa aprovada com rollback e sem fixtures residuais.
@@ -63,14 +63,14 @@ Fontes versionadas: `scripts/remote-inventory.sql`, `scripts/supabase-validate.s
 | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
 | `npm run typecheck`                             | Aprovado fora do sandbox                                                                                   |
 | `npm run lint`                                  | Aprovado                                                                                                   |
-| `npm test`                                      | 86 arquivos e 364 testes aprovados                                                                         |
+| `npm test`                                      | 87 arquivos e 367 testes aprovados                                                                         |
 | `npm run build`                                 | Aprovado; 5.985 módulos, manifest e service worker gerados, precache de 103 entradas                       |
 | `npm run audit:bundle`                          | Aprovado; entrada JS 291,9 KiB gzip, CSS 27,8 KiB gzip e maior lazy chunk 78,8 KiB gzip                    |
 | `npm run check:catalog`                         | Aprovado                                                                                                   |
 | `npm run audit:production-debt`                 | Aprovado; zero mock, seed, TODO e localStorage; ocorrências legadas explicitamente allowlisted             |
 | `npm run audit:secrets`                         | Aprovado                                                                                                   |
 | `npm run audit:text-encoding`                   | Aprovado                                                                                                   |
-| `npm run test:e2e:staging:social`               | Aprovado 2/2; duas sessões reais, amizade e comunidade com persistência após reload                        |
+| `npm run test:e2e:staging:social`               | Aprovado 3/3; duas sessões reais, amizade, comunidade e conversa textual com Realtime/reload                |
 | `npm run test:e2e:production`                   | Bloqueado no preflight por ambiente/secrets ausentes; nenhuma jornada foi falsamente marcada como aprovada |
 | `npm audit --omit=dev --audit-level=high`       | Aprovado; zero vulnerabilidades                                                                            |
 | `npx supabase db lint --linked --level warning` | Aprovado sem erros nem avisos                                                                              |
@@ -113,7 +113,7 @@ O gate `npm run smoke:worker:account-deletion` passou 17/17. Para desativação,
 
 O gate `npm run smoke:messaging:media` passou 18/18 com duas contas efêmeras: onboarding real, solicitação e aceite de conversa, texto em Realtime privado, imagem, áudio WAV, waveform, verificação binária, signed download, recibo, denúncia com retenção exata do anexo e evidência privada. O mesmo gate confirmou que os canais privados `notifications:<user>` e `support:<user>` alcançam readiness de replicação sem abrir escrita ao cliente. A pós-consulta confirmou zero contas, perfis e objetos sintéticos. A matriz permanente A/B/Admin/Moderador/Suporte continua sendo um gate maior e separado.
 
-O gate `npm run smoke:social:domain` também passou 18/18 com duas contas efêmeras e cleanup verificado. Ele exerceu os repositories de produção contra o staging: descoberta de perfis, autoamizade negada, pedido/aceite/notificações, par idempotente, escrita direta privilegiada negada, comunidade com owner server-side, membership, autoridade de manager, post, comentário, reações, saída/reentrada, bloqueio global, desbloqueio e negação anônima. A matriz permanente A/B/Admin/Moderador/Suporte permanece necessária porque esse smoke não substitui navegador, e-mail, papéis administrativos nem evidência longitudinal entre dispositivos.
+O gate `npm run smoke:social:domain` também passou 20/20 com duas contas efêmeras e cleanup verificado. Ele exerceu os repositories de produção contra o staging: descoberta de perfis, identidade de mensageria negada sem vínculo e autorizada por pedido, autoamizade negada, pedido/aceite/notificações, par idempotente, escrita direta privilegiada negada, comunidade com owner server-side, membership, autoridade de manager, post, comentário, reações, saída/reentrada, bloqueio global, desbloqueio e negação anônima. A matriz permanente A/B/Admin/Moderador/Suporte permanece necessária porque esse smoke não substitui navegador, e-mail, papéis administrativos nem evidência longitudinal entre dispositivos.
 
 Critério de aceite:
 
@@ -143,9 +143,9 @@ Critério de aceite:
 - confirmar que o bundle implantado corresponde ao commit/release aprovado;
 - procurar novamente `PrototypeProvider`, `prototype-data`, mock e seed no commit implantado.
 
-### P0.4 Completar a matriz E2E real multiusuário — prova efêmera 2/2 concluída
+### P0.4 Completar a matriz E2E real multiusuário — prova efêmera 3/3 concluída
 
-O gate efêmero `npm run test:e2e:staging:social` passou 2/2 com duas contas criadas e removidas pelo runner e duas sessões de navegador independentes. A interface real comprovou amizade completa e comunidade com post, reação e comentário recuperados após reload. O gate também detectou e corrigiu invalidação de cache após ingresso, heading duplicado e uma asserção que confundia conteúdo do editor com gravação confirmada.
+O gate efêmero `npm run test:e2e:staging:social` passou 3/3 com duas contas criadas e removidas pelo runner e duas sessões de navegador independentes. A interface real comprovou amizade completa, comunidade com post/reação/comentário recuperados após reload e conversa consentida com pedido sem reload, aceite, deep link, entrega textual por Realtime e persistência. O gate também detectou e corrigiu invalidação de cache, projeções incompatíveis com RLS, dois embeds PostgREST inválidos, heading duplicado e uma asserção que confundia conteúdo do editor com gravação confirmada.
 
 O preflight da matriz permanente ainda bloqueia por ausência de 22 valores operacionais, incluindo URL/key/host de staging, contas A/B/Admin/Moderador/Suporte, credenciais, service role exclusiva do runner, domínio catch-all e confirmação SMTP. A prova efêmera reduz risco nos domínios de amizade/comunidade, mas não substitui Auth por e-mail, papéis administrativos, suporte, moderação, chat/mídia no navegador nem evidência longitudinal entre dispositivos.
 

@@ -146,6 +146,12 @@ export type MessagingRealtimeEvent =
   | { entity: "reaction" | "receipt" | "attachment"; operation: "change"; conversationId: string; messageId?: string }
   | { entity: "preferences"; operation: "change"; conversationId: string; clearedBefore: string | null };
 
+export type MessagingInboxRealtimeEvent = Readonly<{
+  entity: "sync" | "request" | "membership" | "conversation" | "message" | "preferences";
+  operation: "ready" | "insert" | "update" | "delete";
+  conversationId?: string;
+}>;
+
 export type MessagingPresenceSnapshot = Readonly<{
   participants: ConversationPresence[];
 }>;
@@ -156,6 +162,11 @@ export interface MessagingRealtimeSession {
 }
 
 export interface MessagingRealtimeRepository {
+  subscribeInbox(input: {
+    userId: string;
+    onEvent: (event: MessagingInboxRealtimeEvent) => void;
+    onError?: (error: Error) => void;
+  }): Pick<MessagingRealtimeSession, "unsubscribe">;
   subscribe(input: {
     conversationId: string;
     userId: string;

@@ -1,6 +1,7 @@
 import type { RealtimePostgresChangesPayload, SupabaseClient } from "@supabase/supabase-js";
 import type {
   ConversationPresence,
+  MessagingInboxRealtimeEvent,
   MessagingPresenceSnapshot,
   MessagingRealtimeEvent,
   MessagingRealtimeRepository,
@@ -28,6 +29,116 @@ export class SupabaseMessagingRealtimeRepository implements MessagingRealtimeRep
     private readonly client: SupabaseClient,
     private readonly repository: MessagingRepository,
   ) {}
+
+  subscribeInbox(input: {
+    userId: string;
+    onEvent: (event: MessagingInboxRealtimeEvent) => void;
+    onError?: (error: Error) => void;
+  }): Pick<MessagingRealtimeSession, "unsubscribe"> {
+    if (!isValidId(input.userId)) {
+      input.onError?.(new Error("Identificador inválido para a caixa de conversas."));
+      return { unsubscribe: () => undefined };
+    }
+
+    let active = true;
+    let removed = false;
+    let subscribed = false;
+    let replicationReady = false;
+    let readyEmitted = false;
+    const seen = new Set<string>();
+    const reportError = (error: unknown) => {
+      if (!active) return;
+      input.onError?.(error instanceof Error ? error : new Error("Falha na atualização da caixa de conversas."));
+    };
+    const emitReady = () => {
+      if (!active || !subscribed || !replicationReady || readyEmitted) return;
+      readyEmitted = true;
+      input.onEvent({ entity: "sync", operation: "ready" });
+    };
+    const emitChange = (
+      entity: Exclude<MessagingInboxRealtimeEvent["entity"], "sync">,
+      payload: RealtimePostgresChangesPayload<RealtimeRow>,
+      idColumn: "id" | "conversation_id" = "conversation_id",
+    ) => {
+      if (!active) return;
+      const next = row(payload.new);
+      const previous = row(payload.old);
+      const changed = Object.keys(next).length ? next : previous;
+      const identity = text(changed.id) || text(changed.conversation_id);
+      const version = text(changed.updated_at) || text(changed.created_at) || text(changed.responded_at);
+      const operation = payload.eventType.toLowerCase() as "insert" | "update" | "delete";
+      const key = `${entity}:${operation}:${identity}:${version}`;
+      if (identity && seen.has(key)) return;
+      if (identity) {
+        seen.add(key);
+        if (seen.size > 512) seen.delete(seen.values().next().value ?? "");
+      }
+      const conversationId = text(changed[idColumn]);
+      input.onEvent({ entity, operation, ...(conversationId ? { conversationId } : {}) });
+    };
+
+    const channel = this.client.channel(`messaging-inbox:${input.userId}`, {
+      config: {
+        private: true,
+        broadcast: { ack: false, self: false, replication_ready: true },
+      },
+    });
+    const requestFilter = (column: "recipient_id" | "requester_id") =>
+      ` ${column}=eq.${input.userId}`.trim();
+
+    channel
+      .on("postgres_changes", {
+        event: "*", schema: "public", table: "conversation_requests", filter: requestFilter("recipient_id"),
+      }, (payload) => emitChange("request", payload))
+      .on("postgres_changes", {
+        event: "*", schema: "public", table: "conversation_requests", filter: requestFilter("requester_id"),
+      }, (payload) => emitChange("request", payload))
+      .on("postgres_changes", {
+        event: "*", schema: "public", table: "conversation_members", filter: `profile_id=eq.${input.userId}`,
+      }, (payload) => emitChange("membership", payload))
+      .on("postgres_changes", {
+        event: "*", schema: "public", table: "conversation_preferences", filter: `profile_id=eq.${input.userId}`,
+      }, (payload) => emitChange("preferences", payload))
+      .on("postgres_changes", {
+        event: "*", schema: "public", table: "messages",
+      }, (payload) => emitChange("message", payload))
+      .on("postgres_changes", {
+        event: "*", schema: "public", table: "conversations",
+      }, (payload) => emitChange("conversation", payload, "id"))
+      .on("system", {}, (payload) => {
+        if (!active || payload.extension !== "system") return;
+        if (payload.status !== "ok") {
+          replicationReady = false;
+          readyEmitted = false;
+          reportError(new Error("A sincronização da caixa de conversas ficou indisponível."));
+          return;
+        }
+        replicationReady = true;
+        emitReady();
+      })
+      .subscribe((status, error) => {
+        if (!active) return;
+        if (status === "SUBSCRIBED") {
+          subscribed = true;
+          emitReady();
+        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+          subscribed = false;
+          replicationReady = false;
+          readyEmitted = false;
+          reportError(error);
+        }
+      });
+
+    return {
+      unsubscribe: () => {
+        if (removed) return;
+        removed = true;
+        active = false;
+        seen.clear();
+        void this.client.removeChannel(channel);
+      },
+    };
+  }
 
   subscribe(input: {
     conversationId: string;

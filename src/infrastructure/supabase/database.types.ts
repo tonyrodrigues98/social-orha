@@ -2819,6 +2819,15 @@ export type Database = {
           username: string
         }[]
       }
+      get_messaging_profile_summaries: {
+        Args: { p_profile_ids: string[] }
+        Returns: {
+          avatar_path: string
+          full_name: string
+          profile_id: string
+          username: string
+        }[]
+      }
       get_visible_community_post: {
         Args: { p_post_id: string }
         Returns: {
