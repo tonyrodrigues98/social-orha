@@ -1,18 +1,11 @@
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2.112.2";
 import { EdgeHttpError } from "./runtime.ts";
+import {
+  parseLifecycleRpcRow,
+  type LifecycleRequestRow,
+} from "./database-row.ts";
 
-export type LifecycleRequestRow = {
-  id: string;
-  user_id: string;
-  kind: "data_export" | "deactivate" | "delete";
-  status: "pending" | "processing" | "completed" | "cancelled" | "failed";
-  execute_after: string;
-};
-
-export function rpcRow<T>(value: unknown): T | null {
-  const row = Array.isArray(value) ? value[0] : value;
-  return row && typeof row === "object" ? row as T : null;
-}
+export type { LifecycleRequestRow } from "./database-row.ts";
 
 export async function claimLifecycle(
   service: SupabaseClient,
@@ -24,7 +17,11 @@ export async function claimLifecycle(
     p_user_id: input.userId ?? null,
   });
   if (error) throw new EdgeHttpError(500, "lifecycle_claim_failed", "A fila da conta está indisponível.");
-  return rpcRow<LifecycleRequestRow>(data);
+  try {
+    return parseLifecycleRpcRow(data);
+  } catch {
+    throw new EdgeHttpError(500, "lifecycle_claim_invalid", "A fila da conta retornou dados inválidos.");
+  }
 }
 
 export async function completeLifecycle(

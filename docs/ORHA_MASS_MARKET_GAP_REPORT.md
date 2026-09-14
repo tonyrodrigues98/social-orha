@@ -8,14 +8,14 @@ Produção Supabase: `iuaczhkfmwpyhtpdmuyt`
 
 ## Veredito
 
-A ORHA não é mais somente um protótipo na branch de lançamento: existe uma base de produção ampla, integrada ao Supabase, com rotas reais, repositories reais, schema social, RLS, Storage, Realtime e uma suíte de testes relevante. O staging possui 15 migrations aplicadas, 38 tabelas públicas com RLS, cinco buckets privados, 14 tabelas publicadas no Realtime, lint hospedado sem erros, gate estrutural 18/18 e matriz RLS transacional aprovada.
+A ORHA não é mais somente um protótipo na branch de lançamento: existe uma base de produção ampla, integrada ao Supabase, com rotas reais, repositories reais, schema social, RLS, Storage, Realtime e uma suíte de testes relevante. O staging possui 16 migrations aplicadas, 38 tabelas públicas com RLS, cinco buckets privados, 14 tabelas publicadas no Realtime, lint hospedado sem erros, gate estrutural 19/19 e matriz RLS transacional aprovada.
 
 Mesmo assim, a ORHA **ainda não atende à Definition of Done para lançamento em massa**. Os bloqueadores não são cosméticos: o deploy público ainda executa a `main` legada com `PrototypeProvider` e seeds; deep links retornam HTTP 404; a jornada E2E real não pode iniciar por falta de ambiente/secrets; e os serviços externos obrigatórios de Auth, e-mail, domínio e operação ainda não foram comprovados. As cinco Edge Functions já estão ativas no staging, os dois erros SQL foram corrigidos e a superfície de dependências de produção está com audit zero.
 
 Portanto, a classificação correta é:
 
 - **Código candidato a lançamento:** avançado, compilável e sem mocks de runtime na branch auditada.
-- **Staging de dados:** estruturalmente consistente, com RLS e lint validados, cinco Edge Functions ativas e gate anônimo/CORS 7/7; jornadas autenticadas e Cron/Vault ainda pendentes.
+- **Staging de dados:** estruturalmente consistente, com RLS e lint validados, cinco Edge Functions ativas, gate anônimo/CORS 7/7 e dois jobs Cron/Vault ativos; jornadas autenticadas ainda pendentes.
 - **Produção:** não promovida.
 - **Produto público atual:** protótipo legado, não equivalente à branch candidata.
 - **Pronto para as massas:** não.
@@ -45,12 +45,12 @@ Portanto, a classificação correta é:
 
 As leituras autenticadas da CLI confirmaram:
 
-- 15 migrations locais/remotas alinhadas, de `20260811040000` a `20260914070000`;
+- 16 migrations locais/remotas alinhadas, de `20260811040000` a `20260914080000`;
 - 38 tabelas públicas e as mesmas 38 com RLS;
 - cinco buckets privados: `profile-media`, `community-media`, `chat-media`, `report-evidence` e `account-exports`;
 - 14 tabelas na publication `supabase_realtime`;
 - PostgreSQL 17.6;
-- `scripts/supabase-validate.sql`: 18/18 verificações aprovadas;
+- `scripts/supabase-validate.sql`: 19/19 verificações aprovadas;
 - `scripts/supabase-rls-integration.sql`: matriz completa aprovada com rollback e sem fixtures residuais.
 
 Fontes versionadas: `scripts/remote-inventory.sql`, `scripts/supabase-validate.sql`, `scripts/supabase-rls-integration.sql`, `supabase/migrations/*` e `docs/ORHA_PRODUCTION_EXECUTION_STATE.md`.
@@ -101,13 +101,13 @@ As cinco funções estão versionadas e `ACTIVE` no staging; produção continua
 - `supabase/functions/media-verify`;
 - `supabase/functions/catalog-search`.
 
-`ORHA_CRON_SECRET` e `ORHA_ALLOWED_ORIGINS` foram provisionados no staging. O gate `npm run smoke:edge:anonymous` passou 7/7: todas rejeitam acesso anônimo com `401`, o preflight da origem permitida retorna `204` e uma origem externa recebe `403`. Ainda faltam Cron/Vault e as jornadas autenticadas de upload, catálogo, exportação, exclusão e cleanup.
+`ORHA_CRON_SECRET` e `ORHA_ALLOWED_ORIGINS` foram provisionados no staging. O gate `npm run smoke:edge:anonymous` passou 7/7: todas rejeitam acesso anônimo com `401`, o preflight da origem permitida retorna `204` e uma origem externa recebe `403`. `pg_cron`, `pg_net`, Vault e os jobs de 5/10 minutos estão ativos; ambos os workers retornaram `200` em filas vazias. O teste revelou e corrigiu o parsing de um composto SQL nulo que antes causava retry inválido. Ainda faltam as jornadas autenticadas de upload, catálogo, exportação, exclusão e cleanup com artefatos reais.
 
 Critério de aceite:
 
 - manter `ORHA_CRON_SECRET` e `ORHA_ALLOWED_ORIGINS` rotacionáveis por ambiente;
 - manter as cinco funções com `verify_jwt` conforme `supabase/config.toml`;
-- configurar Cron/Vault para lifecycle e cleanup;
+- manter Cron/Vault de lifecycle e cleanup monitorados e rotacionáveis;
 - executar check/test Deno em ambiente com Deno 2;
 - provar reserva → upload → verificação → associação → URL assinada → remoção → cleanup;
 - provar exportação e exclusão com reconciliação idempotente;

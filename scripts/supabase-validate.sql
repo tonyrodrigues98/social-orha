@@ -17,7 +17,13 @@ expected_migrations(version) as (
     ('20260816210000'),
     ('20260816220000'),
     ('20260816230000'),
-    ('20260816240000')
+    ('20260816240000'),
+    ('20260816250000'),
+    ('20260903010000'),
+    ('20260914050000'),
+    ('20260914060000'),
+    ('20260914070000'),
+    ('20260914080000')
 ),
 missing_migrations as (
   select expected.version
@@ -287,6 +293,17 @@ abuse_control_contract as (
         and tgenabled <> 'D'
     ) as present
 ),
+worker_scheduler_contract as (
+  select
+    exists (select 1 from pg_extension where extname = 'pg_cron')
+    and exists (select 1 from pg_extension where extname = 'pg_net')
+    and to_regprocedure('private.invoke_orha_worker(text,integer)') is not null
+    and to_regprocedure('private.configure_orha_worker_schedules()') is not null
+    and not has_function_privilege('anon', 'private.invoke_orha_worker(text,integer)', 'EXECUTE')
+    and not has_function_privilege('authenticated', 'private.invoke_orha_worker(text,integer)', 'EXECUTE')
+    and not has_function_privilege('service_role', 'private.invoke_orha_worker(text,integer)', 'EXECUTE')
+    as present
+),
 username_unique_index as (
   select exists (
     select 1
@@ -430,6 +447,16 @@ checks(check_order, check_name, passed, details) as (
       when (select present from abuse_control_contract)
         then 'all six protected mutations have private authoritative rate limits'
       else 'private abuse-control tables, consumer, or triggers are incomplete'
+    end
+  union all
+  select
+    160,
+    'worker_scheduler_contract',
+    (select present from worker_scheduler_contract),
+    case
+      when (select present from worker_scheduler_contract)
+        then 'pg_cron, pg_net, and private worker scheduler functions are installed'
+      else 'worker scheduler extensions, functions, or grants are incomplete'
     end
 )
 select check_name, passed, details

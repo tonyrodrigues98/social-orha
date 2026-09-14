@@ -5,17 +5,17 @@ Branch: `codex/production-launch`
 Commit-base publicado: `f6b7ad2`
 Projeto vinculado durante os gates: `bgeauxljwjbtbwpbzpoo` (ORHA-Staging)  
 Produção: `iuaczhkfmwpyhtpdmuyt` (ORHA), ainda não promovida  
-Estado: **staging saudável e alinhado às 15 migrations locais; cinco Edge Functions ativas e gate anônimo/CORS 7/7; dependências de produção com audit 0; produção intacta; lint remoto sem erros, gate estrutural 18/18 e matriz RLS transacional aprovados**.
+Estado: **staging saudável e alinhado às 16 migrations locais; cinco Edge Functions ativas, gate anônimo/CORS 7/7 e dois jobs Cron/Vault ativos; dependências de produção com audit 0; produção intacta; lint remoto sem erros, gate estrutural 19/19 e matriz RLS transacional aprovados**.
 
 ## Resumo executivo
 
-O banco de produção ainda não recebeu a cadeia social desta branch. No staging isolado `bgeauxljwjbtbwpbzpoo`, as 15 migrations versionadas, de `20260811040000` a `20260914070000`, estão agora aplicadas e registradas no ledger remoto. O lint hospedado passa sem erros, o gate estrutural passou em 18/18 checks e `scripts/supabase-rls-integration.sql` passou integralmente, terminando em `ROLLBACK` sem fixtures residuais.
+O banco de produção ainda não recebeu a cadeia social desta branch. No staging isolado `bgeauxljwjbtbwpbzpoo`, as 16 migrations versionadas, de `20260811040000` a `20260914080000`, estão agora aplicadas e registradas no ledger remoto. O lint hospedado passa sem erros, o gate estrutural passou em 19/19 checks e `scripts/supabase-rls-integration.sql` passou integralmente, terminando em `ROLLBACK` sem fixtures residuais.
 
 Em 2026-09-14, ambos os projetos foram confirmados como ativos no control plane e o staging como `Healthy` no Dashboard. A CLI foi autenticada pelo fluxo oficial no navegador e o workspace foi vinculado temporariamente ao staging. A primeira aplicação publicou `1800` a `2200`; `2300` falhou atomicamente por um alias SQL reservado e por uma pós-validação que não aceitava a serialização `search_path=""` do PostgreSQL hospedado. As duas causas foram corrigidas no SQL versionado. A retomada aplicou `2300`, `2400`, `2500` e `20260903010000` com sucesso. O único aviso final foi a impossibilidade de gerar cache local do catálogo porque Docker não está instalado; isso não afetou o commit remoto das migrations.
 
 O schema local agora cobre identidade e privacidade, amizades sem follow, bloqueios, comunidades e conteúdo, conversas consentidas, mensagens e mídia, notificações, denúncias/moderação, ciclo de conta, Storage privado e Realtime. Processos que exigem autoridade de serviço — exclusão final de conta, exportação de dados, limpeza física de objetos e eventual cópia física de anexos — permanecem jobs operacionais/Edge, não ações simuladas no navegador.
 
-As cinco Edge Functions estão `ACTIVE` no staging. `ORHA_CRON_SECRET` foi gerado criptograficamente em memória e provisionado junto de `ORHA_ALLOWED_ORIGINS`, sem gravar ou imprimir o valor. O gate reproduzível `npm run smoke:edge:anonymous` comprovou 7/7 checks: as cinco funções retornam `401` sem credenciais, a origem local exata recebe preflight `204` e uma origem externa recebe `403` sem header permissivo. Fluxos autenticados, filas e Cron/Vault permanecem gates separados.
+As cinco Edge Functions estão `ACTIVE` no staging. `ORHA_CRON_SECRET` foi gerado criptograficamente em memória e provisionado junto de `ORHA_ALLOWED_ORIGINS`, sem gravar ou imprimir o valor. O gate reproduzível `npm run smoke:edge:anonymous` comprovou 7/7 checks: as cinco funções retornam `401` sem credenciais, a origem local exata recebe preflight `204` e uma origem externa recebe `403` sem header permissivo. A migration `20260914080000` instalou `pg_cron`/`pg_net` e funções privadas restritas a `postgres`; o Vault possui somente os nomes `orha_project_url` e `orha_cron_secret`. Os jobs `orha-account-lifecycle-worker` (5 min) e `orha-media-cleanup-worker` (10 min) estão ativos. Execuções idempotentes com filas vazias retornaram `200`: ciclo de conta com quatro contagens zero e mídia com oito filas zero. Fluxos autenticados com artefatos reais permanecem um gate separado.
 
 ## Inventário remoto confirmado
 
@@ -74,7 +74,7 @@ O primeiro `scripts/supabase-validate.ps1`, executado sobre uma revisão anterio
 - `community_memberships` ainda não estava na publication;
 - as 15 constraints `NOT VALID` do hardening ainda não haviam sido validadas.
 
-As três causas foram corrigidas antes da reconstrução final. No staging `bgeauxljwjbtbwpbzpoo`, `scripts/supabase-validate.sql` retornou 18/18 checks aprovados. Em seguida, `scripts/supabase-rls-integration.sql` cobriu anon, owner, outro usuário, amigo, bloqueado, membro, moderador comunitário, moderador global, admin, super-admin e suporte, além de introspecção de Storage e Realtime; o script concluiu com `ROLLBACK`, e a verificação posterior confirmou zero linhas residuais das fixtures.
+As três causas foram corrigidas antes da reconstrução final. No staging `bgeauxljwjbtbwpbzpoo`, `scripts/supabase-validate.sql` retornou 19/19 checks aprovados, incluindo o contrato Cron/pg_net/Vault. Em seguida, `scripts/supabase-rls-integration.sql` cobriu anon, owner, outro usuário, amigo, bloqueado, membro, moderador comunitário, moderador global, admin, super-admin e suporte, além de introspecção de Storage e Realtime; o script concluiu com `ROLLBACK`, e a verificação posterior confirmou zero linhas residuais das fixtures.
 
 No mesmo staging, o smoke de Auth passou: criação administrativa do usuário, login por senha via publishable key, leitura owner-only do perfil sob RLS e cleanup; o perfil novo nasceu corretamente com `onboarding_step = 0` e `onboarding_completed_at = null`.
 
@@ -94,6 +94,10 @@ As migrations forward seguintes já foram aplicadas, na ordem, no staging em 202
 - `20260816240000_notification_lifecycle_hardening.sql`: aplicado;
 - `20260816250000_visible_community_post.sql`: aplicado;
 - `20260903010000_group_conversation_lifecycle.sql`: aplicado; saída, transferência de owner e encerramento atômico de grupos.
+- `20260914050000_worker_table_grant_hardening.sql`: aplicado;
+- `20260914060000_audit_log_actor_anonymization.sql`: aplicado;
+- `20260914070000_resolve_runtime_function_ambiguity.sql`: aplicado;
+- `20260914080000_worker_scheduler_foundation.sql`: aplicado; `pg_cron`, `pg_net` e invocação privada via Vault.
 
 Qualquer alteração posterior nesses arquivos invalida o resultado e exige staging descartável novo, reaplicação e repetição integral dos gates. A migration `20260816180000` e suas migrations posteriores estão aplicadas e cobertas pelos gates estruturais/RLS atuais; a execução funcional autenticada dos workers continua separada.
 
@@ -269,10 +273,10 @@ Qualquer falha nessas pós-condições levanta erro e deve reverter a transaçã
 ## Limitações conhecidas do ambiente atual
 
 - Docker/Podman não está disponível neste workspace; `supabase status/db reset` não pode executar o banco local;
-- os testes locais continuam sendo estáticos/contratuais, mas o schema social também passou por aplicação SQL real, 18/18 validações e gate RLS transacional com `ROLLBACK` no staging `bgeauxljwjbtbwpbzpoo`;
+- os testes locais continuam sendo estáticos/contratuais, mas o schema social também passou por aplicação SQL real, 19/19 validações e gate RLS transacional com `ROLLBACK` no staging `bgeauxljwjbtbwpbzpoo`;
 - todas as migrations locais estão aplicadas no staging; produção permanece sem promoção;
 - buckets, publication e policies do staging foram criados pelas migrations e cobertos pela repetição integral dos gates estrutural e RLS/Storage/Realtime;
-- os workers estão implantados e protegidos por bearer próprio no staging, mas Cron/Vault e as jornadas autenticadas de exportação, delete final, purge e retenção ainda precisam ser comprovados antes do lançamento público;
+- os workers estão implantados, protegidos por bearer próprio, agendados por Cron/Vault e aprovados com filas vazias no staging; jornadas autenticadas de exportação, delete final, purge e retenção ainda precisam ser comprovadas antes do lançamento público;
 - as Edge Functions de mídia estão implantadas e passam o gate anônimo/CORS; PDF/arquivo genérico permanece fora do lançamento até existir quarentena e antimalware.
 
 ## Referências oficiais
