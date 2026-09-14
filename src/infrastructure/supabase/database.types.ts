@@ -2005,6 +2005,8 @@ export type Database = {
       }
       user_settings: {
         Row: {
+          analytics_consent_updated_at: string | null
+          analytics_enabled: boolean
           created_at: string
           high_contrast: boolean
           locale: string
@@ -2014,6 +2016,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          analytics_consent_updated_at?: string | null
+          analytics_enabled?: boolean
           created_at?: string
           high_contrast?: boolean
           locale?: string
@@ -2023,6 +2027,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          analytics_consent_updated_at?: string | null
+          analytics_enabled?: boolean
           created_at?: string
           high_contrast?: boolean
           locale?: string

@@ -28,7 +28,8 @@ expected_migrations(version) as (
     ('20260914100000'),
     ('20260914101000'),
     ('20260914102000'),
-    ('20260914103000')
+    ('20260914103000'),
+    ('20260914104000')
 ),
 missing_migrations as (
   select expected.version
@@ -382,6 +383,32 @@ global_role_management_contract as (
       where action = 'global_role_change'
     ) as present
 ),
+analytics_consent_contract as (
+  select
+    exists (
+      select 1
+      from information_schema.columns
+      where table_schema = 'public'
+        and table_name = 'user_settings'
+        and column_name = 'analytics_enabled'
+        and is_nullable = 'NO'
+        and column_default = 'false'
+    )
+    and exists (
+      select 1
+      from pg_trigger
+      where tgrelid = 'public.user_settings'::regclass
+        and tgname = 'user_settings_stamp_analytics_consent'
+        and not tgisinternal
+    )
+    and has_column_privilege('authenticated', 'public.user_settings', 'analytics_enabled', 'UPDATE')
+    and not has_column_privilege(
+      'authenticated',
+      'public.user_settings',
+      'analytics_consent_updated_at',
+      'UPDATE'
+    ) as present
+),
 username_unique_index as (
   select exists (
     select 1
@@ -565,6 +592,16 @@ checks(check_order, check_name, passed, details) as (
       when (select present from global_role_management_contract)
         then 'global roles are RPC-only, least-privilege, rate-limited, and server-authoritative'
       else 'global role functions, grants, or rate limits are incomplete'
+    end
+  union all
+  select
+    200,
+    'analytics_consent_contract',
+    (select present from analytics_consent_contract),
+    case
+      when (select present from analytics_consent_contract)
+        then 'analytics is disabled by default, owner-controlled, and server-timestamped'
+      else 'analytics consent columns, trigger, or least-privilege grants are incomplete'
     end
 )
 select check_name, passed, details

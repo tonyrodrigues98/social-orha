@@ -3,6 +3,7 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleHelp,
+  ChartNoAxesCombined,
   Download,
   FileText,
   LockKeyhole,
@@ -35,11 +36,18 @@ import {
 } from "../settings/settings-info-routes";
 import { SettingsInfoLink } from "../settings/settings-info-link";
 import { buildLaunchNotificationPreferencesUpdate } from "../settings/notification-settings-policy";
+import { useAuth } from "../auth/auth-context";
+import { useAnalytics } from "../analytics/analytics-context";
+import {
+  useOwnProfileSettingsQuery,
+  useUpdateOwnSettingsMutation,
+} from "../profile/profile-queries";
 
-export type SettingsSection = "notifications" | "blocked" | "security" | "account" | "support";
+export type SettingsSection = "notifications" | "privacy" | "blocked" | "security" | "account" | "support";
 
 const sections: Array<{ value: SettingsSection; label: string }> = [
   { value: "notifications", label: "Notificações" },
+  { value: "privacy", label: "Dados" },
   { value: "blocked", label: "Bloqueados" },
   { value: "security", label: "Segurança" },
   { value: "account", label: "Conta" },
@@ -151,6 +159,125 @@ function NotificationSettings() {
       error={query.error}
       onSave={query.save}
     />
+  );
+}
+
+function AnalyticsConsentForm({
+  enabled,
+  consentUpdatedAt,
+  configured,
+  active,
+  isSaving,
+  onSave,
+}: {
+  enabled: boolean;
+  consentUpdatedAt: string | null;
+  configured: boolean;
+  active: boolean;
+  isSaving: boolean;
+  onSave: (enabled: boolean) => Promise<unknown>;
+}) {
+  const [draft, setDraft] = useState(enabled);
+  const [message, setMessage] = useState<string | null>(null);
+
+  return (
+    <section className="space-y-4" aria-labelledby="analytics-consent-title">
+      <div className="rounded-3xl border border-gray-200 bg-white p-4">
+        <span className="grid size-11 place-items-center rounded-full bg-violet-50 text-violet-700">
+          <ChartNoAxesCombined aria-hidden size={20} />
+        </span>
+        <h2 id="analytics-consent-title" className="mt-3 font-semibold text-gray-950">
+          Ajudar a melhorar a ORHA
+        </h2>
+        <p className="mt-1 text-sm leading-5 text-gray-600">
+          Autorize métricas técnicas e de uso para encontrarmos falhas e melhorarmos os fluxos.
+          É opcional e permanece desativado até você escolher ativar.
+        </p>
+        <div className="mt-4 border-t border-gray-100 pt-4">
+          <Toggle
+            size="md"
+            label="Compartilhar métricas de uso"
+            hint="Nunca inclui e-mail, textos, pesquisas, mensagens, arquivos ou conteúdo do perfil"
+            isSelected={draft}
+            onChange={(value) => {
+              setDraft(value);
+              setMessage(null);
+            }}
+          />
+        </div>
+      </div>
+
+      <div className="rounded-2xl bg-gray-100 p-4 text-sm leading-5 text-gray-700" role="note">
+        <strong className="block text-gray-950">Estado neste ambiente</strong>
+        <span>
+          {!configured
+            ? "O serviço de métricas ainda não foi configurado; nenhuma informação é enviada. Sua escolha fica salva para você controlar."
+            : active
+              ? "Métricas consentidas estão ativas nesta sessão."
+              : "Nenhuma métrica está sendo enviada nesta sessão."}
+        </span>
+        {consentUpdatedAt ? (
+          <small className="mt-2 block text-gray-500">
+            Escolha atualizada em {new Date(consentUpdatedAt).toLocaleString("pt-BR")}.
+          </small>
+        ) : null}
+      </div>
+
+      {message ? <p className="text-sm text-emerald-700" role="status">{message}</p> : null}
+      <Button
+        color="primary"
+        size="lg"
+        className="w-full"
+        isLoading={isSaving}
+        isDisabled={draft === enabled}
+        onPress={() => void onSave(draft).then(() => {
+          setMessage(draft ? "Consentimento salvo." : "Métricas desativadas.");
+        }).catch(() => setMessage(null))}
+      >
+        Salvar escolha
+      </Button>
+    </section>
+  );
+}
+
+function PrivacyAndDataSettings() {
+  const auth = useAuth();
+  const analytics = useAnalytics();
+  const profileId = auth.user?.id ?? "";
+  const query = useOwnProfileSettingsQuery(profileId);
+  const mutation = useUpdateOwnSettingsMutation(profileId);
+
+  if (query.isLoading) {
+    return <div className="h-72 animate-pulse rounded-3xl bg-gray-100" aria-label="Carregando controles de dados" />;
+  }
+  if (!query.data) {
+    return (
+      <div className="rounded-3xl border border-red-200 bg-red-50 p-4" role="alert">
+        <p className="text-sm text-red-800">Não foi possível carregar seus controles de dados.</p>
+        <Button color="secondary-destructive" size="sm" className="mt-3" onPress={() => void query.refetch()}>
+          Tentar novamente
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <AnalyticsConsentForm
+        key={`${query.data.analytics_enabled}:${query.data.analytics_consent_updated_at ?? "unset"}`}
+        enabled={query.data.analytics_enabled}
+        consentUpdatedAt={query.data.analytics_consent_updated_at}
+        configured={analytics.configured}
+        active={analytics.active}
+        isSaving={mutation.isPending}
+        onSave={(analyticsEnabled) => mutation.mutateAsync({ analytics_enabled: analyticsEnabled })}
+      />
+      {mutation.error ? (
+        <p className="mt-3 text-sm text-red-700" role="alert">
+          Não foi possível salvar sua escolha. Tente novamente.
+        </p>
+      ) : null}
+    </>
   );
 }
 
@@ -729,6 +856,7 @@ export function SettingsPage({
       </header>
       <main className="px-4 py-5 pb-[max(32px,env(safe-area-inset-bottom))]">
         {section === "notifications" && <NotificationSettings />}
+        {section === "privacy" && <PrivacyAndDataSettings />}
         {section === "blocked" && <BlockedSettings />}
         {section === "security" && <SecuritySettings onSignedOut={onSignedOut} />}
         {section === "account" && <AccountSettings />}

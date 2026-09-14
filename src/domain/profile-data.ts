@@ -46,13 +46,15 @@ export type UserSettings = {
   timezone_name: string;
   reduced_motion: boolean;
   high_contrast: boolean;
+  analytics_enabled: boolean;
+  analytics_consent_updated_at: string | null;
   created_at: string;
   updated_at: string;
 };
 
 export type UserSettingsUpdate = Partial<Pick<
   UserSettings,
-  "locale" | "timezone_name" | "reduced_motion" | "high_contrast"
+  "locale" | "timezone_name" | "reduced_motion" | "high_contrast" | "analytics_enabled"
 >>;
 
 export function favoriteItemsFromUnknown(values: unknown[]): FavoriteItem[] {

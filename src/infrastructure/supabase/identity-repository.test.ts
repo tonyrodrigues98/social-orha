@@ -212,6 +212,8 @@ describe("createProfileDataRepository", () => {
   it("carrega configurações persistidas em user_settings", async () => {
     const settings = {
       profile_id: "user-1",
+      analytics_enabled: false,
+      analytics_consent_updated_at: null,
       locale: "pt-BR",
       timezone_name: "America/Sao_Paulo",
       reduced_motion: false,
@@ -230,6 +232,8 @@ describe("createProfileDataRepository", () => {
   it("atualiza preferências de acessibilidade em user_settings", async () => {
     const settings = {
       profile_id: "user-1",
+      analytics_enabled: true,
+      analytics_consent_updated_at: "2026-08-16T00:01:00Z",
       locale: "pt-BR",
       timezone_name: "America/Sao_Paulo",
       reduced_motion: true,

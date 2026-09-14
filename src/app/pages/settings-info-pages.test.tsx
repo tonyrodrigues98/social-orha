@@ -69,6 +69,8 @@ describe("settings information pages", () => {
     expect(markup).toContain("publicações são públicas por padrão");
     expect(markup).toContain("O bloqueio é global");
     expect(markup).toContain("Supabase fornece autenticação");
+    expect(markup).toContain("Métricas técnicas e de uso são opcionais");
+    expect(markup).toContain("Captura automática, gravação de sessão");
     expect(markup).toContain("Nenhum serviço conectado à internet pode prometer risco zero");
     expect(markup).toContain("identificação jurídica do controlador");
   });

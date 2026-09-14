@@ -177,6 +177,7 @@ export function PrivacyPolicyPage({ onBack, onNavigate }: LinkedInfoPageProps) {
             <li>prevenir abuso, aplicar bloqueios, analisar denúncias e auditar ações sensíveis;</li>
             <li>atender solicitações de acesso, correção, exportação, desativação ou exclusão.</li>
           </ul>
+          <p>Métricas técnicas e de uso são opcionais. Elas permanecem desativadas até você consentir em Configurações &gt; Dados e não incluem e-mail, mensagens, pesquisas, arquivos nem conteúdo do perfil.</p>
         </DocumentSection>
 
         <DocumentSection title="3. O que outras pessoas podem ver">
@@ -187,6 +188,7 @@ export function PrivacyPolicyPage({ onBack, onNavigate }: LinkedInfoPageProps) {
 
         <DocumentSection title="4. Infraestrutura e armazenamento local">
           <p>Supabase fornece autenticação, banco, arquivos privados e atualizações em tempo real. O host do aplicativo entrega os arquivos da PWA. Esses fornecedores processam os dados necessários para prestar suas partes do serviço.</p>
+          <p>Quando configurado e autorizado por você, PostHog recebe somente eventos técnicos previamente permitidos. Captura automática, gravação de sessão, conteúdo da tela, URLs completas e exceções com mensagem ou stack ficam desativados.</p>
           <p>O dispositivo pode manter dados técnicos indispensáveis à sessão, ao cache da PWA e à recuperação de conexão. Dados privados em cache devem ser separados por conta e limpos no logout ou na troca de usuário.</p>
         </DocumentSection>
 

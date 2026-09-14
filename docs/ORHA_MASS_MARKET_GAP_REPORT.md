@@ -2,13 +2,13 @@
 
 Data da verificação: 2026-09-14  
 Branch auditada: `codex/production-launch`  
-Commit auditado: `fa8e346`  
+Commit-base auditado antes deste checkpoint: `3ab0a7c`
 Staging auditado: `bgeauxljwjbtbwpbzpoo`  
 Produção Supabase: `iuaczhkfmwpyhtpdmuyt`  
 
 ## Veredito
 
-A ORHA não é mais somente um protótipo na branch de lançamento: existe uma base de produção ampla, integrada ao Supabase, com rotas reais, repositories reais, schema social, RLS, Storage, Realtime e uma suíte de testes relevante. O staging possui 21 migrations aplicadas, 40 tabelas públicas com RLS, cinco buckets privados, 16 tabelas publicadas no Realtime, lint hospedado sem erros, gate estrutural 22/22 e matrizes RLS/onboarding/suporte/papéis globais transacionais aprovadas.
+A ORHA não é mais somente um protótipo na branch de lançamento: existe uma base de produção ampla, integrada ao Supabase, com rotas reais, repositories reais, schema social, RLS, Storage, Realtime e uma suíte de testes relevante. O staging possui 22 migrations aplicadas, 40 tabelas públicas com RLS, cinco buckets privados, 16 tabelas publicadas no Realtime, lint hospedado sem erros, gate estrutural 23/23 e matrizes RLS/onboarding/suporte/papéis globais/consentimento transacionais aprovadas.
 
 Mesmo assim, a ORHA **ainda não atende à Definition of Done para lançamento em massa**. Os bloqueadores não são cosméticos: o deploy público ainda executa a `main` legada com `PrototypeProvider` e seeds; deep links retornam HTTP 404; a jornada E2E real não pode iniciar por falta de ambiente/secrets; e os serviços externos obrigatórios de Auth, e-mail, domínio e operação ainda não foram comprovados. As cinco Edge Functions já estão ativas no staging, os dois erros SQL foram corrigidos e a superfície de dependências de produção está com audit zero.
 
@@ -39,6 +39,7 @@ Portanto, a classificação correta é:
 | Explore real | `src/app/explore/*` e `src/infrastructure/supabase/explore/*` usam busca server-side de perfis, comunidades, interesses e posts | Implementado; destinos futuros estão claramente marcados como planejamento |
 | Confiança e moderação | `src/domains/trust/*`, `src/infrastructure/supabase/trust/*`, `src/app/pages/report-page.tsx` e `src/app/pages/admin-moderation-page.tsx` cobrem bloqueio, denúncia, contexto limitado, sanção e auditoria | Implementado; operação E2E pendente |
 | Suporte | `src/domains/support/*`, `src/infrastructure/supabase/support/*`, `src/app/pages/support-page.tsx` e migrations `20260914100000`/`101000` cobrem chamado, fila, resposta, atribuição, prioridade, notificação e Realtime | Implementado e validado transacionalmente no staging |
+| Analytics consentido | `src/infrastructure/analytics/*`, `src/app/analytics/*`, Configurações > Dados e migration `20260914104000` usam o port existente, carregamento lazy, allowlist e opt-in persistente | Implementado e validado transacionalmente; key/host externo ainda não provisionados |
 | PWA e native-first | `vite.config.ts`, `scripts/pwa-manifest.ts`, `src/app/pwa-runtime.ts`, `src/styles/index.css` e `public/brand/*` | Build PWA aprovado |
 | Base de bibliotecas | `src/infrastructure/libraries/library-catalog.ts`, `docs/LIBRARY-INVENTORY.md`, `components.json` e `package.json` | 43 itens, 66 pacotes/fontes conferidos, cinco pacotes em quarentena sem imports de runtime |
 
@@ -46,12 +47,12 @@ Portanto, a classificação correta é:
 
 As leituras autenticadas da CLI confirmaram:
 
-- 21 migrations locais/remotas alinhadas, de `20260811040000` a `20260914103000`;
+- 22 migrations locais/remotas alinhadas, de `20260811040000` a `20260914104000`;
 - 40 tabelas públicas e as mesmas 40 com RLS;
 - cinco buckets privados: `profile-media`, `community-media`, `chat-media`, `report-evidence` e `account-exports`;
 - 16 tabelas na publication `supabase_realtime`;
 - PostgreSQL 17.6;
-- `scripts/supabase-validate.sql`: 22/22 verificações aprovadas;
+- `scripts/supabase-validate.sql`: 23/23 verificações aprovadas;
 - `scripts/supabase-rls-integration.sql`: matriz completa aprovada com rollback e sem fixtures residuais.
 
 Fontes versionadas: `scripts/remote-inventory.sql`, `scripts/supabase-validate.sql`, `scripts/supabase-rls-integration.sql`, `supabase/migrations/*` e `docs/ORHA_PRODUCTION_EXECUTION_STATE.md`.
@@ -62,15 +63,15 @@ Fontes versionadas: `scripts/remote-inventory.sql`, `scripts/supabase-validate.s
 |---|---|
 | `npm run typecheck` | Aprovado fora do sandbox |
 | `npm run lint` | Aprovado |
-| `npm test` | 72 arquivos e 312 testes aprovados |
-| `npm run build` | Aprovado; 5.978 módulos, manifest e service worker gerados, precache de 102 entradas |
+| `npm test` | 74 arquivos e 318 testes aprovados |
+| `npm run build` | Aprovado; 5.983 módulos, manifest e service worker gerados, precache de 103 entradas |
 | `npm run check:catalog` | Aprovado |
 | `npm run audit:production-debt` | Aprovado; zero mock, seed, TODO e localStorage; ocorrências legadas explicitamente allowlisted |
 | `npm run audit:secrets` | Aprovado |
 | `npm run audit:text-encoding` | Aprovado |
 | `npm run test:e2e:production` | Bloqueado no preflight por ambiente/secrets ausentes; nenhuma jornada foi falsamente marcada como aprovada |
-| `npm audit --omit=dev --audit-level=high` | Reprovado: seis vulnerabilidades, incluindo uma crítica |
-| `npx supabase db lint --linked --level warning` | Reprovado: dois erros SQL e um aviso |
+| `npm audit --omit=dev --audit-level=high` | Aprovado; zero vulnerabilidades |
+| `npx supabase db lint --linked --level warning` | Aprovado sem erros; um aviso extra preexistente sobre variável PL/pgSQL não lida |
 
 ## Bloqueadores P0 — precisam ser eliminados antes de qualquer promoção
 
@@ -147,16 +148,15 @@ Critério de aceite:
 - repetir falhas até todas as jornadas ficarem verdes;
 - preservar evidência de falha sem vazar sessão.
 
-### P0.5 Remover vulnerabilidades de dependências que quebram o CI — superfície produtiva corrigida
+### P0.5 Remover vulnerabilidades de dependências que quebram o CI — concluído
 
-O audit atual encontrou seis vulnerabilidades: uma crítica em `maplibre-gl`, três altas (`@tiptap/core`, `fast-uri`, `js-yaml`) e duas moderadas (`hono`, `qs`). O workflow executa `npm audit --omit=dev --audit-level=high`, portanto o candidato não deve ser promovido enquanto esse gate falhar.
+O audit produtivo foi reexecutado em 2026-09-14 e retornou `found 0 vulnerabilities`. As dependências que antes quebravam o limite do CI foram atualizadas/removidas sem reintroduzir imports órfãos ou conflitos no catálogo.
 
-Critério de aceite:
+Evidência preservada:
 
-- executar search-before-build e identificar se cada pacote vulnerável é usado no runtime;
-- atualizar versões compatíveis e lockfile ou remover dependências órfãs;
-- retestar catálogo, typecheck, lint, 290+ testes, build e E2E;
-- obter `npm audit --omit=dev --audit-level=high` verde.
+- `npm audit --omit=dev --audit-level=high`: zero vulnerabilidades;
+- catálogo, TypeScript, ESLint, 318 testes e build PWA verdes;
+- E2E autenticado continua sendo um gate separado e não foi inferido deste resultado.
 
 ## Bloqueadores P1 — produto completo e operável
 
@@ -216,16 +216,16 @@ Critério de aceite:
 - preparar procedimento de denúncia, apelação, retenção, exportação e exclusão;
 - definir escala humana para moderação e incidentes antes de abrir tráfego.
 
-### P1.5 Prova de carga, observabilidade e resposta a incidentes
+### P1.5 Prova de carga, observabilidade e resposta a incidentes — fundação consentida concluída
 
-O repositório possui rate limits server-authoritative para amizade, pedidos de conversa, reports, posts, comentários e mensagens em `20260816230000_abuse_rate_limits.sql`. Não há, porém, evidência de teste de carga, SLO, alertas, budget, fila operacional, métricas de latência/erro ou runbook de incidentes em produção.
+O repositório possui rate limits server-authoritative para amizade, pedidos de conversa, reports, posts, comentários e mensagens em `20260816230000_abuse_rate_limits.sql`. A fundação de analytics agora está completa: escolha owner-only no Supabase, desligada por padrão, timestamp do servidor, adapter PostHog lazy, reset por conta e allowlist sem conteúdo/URL/autocapture/replay. Ainda não há key/host PostHog provisionados, evidência de teste de carga, SLO, alertas, budget, métricas de latência/erro ou runbook de incidentes em produção.
 
 Critério de aceite:
 
 - definir SLOs de Auth, feed, chat, upload e Realtime;
 - medir p95/p99 e concorrência com dados sintéticos isolados;
 - criar alertas para erros 5xx, Auth, Functions, banco, Storage e Realtime;
-- configurar analytics consentido atrás do port existente;
+- provisionar o projeto PostHog e comprovar ingestão apenas depois do opt-in, usando a fundação já validada;
 - validar rate limits e backpressure sob abuso;
 - documentar on-call, severidades, contenção e comunicação.
 
@@ -233,7 +233,7 @@ Critério de aceite:
 
 ### P2.1 Inspeção visual e de dispositivo completa — superfície pública automatizada
 
-Playwright agora cobre seis viewports de iPhone, tablet retrato/paisagem, dois desktops, iPhone/WebKit e PWA. A matriz pública final passou `111/111`, incluindo guards, rotas, cadastro, recovery, 16 px, WCAG A/AA, alvos de toque, reduced motion, offline e ausência de OAuth Google falso. A execução autenticada integral continua bloqueada; ainda faltam teclado aberto, mídia quebrada, rede lenta, sessão expirada e aparelho iOS real nas áreas privadas.
+Playwright agora cobre seis viewports de iPhone, tablet retrato/paisagem, dois desktops, iPhone/WebKit e PWA. A matriz pública final passou `111/111`, incluindo guards, rotas, cadastro, recovery, 16 px, WCAG A/AA, alvos de toque, reduced motion, offline e ausência de OAuth Google falso. O gate detectou e a base canônica corrigiu o arredondamento subpixel do WebKit que reduzia alvos CSS de 44 px para 43,34 px. A execução autenticada integral continua bloqueada; ainda faltam teclado aberto, mídia quebrada, rede lenta, sessão expirada e aparelho iOS real nas áreas privadas.
 
 Aceite: screenshots e console/network limpos para 320×568, 375×667, 390×844, 393×852, 430×932, 440×932, tablet retrato/paisagem, 1280×800 e 1440×900, além de Safari/iPhone real instalado como PWA.
 
@@ -247,7 +247,7 @@ Aceite: manter o recurso invisível no lançamento ou criar pipeline de quarente
 
 `20260914090000_atomic_onboarding_completion.sql` removeu do papel `authenticated` a escrita direta de `onboarding_completed_at` e introduziu `complete_own_onboarding()`. A RPC valida o ator, o estado efetivo da conta, 18+, username, UF, cidade, bio e nome; deriva o timestamp no servidor e preserva o primeiro valor em retries. O cliente deixou de enviar relógio local para concluir o fluxo.
 
-Evidência: ledger remoto alinhado; lint SQL sem erros; gate estrutural 22/22; `scripts/supabase-onboarding-integration.sql` passou com rollback, rejeitando perfil incompleto, UF inválida e escrita direta da coluna, além de provar conclusão válida e idempotência.
+Evidência: ledger remoto alinhado; lint SQL sem erros; gate estrutural 23/23; `scripts/supabase-onboarding-integration.sql` passou com rollback, rejeitando perfil incompleto, UF inválida e escrita direta da coluna, além de provar conclusão válida e idempotência.
 
 ### P2.4 Superfícies operacionais de suporte e papéis — concluídas em staging
 
@@ -259,7 +259,7 @@ A rota `/admin/funcoes` fornece busca sem e-mail e alteração por motivo obriga
 
 - Remover gradualmente as 171 ocorrências do namespace CSS `prototype` allowlisted, sem confundir nome legado com fonte de dados.
 - Revisar peso dos chunks: `authenticated-app` ~268 KiB, entry ~357 KiB e chat ~179 KiB antes de gzip; medir em rede móvel real antes de otimização prematura.
-- Conectar analytics opt-in pelo `AnalyticsPort`; não inserir PostHog/Umami diretamente nas páginas.
+- Expandir os eventos allowlisted pelo `AnalyticsPort` apenas quando métricas de produto forem aprovadas; nunca inserir PostHog/Umami diretamente nas páginas.
 - Manter Cinema, Pet, Loja, Avatar e Jogos como destinos honestamente futuros em `src/app/pages/explore-page.tsx` até existirem fatias persistentes completas.
 - Avaliar arquivos genéricos, push notifications e serviços Meilisearch/Gorse/Metarank somente por adapters e após demanda/infraestrutura aprovadas.
 

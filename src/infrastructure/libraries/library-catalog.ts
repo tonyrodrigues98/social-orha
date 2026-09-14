@@ -53,7 +53,7 @@ export const libraryCatalog: readonly LibraryCatalogEntry[] = [
   { name: "Typesense InstantSearch Adapter", kind: "backend-service", status: "client-ready", packages: ["typesense", "typesense-instantsearch-adapter"], note: "Cliente e adapter instalados; servidor permanece externo." },
   { name: "Gorse", kind: "backend-service", status: "client-ready", packages: ["gorsejs"], note: "SDK TypeScript instalado; serviço Go permanece externo." },
   { name: "Metarank", kind: "backend-service", status: "external", note: "Serviço JVM/Docker sem SDK web oficial; integrar por REST quando houver backend." },
-  { name: "PostHog JS", kind: "npm", status: "client-ready", packages: ["posthog-js"], sourcePath: "src/infrastructure/analytics/analytics-port.ts", note: "SDK disponível atrás de porta; não inicializa sem consentimento/configuração." },
+  { name: "PostHog JS", kind: "npm", status: "integrated", packages: ["posthog-js"], sourcePath: "src/infrastructure/analytics/posthog-analytics-adapter.ts", note: "Adapter lazy e allowlisted; só inicializa com configuração HTTPS e consentimento persistido no Supabase." },
   { name: "Umami", kind: "backend-service", status: "client-ready", packages: ["@umami/node"], note: "Cliente Node instalado; tracker web exige URL e website-id do deployment." },
 ] as const;
 

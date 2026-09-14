@@ -7,6 +7,8 @@ interface ImportMetaEnv {
   readonly VITE_ORHA_SUPPORT_EMAIL?: string;
   readonly VITE_ORHA_BASE_PATH?: string;
   readonly VITE_ORHA_PUBLIC_ORIGIN?: string;
+  readonly VITE_ORHA_POSTHOG_KEY?: string;
+  readonly VITE_ORHA_POSTHOG_HOST?: string;
 }
 
 interface ImportMeta {

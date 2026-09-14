@@ -170,7 +170,7 @@ export const InputBase = ({
                     aria-label={isPasswordVisible ? "Ocultar senha" : "Mostrar senha"}
                     onClick={() => setIsPasswordVisible(!isPasswordVisible)}
                     className={cx(
-                        "absolute right-0.5 flex size-11 cursor-pointer items-center justify-center text-fg-quaternary transition duration-100 ease-linear hover:text-fg-quaternary_hover focus:text-fg-quaternary_hover focus:outline-hidden",
+                        "absolute right-0.5 flex size-[45px] cursor-pointer items-center justify-center text-fg-quaternary transition duration-100 ease-linear hover:text-fg-quaternary_hover focus:text-fg-quaternary_hover focus:outline-hidden",
                     )}
                 >
                     {isPasswordVisible ? <EyeOff className="size-4 stroke-[2.25px]" /> : <Eye className="size-4 stroke-[2.25px]" />}

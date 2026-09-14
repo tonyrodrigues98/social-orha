@@ -89,12 +89,13 @@ A CLI oficial foi executada com `--all --type base --yes`. O path final foi norm
 1. Atualize um grupo de cada vez.
 2. Rode `npm run check:catalog`, typecheck, testes e build.
 3. Para GodUI/chatcn/shadcn, use `--dry-run` e `--diff` antes de sobrescrever código local.
-4. Não inicialize PostHog, Umami ou serviços de busca sem configuração, consentimento e uma decisão explícita de backend.
+4. PostHog está integrado atrás do `AnalyticsPort`, com carregamento lazy, configuração HTTPS e consentimento persistido; Umami e serviços de busca continuam proibidos sem configuração e decisão explícita de backend.
 
 ## Uso real na base atual
 
 - GodUI: Tab Bar global e Drawer local; o Drawer compõe React Aria para modalidade, foco, Escape e isolamento do fundo.
 - Untitled UI: botões, inputs, textareas, selects, toggles, checkboxes, avatar, dropdown e gatilhos de arquivo.
+- PostHog JS: adapter opt-in em `src/infrastructure/analytics`, autocapture e session replay desativados, eventos/propriedades allowlisted e controle persistente em Configurações > Dados.
 - React Aria: tabs de Conversas, overlays, foco, seleção, semântica e comportamento de teclado.
 - chatcn: única base de conversa privada e composer.
 - MediaRecorder + WaveSurfer: gravação real, reprodução, seek e waveform; Vidstack e react-media-recorder permanecem em quarentena.

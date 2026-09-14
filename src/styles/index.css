@@ -2588,11 +2588,12 @@ button {
 }
 
 /* React Aria keeps the native checkbox visually hidden. Its native hit target
-   still participates in WCAG 2.2 target-size measurement, so preserve a full
-   app-sized 44px target without changing the visible 20px indicator. */
+   still participates in WCAG 2.2 target-size measurement. Keep one extra CSS
+   pixel so WebKit subpixel rounding still preserves a real 44px touch target,
+   without changing the visible 20px indicator. */
 .auth-check input[type="checkbox"] {
-  width: 44px;
-  height: 44px;
+  width: 45px;
+  height: 45px;
 }
 
 .access-switch-page button,

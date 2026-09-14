@@ -17,17 +17,20 @@ import {
 import { ROUTE_PATHS, parsePostAuthRedirect } from "./router-policy";
 import { AppRuntimeProviders } from "./app-runtime-providers";
 import { useBrowserOnline, usePwaUpdateDraftRestoration } from "./pwa-runtime";
+import { AnalyticsProvider } from "./analytics/analytics-provider";
 
 export function App() {
   return (
     <AppRuntimeProviders>
       <AuthProvider>
-        <div className="device-stage">
-          <div className="native-app-shell">
-            <AppGate />
-            <PwaRuntimeNotices />
+        <AnalyticsProvider>
+          <div className="device-stage">
+            <div className="native-app-shell">
+              <AppGate />
+              <PwaRuntimeNotices />
+            </div>
           </div>
-        </div>
+        </AnalyticsProvider>
       </AuthProvider>
     </AppRuntimeProviders>
   );
