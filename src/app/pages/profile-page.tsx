@@ -453,7 +453,7 @@ export function ProfilePage() {
             </button>
           </div>
           {hasProfileDetails ? (
-            <div className="grid gap-4 rounded-3xl border border-secondary bg-primary p-4">
+            <div className="grid gap-4 rounded-3xl border border-secondary bg-card p-4">
               <ProfileDetailGroup label="Seu jeito" items={identityTraits} />
               <ProfileDetailGroup label="Interesses" items={details.interests} />
               <ProfileDetailGroup label="Hobbies" items={details.hobbies} />
@@ -464,7 +464,7 @@ export function ProfilePage() {
           ) : (
             <button
               type="button"
-              className="grid min-h-24 w-full place-items-center rounded-3xl border border-dashed border-secondary bg-primary px-5 text-center text-sm text-tertiary"
+              className="grid min-h-24 w-full place-items-center rounded-3xl border border-dashed border-secondary bg-card px-5 text-center text-sm text-tertiary"
               onClick={() => setSettingsPanel({ type: "details" })}
             >
               Adicione interesses, hobbies e lugares para encontrar pessoas com mais afinidade.

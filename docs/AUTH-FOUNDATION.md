@@ -4,7 +4,7 @@
 
 1. Splash restaura a sessão persistida.
 2. Sem sessão: boas-vindas, entrar, criar conta ou recuperar senha.
-3. Cadastro exige e-mail, senha mínima de oito caracteres, confirmação 18+ e aceite legal.
+3. Cadastro exige e-mail, senha mínima de doze caracteres com maiúscula, minúscula, número e símbolo, confirmação 18+ e aceite legal.
 4. E-mail confirmado retorna ao app e inicia o onboarding.
 5. Dados obrigatórios: nome, username único, nascimento 18+, estado, cidade e bio.
 6. Depois da bio, a pessoa pode concluir ou enriquecer personalidade, interesses, hobbies, viagens e favoritos.
@@ -25,6 +25,7 @@ Todo usuário de Auth recebe automaticamente `profiles`, `profile_details`, `pro
 - A publishable key é a única chave disponível no frontend.
 - Confirmação de e-mail está ativa, TOTP preexistente foi preservado e o OTP permanece com oito dígitos.
 - Redirects de confirmação, reenvio e recuperação preservam `import.meta.env.BASE_URL`, incluindo `/social-orha/`. A URL do GitHub Pages está versionada em `supabase/config.toml`; a configuração remota deve ser conferida após o push.
+- Templates em português para confirmação, recuperação e notificação de senha alterada estão versionados em `supabase/templates/` e protegidos por teste. O Supabase Free recusou publicá-los enquanto o staging usa o mailer padrão; a própria API exige upgrade ou custom SMTP antes de aceitar a alteração.
 
 Migrations versionadas:
 

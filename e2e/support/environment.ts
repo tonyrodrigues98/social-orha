@@ -135,7 +135,13 @@ function browserStorageStateForSession(
 export async function createNamedBrowserContext(
   browser: Browser,
   principal: TestPrincipal,
-  options: { serviceWorkers?: "allow" | "block" } = {},
+  options: {
+    serviceWorkers?: "allow" | "block";
+    viewport?: { width: number; height: number };
+    deviceScaleFactor?: number;
+    hasTouch?: boolean;
+    isMobile?: boolean;
+  } = {},
 ): Promise<BrowserContext> {
   const credentials = requireNamedCredentials(principal);
   const staging = stagingBrowserCredentials();
@@ -162,7 +168,10 @@ export async function createNamedBrowserContext(
       staging.url,
       signedIn.data.session,
     ),
-    viewport: { width: 390, height: 844 },
+    viewport: options.viewport ?? { width: 390, height: 844 },
+    deviceScaleFactor: options.deviceScaleFactor,
+    hasTouch: options.hasTouch,
+    isMobile: options.isMobile,
     locale: "pt-BR",
     timezoneId: "America/Sao_Paulo",
     serviceWorkers: options.serviceWorkers ?? "block",

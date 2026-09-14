@@ -1,6 +1,6 @@
 # ORHA — Inventário de secrets e configurações públicas
 
-Última verificação operacional: 2026-08-16.
+Última verificação operacional: 2026-09-14.
 
 Este inventário contém somente nomes e estado de disponibilidade. Valores, hashes, tokens e senhas não pertencem a este documento.
 
@@ -35,7 +35,7 @@ Este inventário contém somente nomes e estado de disponibilidade. Valores, has
 | `SUPABASE_SERVICE_ROLE_KEY` | secret crítico | não encontrado | Edge Function/servidor; nunca navegador |
 | `ORHA_CRON_SECRET` | secret crítico | provisionado no Edge Runtime e Vault do staging; valor não registrado | Supabase Edge secrets e Vault, com o mesmo valor gerado fora do código |
 | `ORHA_ALLOWED_ORIGINS` | configuração server-side | provisionada no staging com origins exatas, sem wildcard | Supabase Edge secrets/config, lista exata sem `*` |
-| `SMTP_HOST` | configuração sensível | não provisionado; custom SMTP confirmado desligado no staging | Supabase Auth/Dashboard ou secret manager |
+| `SMTP_HOST` | configuração sensível | não provisionado; custom SMTP confirmado desligado no staging e necessário para liberar templates personalizados | Supabase Auth/Dashboard ou secret manager |
 | `SMTP_PORT` | configuração | não provisionado; custom SMTP confirmado desligado no staging | Supabase Auth/Dashboard |
 | `SMTP_USER` | secret | não provisionado; custom SMTP confirmado desligado no staging | Supabase Auth/Dashboard ou secret manager |
 | `SMTP_PASSWORD` | secret crítico | não provisionado; custom SMTP confirmado desligado no staging | Supabase Auth/Dashboard ou secret manager |

@@ -131,7 +131,7 @@ export function ConversationsPage() {
           <button type="button" className="flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-[var(--orha-hairline)] bg-white px-3 text-[13px] font-semibold" onClick={() => setShowRequests(true)}>
             <UserRoundPlus size={17} aria-hidden="true" /> Solicitações {incomingRequests.length ? `(${incomingRequests.length})` : ""}
           </button>
-          <button type="button" className="flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-[#242426] px-3 text-[13px] font-semibold text-white" onClick={() => setShowSetup(true)}>
+          <button type="button" className="conversation-new-button flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-[#242426] px-3 text-[13px] font-semibold" onClick={() => setShowSetup(true)}>
             <MessageCirclePlus size={17} aria-hidden="true" /> Nova conversa
           </button>
         </div>

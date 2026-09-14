@@ -174,6 +174,8 @@ Evidência preservada:
 
 ### P1.1 Auth externo e entrega real de e-mail
 
+Os templates em português para confirmação, recuperação e alerta de senha alterada já estão versionados e testados. A tentativa de sincronização no staging foi rejeitada atomicamente pelo Supabase: projetos Free usando o mailer padrão não podem modificar templates; é necessário configurar custom SMTP ou fazer upgrade. Nenhum template parcial foi declarado como publicado.
+
 Google continua ausente do frontend e corretamente desligado no remoto enquanto faltam client ID/secret. No staging, Site URL e seis redirects foram conferidos, confirmação de e-mail está ativa, senha mínima de 12 caracteres e composição forte foram sincronizadas, e a validação server-side da senha atual foi ativada. O cliente agora envia `current_password` no mesmo `updateUser`, com erro tipado e gate E2E para rejeição da senha incorreta. Custom SMTP está desligado, o mailer padrão está limitado a 2 e-mails/h e CAPTCHA/bot protection, templates e entrega real ainda não foram comprovados.
 
 Próxima fatia vertical:
@@ -252,7 +254,7 @@ Critério de aceite:
 
 ### P2.1 Inspeção visual e de dispositivo completa — superfície pública automatizada
 
-Playwright agora cobre seis viewports de iPhone, tablet retrato/paisagem, dois desktops, iPhone/WebKit e PWA. A matriz pública final passou `111/111`, incluindo guards, rotas, cadastro, recovery, 16 px, WCAG A/AA, alvos de toque, reduced motion, offline e ausência de OAuth Google falso. O gate detectou e a base canônica corrigiu o arredondamento subpixel do WebKit que reduzia alvos CSS de 44 px para 43,34 px. A execução autenticada integral continua bloqueada; ainda faltam teclado aberto, mídia quebrada, rede lenta, sessão expirada e aparelho iOS real nas áreas privadas.
+Playwright agora cobre seis viewports de iPhone, tablet retrato/paisagem, dois desktops, iPhone/WebKit e PWA. A matriz pública final passou `111/111`, incluindo guards, rotas, cadastro, recovery, 16 px, WCAG A/AA, alvos de toque, reduced motion, offline e ausência de OAuth Google falso. A matriz privada adicional passou `15/15`: cinco setups reais e os dez viewports percorrendo Início, Comunidade, Explorar, Conversas e Perfil com a11y, 16 px, alvos de toque, overflow, console/network e screenshots. Ela encontrou e corrigiu dois conflitos de tokens que deixavam texto escuro sobre superfícies escuras em Conversas e Perfil. Ainda faltam teclado aberto, mídia quebrada, rede lenta, sessão expirada, WebKit autenticado e aparelho iOS real instalado como PWA.
 
 Aceite: screenshots e console/network limpos para 320×568, 375×667, 390×844, 393×852, 430×932, 440×932, tablet retrato/paisagem, 1280×800 e 1440×900, além de Safari/iPhone real instalado como PWA.
 
