@@ -1,5 +1,9 @@
 import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
-import { expectedSupabaseHost } from "./environment";
+import {
+  expectedAppRoleForPrincipal,
+  expectedSupabaseHost,
+  type TestPrincipal,
+} from "./environment";
 
 type GeneratedAuthLink = {
   actionLink: string;
@@ -35,6 +39,42 @@ export function createE2EAdminClient(): SupabaseClient {
       persistSession: false,
     },
   });
+}
+
+/**
+ * Fails the setup before browser journeys when a named staging identity is
+ * incomplete or has a role different from the authoritative user_roles row.
+ */
+export async function assertE2EPrincipalProvisioning(
+  client: SupabaseClient,
+  principal: TestPrincipal,
+  userId: string,
+): Promise<void> {
+  const [profileResult, roleResult] = await Promise.all([
+    client
+      .from("profiles")
+      .select("onboarding_completed_at")
+      .eq("id", userId)
+      .single(),
+    client
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .single(),
+  ]);
+
+  if (profileResult.error || !profileResult.data?.onboarding_completed_at) {
+    throw new Error(
+      `A conta E2E ${principal} precisa ter o onboarding concluído no staging.`,
+    );
+  }
+
+  const expectedRole = expectedAppRoleForPrincipal(principal);
+  if (roleResult.error || roleResult.data?.role !== expectedRole) {
+    throw new Error(
+      `A conta E2E ${principal} precisa ter exatamente o papel ${expectedRole} no backend.`,
+    );
+  }
 }
 
 export async function generateSignupLink(

@@ -117,6 +117,12 @@ pela própria UI, removendo seus anexos e preservando apenas o tombstone de
 auditoria; denúncias são encerradas pelo moderador e permanecem no histórico
 append-only do produto.
 
+O setup não confia apenas nos e-mails configurados ou na interface: depois do
+login real, lê o `sub` da sessão efêmera, rejeita subjects duplicados e consulta
+o staging com o cliente administrativo restrito ao processo Node. Cada perfil
+precisa ter onboarding concluído e o registro autoritativo em `user_roles`
+precisa corresponder exatamente a `user`, `admin`, `moderator` ou `support`.
+
 O gate final executa um preflight que falha antes do browser se a configuração
 isolada de staging, A, B, admin, moderador, suporte, marcadores ou senha rotativa estiverem ausentes
 ou inconsistentes. Depois roda a matriz pública em

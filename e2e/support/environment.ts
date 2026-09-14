@@ -4,6 +4,7 @@ import type { Browser, BrowserContext, Page } from "playwright/test";
 export const AUTH_STATE_DIRECTORY = path.resolve("playwright/.auth");
 
 export type TestPrincipal = "user-a" | "user-b" | "admin" | "moderator" | "support";
+export type ExpectedAppRole = "user" | "admin" | "moderator" | "support";
 
 export type NamedCredentials = {
   email: string;
@@ -41,6 +42,20 @@ const PRINCIPAL_ENV_KEYS: Record<
     expectedProfileText: "ORHA_E2E_SUPPORT_PROFILE_TEXT",
   },
 };
+
+const EXPECTED_APP_ROLES: Record<TestPrincipal, ExpectedAppRole> = {
+  "user-a": "user",
+  "user-b": "user",
+  admin: "admin",
+  moderator: "moderator",
+  support: "support",
+};
+
+export function expectedAppRoleForPrincipal(
+  principal: TestPrincipal,
+): ExpectedAppRole {
+  return EXPECTED_APP_ROLES[principal];
+}
 
 export function authStatePath(principal: TestPrincipal): string {
   return path.join(AUTH_STATE_DIRECTORY, `${principal}.json`);

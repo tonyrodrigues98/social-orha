@@ -63,7 +63,7 @@ Fontes versionadas: `scripts/remote-inventory.sql`, `scripts/supabase-validate.s
 |---|---|
 | `npm run typecheck` | Aprovado fora do sandbox |
 | `npm run lint` | Aprovado |
-| `npm test` | 76 arquivos e 333 testes aprovados |
+| `npm test` | 77 arquivos e 337 testes aprovados |
 | `npm run build` | Aprovado; 5.983 módulos, manifest e service worker gerados, precache de 103 entradas |
 | `npm run audit:bundle` | Aprovado; entrada JS 291,9 KiB gzip, CSS 27,8 KiB gzip e maior lazy chunk 78,8 KiB gzip |
 | `npm run check:catalog` | Aprovado |

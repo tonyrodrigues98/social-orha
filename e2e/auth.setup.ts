@@ -6,10 +6,16 @@ import {
   authStatePath,
   requireNamedCredentials,
   openApp,
+  readSupabaseSessionSubject,
   type TestPrincipal,
 } from "./support/environment";
+import {
+  assertE2EPrincipalProvisioning,
+  createE2EAdminClient,
+} from "./support/supabase-admin";
 
 const principals: readonly TestPrincipal[] = ["user-a", "user-b", "admin", "moderator", "support"];
+const observedSubjects = new Map<string, TestPrincipal>();
 
 setup.describe("sessões reais nomeadas", () => {
   setup.describe.configure({ mode: "serial" });
@@ -29,6 +35,25 @@ setup.describe("sessões reais nomeadas", () => {
           ? [rotatedPassword]
           : [],
       );
+
+      const state = await page.context().storageState();
+      const subject = readSupabaseSessionSubject(state);
+      if (!subject) {
+        throw new Error(`A sessão E2E ${principal} não contém um subject Supabase válido.`);
+      }
+      const existingPrincipal = observedSubjects.get(subject);
+      if (existingPrincipal) {
+        throw new Error(
+          `As sessões E2E ${existingPrincipal} e ${principal} apontam para a mesma conta.`,
+        );
+      }
+
+      await assertE2EPrincipalProvisioning(
+        createE2EAdminClient(),
+        principal,
+        subject,
+      );
+      observedSubjects.set(subject, principal);
       await page.context().storageState({ path: authStatePath(principal) });
     });
   }

@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { expectedAppRoleForPrincipal } from "../e2e/support/environment";
 
 const forbiddenTestDoubleApis = [
   /\b[A-Za-z_$][\w$]*\.route\s*\(/g,
@@ -66,6 +67,26 @@ describe("E2E production contract", () => {
       });
 
     expect(directContextCreation).toEqual([]);
+  });
+
+  it("binds every named principal to one exact backend role", () => {
+    expect({
+      "user-a": expectedAppRoleForPrincipal("user-a"),
+      "user-b": expectedAppRoleForPrincipal("user-b"),
+      admin: expectedAppRoleForPrincipal("admin"),
+      moderator: expectedAppRoleForPrincipal("moderator"),
+      support: expectedAppRoleForPrincipal("support"),
+    }).toEqual({
+      "user-a": "user",
+      "user-b": "user",
+      admin: "admin",
+      moderator: "moderator",
+      support: "support",
+    });
+
+    const setupSource = readFileSync(path.resolve("e2e/auth.setup.ts"), "utf8");
+    expect(setupSource).toContain("assertE2EPrincipalProvisioning");
+    expect(setupSource).toContain("readSupabaseSessionSubject");
   });
 
   it("keeps every authenticated production journey in the gate", () => {
