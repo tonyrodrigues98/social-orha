@@ -94,7 +94,7 @@ Critério de aceite:
 - `supabase db lint` sem erros;
 - repetir aceite de conversa, marcação individual e marcação total de notificações com dois usuários reais.
 
-### P0.2 Implantar e operar as cinco Edge Functions — implantadas no staging; smoke autenticado pendente
+### P0.2 Implantar e operar as cinco Edge Functions — implantadas; catálogo/export autenticados aprovados
 
 As cinco funções estão versionadas e `ACTIVE` no staging; produção continua sem promoção:
 
@@ -104,7 +104,9 @@ As cinco funções estão versionadas e `ACTIVE` no staging; produção continua
 - `supabase/functions/media-verify`;
 - `supabase/functions/catalog-search`.
 
-`ORHA_CRON_SECRET` e `ORHA_ALLOWED_ORIGINS` foram provisionados no staging. O gate `npm run smoke:edge:anonymous` passou 7/7: todas rejeitam acesso anônimo com `401`, o preflight da origem permitida retorna `204` e uma origem externa recebe `403`. `pg_cron`, `pg_net`, Vault e os jobs de 5/10 minutos estão ativos; ambos os workers retornaram `200` em filas vazias. O teste revelou e corrigiu o parsing de um composto SQL nulo que antes causava retry inválido. Em 2026-09-14, Deno 2.8 também verificou os cinco entrypoints e executou 11/11 testes; esse gate encontrou e corrigiu o contrato `ArrayBuffer` do SHA-256 e um teste Vitest que estava indevidamente dentro da suíte Deno. `npm run check:edge` e `npm run test:edge` agora são obrigatórios no CI. Ainda faltam as jornadas autenticadas de upload, catálogo, exportação, exclusão e cleanup com artefatos reais.
+`ORHA_CRON_SECRET` e `ORHA_ALLOWED_ORIGINS` foram provisionados no staging. O gate `npm run smoke:edge:anonymous` passou 7/7: todas rejeitam acesso anônimo com `401`, o preflight da origem permitida retorna `204` e uma origem externa recebe `403`. `pg_cron`, `pg_net`, Vault e os jobs de 5/10 minutos estão ativos; ambos os workers retornaram `200` em filas vazias. O teste revelou e corrigiu o parsing de um composto SQL nulo que antes causava retry inválido. Em 2026-09-14, Deno 2.8 também verificou os cinco entrypoints e executou 11/11 testes; esse gate encontrou e corrigiu o contrato `ArrayBuffer` do SHA-256 e um teste Vitest que estava indevidamente dentro da suíte Deno. `npm run check:edge` e `npm run test:edge` agora são obrigatórios no CI.
+
+O novo gate `npm run smoke:edge:authenticated`, restrito por código ao projeto staging, passou 8/8. Ele criou uma conta efêmera confirmada, obteve sessão real por senha, consultou `catalog-search` com provedor externo, persistiu uma solicitação `data_export`, gerou e baixou o artefato privado, conferiu tamanho, SHA-256, schema, request e owner, repetiu a chamada idempotente e removeu objeto + usuário no `finally`. Nenhum e-mail, senha, token, signed URL ou path privado foi impresso. Ainda faltam mídia autenticada completa, lifecycle destrutivo/cleanup com artefatos e a jornada multiusuário permanente.
 
 Critério de aceite:
 
@@ -156,7 +158,7 @@ O audit produtivo foi reexecutado em 2026-09-14 e retornou `found 0 vulnerabilit
 Evidência preservada:
 
 - `npm audit --omit=dev --audit-level=high`: zero vulnerabilidades;
-- catálogo, TypeScript, ESLint, 320 testes, orçamento de bundle e build PWA verdes;
+- catálogo, TypeScript, ESLint, 352 testes, orçamento de bundle e build PWA verdes;
 - E2E autenticado continua sendo um gate separado e não foi inferido deste resultado.
 
 ## Bloqueadores P1 — produto completo e operável
@@ -184,13 +186,15 @@ Verificação HTTP em 2026-09-14:
 
 Vercel foi selecionado como o próximo host por já existir um contrato versionado em `vercel.json`, sem dependência adicional de runtime. A configuração usa o preset Vite, `dist`, rewrite SPA e headers de cache/segurança. Em 2026-09-14, o rewrite foi reconciliado com a regra oficial de `cleanUrls`: o destino agora é `/`, sem a extensão `.html`.
 
-O comando obrigatório `npm run build:vercel` passou a executar um preflight fail-closed: Preview só pode apontar para o projeto Supabase de staging; Production só pode apontar para o projeto Supabase de produção e também exige a configuração jurídica/de suporte pública. Ambos exigem raiz `/` e publishable key. O origin público pode ser derivado das system environment variables da Vercel, e um build sintético de Preview confirmou canonical e `og:url` corretos. Esse gate elimina promoção cruzada acidental, mas não substitui a prova no host. A conta Vercel autorizada já foi conectada ao GitHub e o projeto `social-orha` foi criado sem Production Deployment; URL/chave publicável do staging e base `/` estão limitadas a Preview. A referência `codex/production-launch@ada660f` foi resolvida pelo Vercel e está pronta para o clique final de criação do Preview.
+O comando obrigatório `npm run build:vercel` passou a executar um preflight fail-closed: Preview só pode apontar para o projeto Supabase de staging; Production só pode apontar para o projeto Supabase de produção e também exige a configuração jurídica/de suporte pública. Ambos exigem raiz `/` e publishable key. O origin público pode ser derivado das system environment variables da Vercel, e um build sintético de Preview confirmou canonical e `og:url` corretos. Esse gate elimina promoção cruzada acidental, mas não substitui a prova no host.
+
+O Preview Vercel do commit `28cae8b` concluiu o build em 52 s usando apenas as variáveis de staging. Em navegador autenticado, splash, `/auth/login` e o guard `/inicio` → `/auth/login?redirect=%2Finicio` foram comprovados. O gate HTTP externo, porém, encontrou `302` na raiz e nos três deep links porque “Vercel Authentication” ainda protege o Preview e envia visitantes anônimos ao SSO. Portanto, o deploy existe e está `Ready`, mas ainda não é um link público aceitável até essa proteção ser desligada conscientemente para Preview.
 
 O `public/404.html` pode recuperar a navegação depois do 404, mas não satisfaz deep link, crawler, OAuth nem gate de host. O projeto já possui `scripts/host-capability-audit.ts` para impedir falso positivo.
 
 Próxima fatia vertical:
 
-- criar o Preview já preparado de `codex/production-launch` após confirmação explícita;
+- desligar a proteção SSO somente no Preview após confirmação explícita e repetir o gate HTTP até 4/4 respostas HTML `200`;
 - manter variáveis separadas por escopo, com Preview em staging e Production ainda sem acesso até a promoção aprovada;
 - configurar domínio, HTTPS, canonical, OG, PWA `id/scope/start_url` e callbacks Auth;
 - exigir HTTP 200 no root e em todas as rotas diretas;

@@ -224,6 +224,8 @@ Configurar as variáveis por ambiente, sem copiar valores entre escopos:
 
 Nunca fornecer `service_role`, senha do banco, SMTP secret ou OAuth secret a `VITE_*` ou ao build público da Vercel. Ainda é necessário importar o repositório, provisionar os valores reais e provar o resultado com `npm run audit:host` antes de qualquer promoção.
 
+O primeiro Preview Vercel do commit `28cae8b` concluiu o build com o ambiente staging e passou a inspeção autenticada do splash/Auth/guard. Antes de compartilhar o link como público, verificar a Deployment Protection: um `302` para `vercel.com/sso-api` significa que “Vercel Authentication” ainda bloqueia visitantes anônimos. Desligar essa proteção somente no Preview mediante autorização explícita e exigir que `npm run audit:host` retorne HTML `200` para raiz, login, reset e perfil. Não desligar proteção de Production como atalho.
+
 ## 10. Domínio e PWA
 
 Concluir `docs/DOMAIN_CHECKLIST.md`. Após o domínio:

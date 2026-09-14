@@ -22,6 +22,7 @@
     "audit:launch-config": "tsx scripts/require-launch-configuration.ts",
     "audit:bundle": "tsx scripts/bundle-budget.ts",
     "smoke:edge:anonymous": "tsx scripts/edge-functions-smoke.ts",
+    "smoke:edge:authenticated": "tsx scripts/edge-functions-authenticated-smoke.ts",
     "audit:secrets": "tsx scripts/secret-audit.ts",
     "audit:text-encoding": "tsx scripts/text-encoding-audit.ts",
     "check:catalog": "tsx scripts/check-library-catalog.ts"
