@@ -8,7 +8,7 @@ Produção Supabase: `iuaczhkfmwpyhtpdmuyt`
 
 ## Veredito
 
-A ORHA não é mais somente um protótipo na branch de lançamento: existe uma base de produção ampla, integrada ao Supabase, com rotas reais, repositories reais, schema social, RLS, Storage, Realtime e uma suíte de testes relevante. O staging possui 16 migrations aplicadas, 38 tabelas públicas com RLS, cinco buckets privados, 14 tabelas publicadas no Realtime, lint hospedado sem erros, gate estrutural 19/19 e matriz RLS transacional aprovada.
+A ORHA não é mais somente um protótipo na branch de lançamento: existe uma base de produção ampla, integrada ao Supabase, com rotas reais, repositories reais, schema social, RLS, Storage, Realtime e uma suíte de testes relevante. O staging possui 17 migrations aplicadas, 38 tabelas públicas com RLS, cinco buckets privados, 14 tabelas publicadas no Realtime, lint hospedado sem erros, gate estrutural 20/20 e matriz RLS transacional aprovada.
 
 Mesmo assim, a ORHA **ainda não atende à Definition of Done para lançamento em massa**. Os bloqueadores não são cosméticos: o deploy público ainda executa a `main` legada com `PrototypeProvider` e seeds; deep links retornam HTTP 404; a jornada E2E real não pode iniciar por falta de ambiente/secrets; e os serviços externos obrigatórios de Auth, e-mail, domínio e operação ainda não foram comprovados. As cinco Edge Functions já estão ativas no staging, os dois erros SQL foram corrigidos e a superfície de dependências de produção está com audit zero.
 
@@ -45,12 +45,12 @@ Portanto, a classificação correta é:
 
 As leituras autenticadas da CLI confirmaram:
 
-- 16 migrations locais/remotas alinhadas, de `20260811040000` a `20260914080000`;
+- 17 migrations locais/remotas alinhadas, de `20260811040000` a `20260914090000`;
 - 38 tabelas públicas e as mesmas 38 com RLS;
 - cinco buckets privados: `profile-media`, `community-media`, `chat-media`, `report-evidence` e `account-exports`;
 - 14 tabelas na publication `supabase_realtime`;
 - PostgreSQL 17.6;
-- `scripts/supabase-validate.sql`: 19/19 verificações aprovadas;
+- `scripts/supabase-validate.sql`: 20/20 verificações aprovadas;
 - `scripts/supabase-rls-integration.sql`: matriz completa aprovada com rollback e sem fixtures residuais.
 
 Fontes versionadas: `scripts/remote-inventory.sql`, `scripts/supabase-validate.sql`, `scripts/supabase-rls-integration.sql`, `supabase/migrations/*` e `docs/ORHA_PRODUCTION_EXECUTION_STATE.md`.
@@ -242,11 +242,11 @@ Aceite: screenshots e console/network limpos para 320×568, 375×667, 390×844, 
 
 Aceite: manter o recurso invisível no lançamento ou criar pipeline de quarentena, scanner, allowlist, limite e testes hostis antes de expô-lo. Nunca aceitar binário genérico apenas por MIME declarado pelo cliente.
 
-### P2.3 Onboarding com conclusão autoritativa única
+### P2.3 Onboarding com conclusão autoritativa única — concluído em staging
 
-O onboarding persiste etapas, mas a conclusão é feita por update do perfil no cliente (`onboarding_completed_at: new Date().toISOString()`) depois de outras mutations. As constraints server-side protegem campos básicos, porém não existe uma RPC nomeada de conclusão atômica.
+`20260914090000_atomic_onboarding_completion.sql` removeu do papel `authenticated` a escrita direta de `onboarding_completed_at` e introduziu `complete_own_onboarding()`. A RPC valida o ator, o estado efetivo da conta, 18+, username, UF, cidade, bio e nome; deriva o timestamp no servidor e preserva o primeiro valor em retries. O cliente deixou de enviar relógio local para concluir o fluxo.
 
-Aceite: consolidar a conclusão numa RPC que valide 18+, username, localização e bio no mesmo contrato, derive o timestamp no servidor e trate concorrência; manter etapas opcionais retomáveis.
+Evidência: ledger remoto com 17/17 migrations; lint SQL sem erros; gate estrutural 20/20; `scripts/supabase-onboarding-integration.sql` passou com rollback, rejeitando perfil incompleto, UF inválida e escrita direta da coluna, além de provar conclusão válida e idempotência.
 
 ### P2.4 Superfícies administrativas por papel
 

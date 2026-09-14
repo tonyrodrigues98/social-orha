@@ -30,6 +30,7 @@ import {
 import { ControlledInput } from "@/app/auth/auth-fields";
 import { useAuth } from "@/app/auth/auth-context";
 import {
+  useCompleteOwnOnboardingMutation,
   useOwnIdentityQuery,
   useUpdateOwnDetailsMutation,
   useUpdateOwnFavoritesMutation,
@@ -219,6 +220,7 @@ export function OnboardingFlow({ onFinished }: { onFinished?: () => void }) {
   const userId = user?.id ?? "";
   const identityQuery = useOwnIdentityQuery(userId, identity ?? undefined);
   const updateProfileMutation = useUpdateOwnProfileMutation(userId);
+  const completeOnboardingMutation = useCompleteOwnOnboardingMutation(userId);
   const updateDetailsMutation = useUpdateOwnDetailsMutation(userId);
   const updateFavoritesMutation = useUpdateOwnFavoritesMutation(userId);
   const currentIdentity = identityQuery.data ?? identity;
@@ -253,10 +255,7 @@ export function OnboardingFlow({ onFinished }: { onFinished?: () => void }) {
     setSaving(true);
     setError(null);
     try {
-      await updateProfileMutation.mutateAsync({
-        onboarding_step: 6,
-        onboarding_completed_at: new Date().toISOString(),
-      });
+      await completeOnboardingMutation.mutateAsync();
       await refreshIdentity();
       onFinished?.();
     } catch {
@@ -321,13 +320,11 @@ export function OnboardingFlow({ onFinished }: { onFinished?: () => void }) {
               city: values.city,
               bio: values.bio,
               church: values.church.trim() || null,
-              onboarding_step: improve ? 2 : 6,
-              onboarding_completed_at: improve
-                ? null
-                : new Date().toISOString(),
+              onboarding_step: 2,
             });
             if (improve) setStep(3);
             else {
+              await completeOnboardingMutation.mutateAsync();
               await refreshIdentity();
               onFinished?.();
             }

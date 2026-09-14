@@ -1656,6 +1656,30 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      complete_own_onboarding: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          avatar_path: string | null
+          bio: string | null
+          birth_date: string | null
+          church: string | null
+          city: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          onboarding_completed_at: string | null
+          onboarding_step: number
+          state_code: string | null
+          updated_at: string
+          username: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       block_profile: {
         Args: { p_reason?: string; p_target_profile_id: string }
         Returns: {

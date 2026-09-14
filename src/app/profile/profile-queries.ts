@@ -105,6 +105,24 @@ export function useUpdateOwnProfileMutation(
   });
 }
 
+export function useCompleteOwnOnboardingMutation(
+  profileId: string,
+  repository?: ProfileDataRepository,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => (
+      repository ?? defaultProfileRepository()
+    ).completeOnboarding(profileId),
+    onSuccess: (profile) => {
+      queryClient.setQueryData<UserIdentity>(
+        profileQueryKeys.identity(profileId),
+        (current) => current ? { ...current, profile } : current,
+      );
+    },
+  });
+}
+
 export function useUpdateOwnDetailsMutation(
   profileId: string,
   repository?: ProfileDataRepository,

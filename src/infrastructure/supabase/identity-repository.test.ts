@@ -101,6 +101,30 @@ describe("createProfileDataRepository", () => {
     expect(builder.eq).toHaveBeenCalledWith("id", "user-1");
   });
 
+  it("conclui onboarding somente pela RPC server-authoritative", async () => {
+    const profile = {
+      id: "user-1",
+      onboarding_step: 6,
+      onboarding_completed_at: "2026-09-14T12:00:00Z",
+    };
+    const rpc = vi.fn().mockResolvedValue({ data: profile, error: null });
+    const repository = createProfileDataRepository({ rpc } as unknown as SupabaseClient);
+
+    await expect(repository.completeOnboarding("user-1")).resolves.toBe(profile);
+    expect(rpc).toHaveBeenCalledWith("complete_own_onboarding");
+  });
+
+  it("rejeita conclusão retornada para outro perfil", async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: { id: "other-user", onboarding_completed_at: "2026-09-14T12:00:00Z" },
+      error: null,
+    });
+    const repository = createProfileDataRepository({ rpc } as unknown as SupabaseClient);
+
+    await expect(repository.completeOnboarding("user-1"))
+      .rejects.toThrow("conclusão deste perfil");
+  });
+
   it("atualiza detalhes somente pelo RPC own-only com patch allowlisted", async () => {
     const details = {
       profile_id: "user-1",

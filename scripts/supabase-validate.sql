@@ -23,7 +23,8 @@ expected_migrations(version) as (
     ('20260914050000'),
     ('20260914060000'),
     ('20260914070000'),
-    ('20260914080000')
+    ('20260914080000'),
+    ('20260914090000')
 ),
 missing_migrations as (
   select expected.version
@@ -221,6 +222,7 @@ expected_functions(function_signature) as (
     ('public.list_message_attachment_cleanup(integer)'),
     ('public.complete_message_attachment_cleanup(uuid)'),
     ('public.request_account_lifecycle(public.account_lifecycle_kind,text)'),
+    ('public.complete_own_onboarding()'),
     ('public.update_own_profile_details(jsonb)'),
     ('public.get_visible_profile_age(uuid)'),
     ('public.get_home_dashboard_summary(integer)'),
@@ -303,6 +305,26 @@ worker_scheduler_contract as (
     and not has_function_privilege('authenticated', 'private.invoke_orha_worker(text,integer)', 'EXECUTE')
     and not has_function_privilege('service_role', 'private.invoke_orha_worker(text,integer)', 'EXECUTE')
     as present
+),
+onboarding_completion_contract as (
+  select
+    to_regprocedure('public.complete_own_onboarding()') is not null
+    and has_function_privilege(
+      'authenticated',
+      'public.complete_own_onboarding()',
+      'EXECUTE'
+    )
+    and not has_function_privilege(
+      'anon',
+      'public.complete_own_onboarding()',
+      'EXECUTE'
+    )
+    and not has_column_privilege(
+      'authenticated',
+      'public.profiles',
+      'onboarding_completed_at',
+      'UPDATE'
+    ) as present
 ),
 username_unique_index as (
   select exists (
@@ -457,6 +479,16 @@ checks(check_order, check_name, passed, details) as (
       when (select present from worker_scheduler_contract)
         then 'pg_cron, pg_net, and private worker scheduler functions are installed'
       else 'worker scheduler extensions, functions, or grants are incomplete'
+    end
+  union all
+  select
+    170,
+    'onboarding_completion_contract',
+    (select present from onboarding_completion_contract),
+    case
+      when (select present from onboarding_completion_contract)
+        then 'onboarding completion is authenticated, RPC-only, and server-authoritative'
+      else 'onboarding completion RPC or least-privilege grants are incomplete'
     end
 )
 select check_name, passed, details

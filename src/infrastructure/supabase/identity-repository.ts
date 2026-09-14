@@ -29,7 +29,6 @@ export type OwnProfileUpdate = Partial<Pick<
   | "church"
   | "avatar_path"
   | "onboarding_step"
-  | "onboarding_completed_at"
 >>;
 
 export type OwnDetailsUpdate = EditableProfileDetailsPatch;
@@ -123,6 +122,17 @@ export function createProfileDataRepository(client: SupabaseClient) {
 
       if (error) throw error;
       return data as Profile;
+    },
+
+    async completeOnboarding(userId: string): Promise<Profile> {
+      const { data, error } = await client.rpc("complete_own_onboarding");
+
+      if (error) throw error;
+      const row = Array.isArray(data) ? data[0] : data;
+      if (!row || typeof row !== "object" || row.id !== userId) {
+        throw new Error("O servidor não retornou a conclusão deste perfil.");
+      }
+      return row as Profile;
     },
 
     async updateDetails(userId: string, values: OwnDetailsUpdate): Promise<ProfileDetails> {
@@ -230,6 +240,10 @@ export function loadUserIdentity(userId: string): Promise<UserIdentity> {
 
 export function updateOwnProfile(userId: string, values: OwnProfileUpdate): Promise<Profile> {
   return repository().updateProfile(userId, values);
+}
+
+export function completeOwnOnboarding(userId: string): Promise<Profile> {
+  return repository().completeOnboarding(userId);
 }
 
 export function updateOwnDetails(userId: string, values: OwnDetailsUpdate): Promise<ProfileDetails> {
