@@ -230,9 +230,9 @@ Critério de aceite:
 
 ## P2 — qualidade de lançamento e fechamento funcional
 
-### P2.1 Inspeção visual e de dispositivo completa
+### P2.1 Inspeção visual e de dispositivo completa — superfície pública automatizada
 
-Playwright configura oito viewports Chromium e iPhone/WebKit, mas a execução autenticada integral continua bloqueada. Falta prova com teclado aberto, landscape, reduced motion, mídia quebrada, rede lenta, sessão expirada e aparelho iOS real.
+Playwright agora cobre seis viewports de iPhone, tablet retrato/paisagem, dois desktops, iPhone/WebKit e PWA. A matriz pública final passou `111/111`, incluindo guards, rotas, cadastro, recovery, 16 px, WCAG A/AA, alvos de toque, reduced motion, offline e ausência de OAuth Google falso. A execução autenticada integral continua bloqueada; ainda faltam teclado aberto, mídia quebrada, rede lenta, sessão expirada e aparelho iOS real nas áreas privadas.
 
 Aceite: screenshots e console/network limpos para 320×568, 375×667, 390×844, 393×852, 430×932, 440×932, tablet retrato/paisagem, 1280×800 e 1440×900, além de Safari/iPhone real instalado como PWA.
 

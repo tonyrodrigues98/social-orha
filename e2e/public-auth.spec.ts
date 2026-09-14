@@ -99,12 +99,12 @@ test.describe("Auth público e guards", () => {
     await expect.poll(() => currentAppPath(page)).toBe("/entrar");
   });
 
-  test("informa claramente que Google ainda não está habilitado", async ({
+  test("não expõe OAuth Google enquanto o provider está desligado", async ({
     page,
   }) => {
-    await page.getByRole("button", { name: "Continuar com Google" }).click();
     await expect(
-      page.getByRole("status").filter({ hasText: "ativada em breve" }),
-    ).toBeVisible();
+      page.getByRole("button", { name: "Continuar com Google" }),
+    ).toHaveCount(0);
+    await expect(page.getByText(/Google.*ativad[oa] em breve/i)).toHaveCount(0);
   });
 });

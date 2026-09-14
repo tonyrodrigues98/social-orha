@@ -2,7 +2,7 @@
 
 Atualizado em: 2026-09-14  
 Branch: `codex/production-launch`  
-Commit-base publicado antes deste checkpoint: `d93b1a9`
+Commit-base publicado antes deste checkpoint: `f9944ba`
 Projeto vinculado durante os gates: `bgeauxljwjbtbwpbzpoo` (ORHA-Staging)  
 Produção: `iuaczhkfmwpyhtpdmuyt` (ORHA), ainda não promovida  
 Estado: **staging saudável e alinhado às 17 migrations locais; cinco Edge Functions ativas, gate anônimo/CORS 7/7 e dois jobs Cron/Vault ativos; Auth remoto sincronizado com senha mínima de 12 caracteres, validação server-side da senha atual e conclusão atômica do onboarding; dependências de produção com audit 0; produção intacta; lint remoto sem erros, gate estrutural 20/20 e matriz RLS transacional aprovados**.
@@ -225,7 +225,7 @@ Evidência obtida no Dashboard e pela CLI oficial, sem copiar secrets para logs:
 - concluído nesta fatia: Auth config sincronizada, política de senha endurecida e contrato do cliente atualizado para `current_password`;
 - concluído nesta fatia: onboarding finalizado somente por RPC autenticada e idempotente; o gate transacional rejeitou perfil incompleto, UF inválida e escrita direta do timestamp, aceitou o perfil válido e preservou o primeiro timestamp no retry;
 - concluído nesta fatia: validação visual e automatizada do Auth/PWA em `320×568`; todos os campos editáveis permanecem em 16 px, o cadastro rejeita senha abaixo de 12 caracteres, o aviso offline não cobre nem intercepta o CTA após o scroll e o botão Voltar conserva pelo menos 44 px durante a animação;
-- gates atuais: PWA offline `1/1`, qualidade pública Chromium `320×568` + WebKit/iPhone `390×844` `8/8`, Vitest `303/303`, catálogo, TypeScript, ESLint, secrets, encoding, dívida de produção e build aprovados;
+- gates atuais: matriz E2E pública `111/111` em seis iPhones, tablet retrato/paisagem, dois desktops, WebKit/iPhone e PWA offline; Vitest `303/303`, catálogo, TypeScript, ESLint, secrets, encoding, dívida de produção e build aprovados;
 - pendente: custom SMTP + domínio de envio, CAPTCHA e jornadas reais de confirmação/reenvio/reset;
 - pendente: contas sintéticas A/B/admin e jornadas autenticadas completas, inclusive a prova automatizada de rejeição da senha atual incorreta;
 - pendente: mídia real, Realtime multiusuário, QA native-first/PWA, host definitivo, observabilidade e promoção controlada da produção.

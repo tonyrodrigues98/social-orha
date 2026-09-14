@@ -26,6 +26,8 @@ const publicChromiumViewports = [
   { name: "393x852", width: 393, height: 852, mobile: true },
   { name: "430x932", width: 430, height: 932, mobile: true },
   { name: "440x932", width: 440, height: 932, mobile: true },
+  { name: "tablet-768x1024", width: 768, height: 1024, mobile: true },
+  { name: "tablet-1024x768", width: 1024, height: 768, mobile: true },
   { name: "1280x800", width: 1280, height: 800, mobile: false },
   { name: "1440x900", width: 1440, height: 900, mobile: false },
 ] as const;
