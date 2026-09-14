@@ -44,6 +44,8 @@ export class SupabaseMessagingRealtimeRepository implements MessagingRealtimeRep
 
     let active = true;
     let subscribed = false;
+    let replicationReady = false;
+    let presenceTracked = false;
     let removed = false;
     const seen = new Set<string>();
     const remember = (key: string) => {
@@ -95,10 +97,17 @@ export class SupabaseMessagingRealtimeRepository implements MessagingRealtimeRep
     const channel = this.client.channel(topic, {
       config: {
         private: true,
-        broadcast: { ack: true, self: false },
+        broadcast: { ack: true, self: false, replication_ready: true },
         presence: { key: input.userId },
       },
     });
+
+    const activateRealtimeSession = () => {
+      if (!active || !subscribed || !replicationReady || presenceTracked) return;
+      presenceTracked = true;
+      input.onEvent({ entity: "sync", operation: "ready", conversationId: input.conversationId });
+      void channel.track({ userId: input.userId, onlineAt: new Date().toISOString() }).catch(reportError);
+    };
 
     const publishPresence = () => {
       if (!active) return;
@@ -147,18 +156,31 @@ export class SupabaseMessagingRealtimeRepository implements MessagingRealtimeRep
         if (!active || userId === input.userId || !isValidId(userId) || Number.isNaN(Date.parse(sentAt))) return;
         input.onTyping?.({ userId, isTyping: payload.isTyping === true, sentAt });
       })
+      .on("system", {}, (payload) => {
+        if (!active || payload.extension !== "system") return;
+        if (payload.status !== "ok") {
+          replicationReady = false;
+          reportError(new Error("A sincronização da conversa ficou indisponível."));
+          return;
+        }
+        replicationReady = true;
+        activateRealtimeSession();
+      })
       .subscribe((status, error) => {
         if (!active) return;
         if (status === "SUBSCRIBED") {
           subscribed = true;
-          void channel.track({ userId: input.userId, onlineAt: new Date().toISOString() }).catch(reportError);
-        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          activateRealtimeSession();
+        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+          subscribed = false;
+          replicationReady = false;
+          presenceTracked = false;
           reportError(error);
         }
       });
 
     const setTyping = async (isTyping: boolean) => {
-      if (!active || !subscribed) return;
+      if (!active || !subscribed || !replicationReady) return;
       const result = await channel.send({
         type: "broadcast",
         event: "typing",
@@ -172,13 +194,13 @@ export class SupabaseMessagingRealtimeRepository implements MessagingRealtimeRep
       removed = true;
       active = false;
       seen.clear();
-      if (subscribed) {
+      if (subscribed && replicationReady) {
         void channel.send({
           type: "broadcast",
           event: "typing",
           payload: { userId: input.userId, isTyping: false, sentAt: new Date().toISOString() },
         }).catch(() => undefined);
-        void channel.untrack().catch(() => undefined);
+        if (presenceTracked) void channel.untrack().catch(() => undefined);
       }
       void this.client.removeChannel(channel);
     };

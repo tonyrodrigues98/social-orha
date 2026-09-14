@@ -49,4 +49,44 @@ describe("SupabaseNotificationRepository mapping", () => {
       p_notification_ids: ["10000000-0000-4000-8000-000000000001"],
     });
   });
+
+  it("abre o canal Realtime como privado no projeto PrivateOnly", async () => {
+    const removeChannel = vi.fn().mockResolvedValue("ok");
+    let systemListener: ((payload: { extension: string; status: string }) => void) | undefined;
+    const channelApi = {
+      on: vi.fn((type: string, _config: unknown, listener: typeof systemListener) => {
+        if (type === "system") systemListener = listener;
+        return channelApi;
+      }),
+      subscribe: vi.fn((listener: (status: string) => void) => {
+        listener("SUBSCRIBED");
+        systemListener?.({ extension: "system", status: "ok" });
+        return channelApi;
+      }),
+    };
+    const channel = vi.fn().mockReturnValue(channelApi);
+    const repository = new SupabaseNotificationRepository({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: "10000000-0000-4000-8000-000000000002" } },
+          error: null,
+        }),
+      },
+      channel,
+      removeChannel,
+    } as unknown as SupabaseClient);
+
+    const unsubscribe = await repository.subscribe(vi.fn());
+    expect(channel).toHaveBeenCalledWith(
+      "notifications:10000000-0000-4000-8000-000000000002",
+      {
+        config: {
+          private: true,
+          broadcast: { ack: false, self: false, replication_ready: true },
+        },
+      },
+    );
+    unsubscribe();
+    expect(removeChannel).toHaveBeenCalledWith(channelApi);
+  });
 });

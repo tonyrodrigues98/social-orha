@@ -2,20 +2,20 @@
 
 Data da verificação: 2026-09-14  
 Branch auditada: `codex/production-launch`  
-Commit-base auditado antes deste checkpoint: `f377382`
+Commit-base auditado antes deste checkpoint: `46d8742`
 Staging auditado: `bgeauxljwjbtbwpbzpoo`  
 Produção Supabase: `iuaczhkfmwpyhtpdmuyt`  
 
 ## Veredito
 
-A ORHA não é mais somente um protótipo na branch de lançamento: existe uma base de produção ampla, integrada ao Supabase, com rotas reais, repositories reais, schema social, RLS, Storage, Realtime e uma suíte de testes relevante. O staging possui 22 migrations aplicadas, 40 tabelas públicas com RLS, cinco buckets privados, 16 tabelas publicadas no Realtime, lint hospedado sem erros, gate estrutural 23/23 e matrizes RLS/onboarding/suporte/papéis globais/consentimento transacionais aprovadas.
+A ORHA não é mais somente um protótipo na branch de lançamento: existe uma base de produção ampla, integrada ao Supabase, com rotas reais, repositories reais, schema social, RLS, Storage, Realtime e uma suíte de testes relevante. O staging possui 25 migrations aplicadas, 40 tabelas públicas com RLS, cinco buckets privados, 16 tabelas publicadas no Realtime, lint hospedado sem achados, gate estrutural 23/23 e matrizes RLS/onboarding/suporte/papéis globais/consentimento transacionais aprovadas.
 
 Mesmo assim, a ORHA **ainda não atende à Definition of Done para lançamento em massa**. Os bloqueadores não são cosméticos: o deploy público ainda executa a `main` legada com `PrototypeProvider` e seeds; deep links retornam HTTP 404; a jornada E2E real não pode iniciar por falta de ambiente/secrets; e os serviços externos obrigatórios de Auth, e-mail, domínio e operação ainda não foram comprovados. As cinco Edge Functions já estão ativas no staging, os dois erros SQL foram corrigidos e a superfície de dependências de produção está com audit zero.
 
 Portanto, a classificação correta é:
 
 - **Código candidato a lançamento:** avançado, compilável e sem mocks de runtime na branch auditada.
-- **Staging de dados:** estruturalmente consistente, com RLS e lint validados, cinco Edge Functions ativas, gate anônimo/CORS 7/7, catálogo/export/mídia autenticados 14/14 e ciclo de conta 17/17 via worker/Vault; jornadas multiusuário ainda pendentes.
+- **Staging de dados:** estruturalmente consistente, com RLS e lint validados, cinco Edge Functions ativas, gate anônimo/CORS 7/7, catálogo/export/mídia autenticados 14/14, ciclo de conta 17/17 e mensageria/mídia privada 18/18; a matriz E2E permanente de cinco contas ainda está pendente.
 - **Produção:** não promovida.
 - **Produto público atual:** protótipo legado, não equivalente à branch candidata.
 - **Pronto para as massas:** não.
@@ -32,8 +32,8 @@ Portanto, a classificação correta é:
 | Onboarding persistente | `src/app/onboarding/onboarding-flow.tsx` retoma `onboarding_step` e persiste identidade, localidade, detalhes e favoritos | Implementado; fechamento E2E pendente |
 | Domínios sociais | `src/domains/social/repository.ts` e `src/infrastructure/supabase/social/social-repository.ts` implementam perfis, amizades, comunidades, memberships, posts, comentários e reações | Implementado |
 | Comunidade administrativa | `src/infrastructure/supabase/community-management-repository.ts` e `src/app/community/community-manager-drawer.tsx` cobrem edição, regras, roles, banimento, branding e arquivamento | Implementado; mídia depende de Edge |
-| Mensageria persistente | `src/domains/messaging/contracts.ts` e `src/infrastructure/supabase/messaging/*` cobrem pedidos, grupos, texto, imagem, áudio, reply, reaction, forward, delete, receipts, busca, preferências e Realtime | Implementado; fluxo integral ainda não comprovado |
-| Waveform e gravação | `src/app/pages/private-chat-page.tsx`, `src/infrastructure/media/browser-audio-recorder.ts` e `src/components/ui/chat/*` usam gravação real, waveform e primitives do chat | Implementado; upload remoto depende de Edge |
+| Mensageria persistente | `src/domains/messaging/contracts.ts` e `src/infrastructure/supabase/messaging/*` cobrem pedidos, grupos, texto, imagem, áudio, reply, reaction, forward, delete, receipts, busca, preferências e Realtime | Implementado; pedido/aceite, texto, receipts, mídia e Realtime privado comprovados 18/18 no staging |
+| Waveform e gravação | `src/app/pages/private-chat-page.tsx`, `src/infrastructure/media/browser-audio-recorder.ts` e `src/components/ui/chat/*` usam gravação real, waveform e primitives do chat | Implementado; WAV remoto, inspeção Edge, waveform persistida e download entre usuários comprovados |
 | Perfil e mídia | `src/app/pages/profile-page.tsx`, `src/app/profile/*`, `src/application/profile-media/*` e `src/infrastructure/supabase/profile-media-repository.ts` cobrem crop, avatar, capa, galeria, privacidade e favoritos | Implementado; verificação remota depende de Edge |
 | Home real | `src/app/pages/home-page.tsx` e `src/infrastructure/supabase/home/home-dashboard-repository.ts` usam resumo server-side, sem conteúdo falso | Implementado |
 | Explore real | `src/app/explore/*` e `src/infrastructure/supabase/explore/*` usam busca server-side de perfis, comunidades, interesses e posts | Implementado; destinos futuros estão claramente marcados como planejamento |
@@ -47,7 +47,7 @@ Portanto, a classificação correta é:
 
 As leituras autenticadas da CLI confirmaram:
 
-- 22 migrations locais/remotas alinhadas, de `20260811040000` a `20260914104000`;
+- 25 migrations locais/remotas alinhadas, de `20260811040000` a `20260914107000`;
 - 40 tabelas públicas e as mesmas 40 com RLS;
 - cinco buckets privados: `profile-media`, `community-media`, `chat-media`, `report-evidence` e `account-exports`;
 - 16 tabelas na publication `supabase_realtime`;
@@ -63,7 +63,7 @@ Fontes versionadas: `scripts/remote-inventory.sql`, `scripts/supabase-validate.s
 |---|---|
 | `npm run typecheck` | Aprovado fora do sandbox |
 | `npm run lint` | Aprovado |
-| `npm test` | 79 arquivos e 345 testes aprovados |
+| `npm test` | 85 arquivos e 363 testes aprovados |
 | `npm run build` | Aprovado; 5.983 módulos, manifest e service worker gerados, precache de 103 entradas |
 | `npm run audit:bundle` | Aprovado; entrada JS 291,9 KiB gzip, CSS 27,8 KiB gzip e maior lazy chunk 78,8 KiB gzip |
 | `npm run check:catalog` | Aprovado |
@@ -108,7 +108,9 @@ As cinco funções estão versionadas e `ACTIVE` no staging; produção continua
 
 O novo gate `npm run smoke:edge:authenticated`, restrito por código ao projeto staging, passou 14/14. Ele criou uma conta efêmera confirmada, obteve sessão real por senha, consultou `catalog-search` com provedor externo, persistiu uma solicitação `data_export`, gerou e baixou o artefato privado, conferiu tamanho, SHA-256, schema, request e owner e repetiu a chamada idempotente. Na mesma execução, reservou mídia de perfil, realizou upload privado, comprovou inspeção binária/promoção pela Edge Function, signed URL, integridade do download, remoção assíncrona e cleanup físico + metadata. Objeto, export e usuário foram removidos no `finally`. Nenhum e-mail, senha, token, signed URL ou path privado foi impresso.
 
-O gate `npm run smoke:worker:account-deletion` passou 17/17. Para desativação, ele rejeitou confirmação inválida, persistiu a restrição imediata e comprovou a conclusão pelo worker real. Para exclusão, persistiu a janela de arrependimento, tornou devida somente a solicitação efêmera, acionou `private.invoke_orha_worker` com o segredo lido internamente pelo Vault e comprovou remoção de Auth, perfil, Storage, lifecycle e tombstone, além de `account.deletion_completed`. `audit_logs` foi corretamente preservada porque é append-only inclusive para `postgres`; ela é evidência operacional anônima, não fixture mutável. A consulta final confirmou zero contas sintéticas e zero tombstones mutáveis. Ainda falta a jornada multiusuário permanente.
+O gate `npm run smoke:worker:account-deletion` passou 17/17. Para desativação, ele rejeitou confirmação inválida, persistiu a restrição imediata e comprovou a conclusão pelo worker real. Para exclusão, persistiu a janela de arrependimento, tornou devida somente a solicitação efêmera, acionou `private.invoke_orha_worker` com o segredo lido internamente pelo Vault e comprovou remoção de Auth, perfil, Storage, lifecycle e tombstone, além de `account.deletion_completed`. `audit_logs` foi corretamente preservada porque é append-only inclusive para `postgres`; ela é evidência operacional anônima, não fixture mutável. A consulta final confirmou zero contas sintéticas e zero tombstones mutáveis.
+
+O gate `npm run smoke:messaging:media` passou 18/18 com duas contas efêmeras: onboarding real, solicitação e aceite de conversa, texto em Realtime privado, imagem, áudio WAV, waveform, verificação binária, signed download, recibo, denúncia com retenção exata do anexo e evidência privada. O mesmo gate confirmou que os canais privados `notifications:<user>` e `support:<user>` alcançam readiness de replicação sem abrir escrita ao cliente. A pós-consulta confirmou zero contas, perfis e objetos sintéticos. A matriz permanente A/B/Admin/Moderador/Suporte continua sendo um gate maior e separado.
 
 Critério de aceite:
 
@@ -160,7 +162,7 @@ O audit produtivo foi reexecutado em 2026-09-14 e retornou `found 0 vulnerabilit
 Evidência preservada:
 
 - `npm audit --omit=dev --audit-level=high`: zero vulnerabilidades;
-- catálogo, TypeScript, ESLint, 354 testes, orçamento de bundle e build PWA verdes;
+- catálogo, TypeScript, ESLint, 363 testes, orçamento de bundle e build PWA verdes;
 - E2E autenticado continua sendo um gate separado e não foi inferido deste resultado.
 
 ## Bloqueadores P1 — produto completo e operável

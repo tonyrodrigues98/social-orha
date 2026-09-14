@@ -140,6 +140,7 @@ export interface MessagingMediaRepository {
 }
 
 export type MessagingRealtimeEvent =
+  | { entity: "sync"; operation: "ready"; conversationId: string }
   | { entity: "message"; operation: "insert" | "update"; conversationId: string; message: Message }
   | { entity: "message"; operation: "delete"; conversationId: string; messageId: string }
   | { entity: "reaction" | "receipt" | "attachment"; operation: "change"; conversationId: string; messageId?: string }

@@ -29,7 +29,10 @@ expected_migrations(version) as (
     ('20260914101000'),
     ('20260914102000'),
     ('20260914103000'),
-    ('20260914104000')
+    ('20260914104000'),
+    ('20260914105000'),
+    ('20260914106000'),
+    ('20260914107000')
 ),
 missing_migrations as (
   select expected.version
@@ -188,7 +191,8 @@ missing_storage_policies as (
 expected_realtime_policies(policy_name) as (
   values
     ('ORHA conversation members can receive realtime'),
-    ('ORHA conversation members can send realtime')
+    ('ORHA conversation members can send realtime'),
+    ('Authenticated users can read own operational channels')
 ),
 missing_realtime_policies as (
   select expected.policy_name
@@ -201,6 +205,7 @@ missing_realtime_policies as (
 ),
 expected_functions(function_signature) as (
   values
+    ('private.can_upload_report_evidence(text,uuid)'),
     ('public.search_visible_profiles(text,integer,integer)'),
     ('public.search_discoverable_interests(text,integer,integer)'),
     ('public.search_discoverable_posts(text,integer,integer)'),

@@ -204,8 +204,24 @@ export class SupabaseSupportRepository implements SupportRepository {
 
   async subscribe(listener: (event: SupportRealtimeEvent) => void): Promise<() => void> {
     const userId = await requireUserId(this.client);
+    let subscriptionReady = false;
+    let replicationReady = false;
+    let resolveReady: () => void = () => undefined;
+    let rejectReady: (error: Error) => void = () => undefined;
+    const ready = new Promise<void>((resolve, reject) => {
+      resolveReady = resolve;
+      rejectReady = reject;
+    });
+    const settleReady = () => {
+      if (subscriptionReady && replicationReady) resolveReady();
+    };
     let channel: RealtimeChannel | null = this.client
-      .channel(`support:${userId}`)
+      .channel(`support:${userId}`, {
+        config: {
+          private: true,
+          broadcast: { ack: false, self: false, replication_ready: true },
+        },
+      })
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "support_tickets" },
@@ -225,21 +241,46 @@ export class SupabaseSupportRepository implements SupportRepository {
           const ticketId = typeof next.ticket_id === "string" ? next.ticket_id : previous.ticket_id;
           if (typeof ticketId === "string") listener({ ticketId, kind: "message" });
         },
-      );
-
-    try {
-      await new Promise<void>((resolve, reject) => {
-        channel?.subscribe((status) => {
-          if (status === "SUBSCRIBED") resolve();
-          if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
-            reject(new SupportError("unavailable", "As atualizações do suporte estão temporariamente indisponíveis."));
-          }
-        });
+      )
+      .on("system", {}, (payload) => {
+        if (payload.extension !== "system") return;
+        if (payload.status === "ok") {
+          replicationReady = true;
+          settleReady();
+        } else {
+          rejectReady(new SupportError(
+            "unavailable",
+            "As atualizações do suporte estão temporariamente indisponíveis.",
+          ));
+        }
       });
+
+    const timeout = setTimeout(() => {
+      rejectReady(new SupportError(
+        "unavailable",
+        "As atualizações do suporte demoraram para responder.",
+      ));
+    }, 15_000);
+    try {
+      channel.subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          subscriptionReady = true;
+          settleReady();
+        }
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+          rejectReady(new SupportError(
+            "unavailable",
+            "As atualizações do suporte estão temporariamente indisponíveis.",
+          ));
+        }
+      });
+      await ready;
     } catch (error) {
       if (channel) await this.client.removeChannel(channel);
       channel = null;
       throw mapError(error);
+    } finally {
+      clearTimeout(timeout);
     }
 
     return () => {

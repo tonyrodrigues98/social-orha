@@ -231,8 +231,24 @@ export class SupabaseNotificationRepository implements NotificationRepository {
 
   async subscribe(listener: (event: NotificationRealtimeEvent) => void): Promise<() => void> {
     const userId = await requireUserId(this.client);
+    let subscriptionReady = false;
+    let replicationReady = false;
+    let resolveReady: () => void = () => undefined;
+    let rejectReady: (error: Error) => void = () => undefined;
+    const ready = new Promise<void>((resolve, reject) => {
+      resolveReady = resolve;
+      rejectReady = reject;
+    });
+    const settleReady = () => {
+      if (subscriptionReady && replicationReady) resolveReady();
+    };
     let channel: RealtimeChannel | null = this.client
-      .channel(`notifications:${userId}`)
+      .channel(`notifications:${userId}`, {
+        config: {
+          private: true,
+          broadcast: { ack: false, self: false, replication_ready: true },
+        },
+      })
       .on(
         "postgres_changes",
         {
@@ -248,26 +264,46 @@ export class SupabaseNotificationRepository implements NotificationRepository {
           if (typeof id !== "string") return;
           listener({ kind: payload.eventType === "INSERT" ? "created" : "updated", notificationId: id });
         },
-      );
-
-    try {
-      await new Promise<void>((resolve, reject) => {
-        channel?.subscribe((status) => {
-          if (status === "SUBSCRIBED") resolve();
-          if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
-            reject(
-              new NotificationError(
-                "unavailable",
-                "As notificações em tempo real estão temporariamente indisponíveis.",
-              ),
-            );
-          }
-        });
+      )
+      .on("system", {}, (payload) => {
+        if (payload.extension !== "system") return;
+        if (payload.status === "ok") {
+          replicationReady = true;
+          settleReady();
+        } else {
+          rejectReady(new NotificationError(
+            "unavailable",
+            "As notificações em tempo real estão temporariamente indisponíveis.",
+          ));
+        }
       });
+
+    const timeout = setTimeout(() => {
+      rejectReady(new NotificationError(
+        "unavailable",
+        "As notificações em tempo real demoraram para responder.",
+      ));
+    }, 15_000);
+    try {
+      channel.subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          subscriptionReady = true;
+          settleReady();
+        }
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+          rejectReady(new NotificationError(
+            "unavailable",
+            "As notificações em tempo real estão temporariamente indisponíveis.",
+          ));
+        }
+      });
+      await ready;
     } catch (error) {
       if (channel) await this.client.removeChannel(channel);
       channel = null;
       throw mapError(error);
+    } finally {
+      clearTimeout(timeout);
     }
 
     return () => {

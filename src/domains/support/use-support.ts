@@ -142,7 +142,10 @@ export function useSupportRealtime() {
       void queryClient.invalidateQueries({ queryKey: supportQueryKeys.messages(event.ticketId) });
     }).then((cleanup) => {
       if (disposed) cleanup();
-      else unsubscribe = cleanup;
+      else {
+        unsubscribe = cleanup;
+        void queryClient.invalidateQueries({ queryKey: supportQueryKeys.root });
+      }
     }).catch(() => undefined);
     return () => {
       disposed = true;

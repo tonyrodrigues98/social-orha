@@ -109,7 +109,10 @@ export function useNotificationCenter({
       .subscribe(() => void load(false))
       .then((cleanup) => {
         if (disposed) cleanup();
-        else unsubscribe = cleanup;
+        else {
+          unsubscribe = cleanup;
+          void load(false);
+        }
       })
       .catch((cause: unknown) => {
         if (!disposed) {

@@ -30,8 +30,10 @@ describe("SupabaseMessagingRealtimeRepository", () => {
       callback: (payload: unknown) => void;
     }> = [];
     const channel: Record<string, unknown> = {};
-    channel.on = vi.fn((_type, config, callback) => {
-      handlers.push({ config: config as { event: string; table: string }, callback: callback as (payload: unknown) => void });
+    channel.on = vi.fn((type, config, callback) => {
+      if (type === "postgres_changes") {
+        handlers.push({ config: config as { event: string; table: string }, callback: callback as (payload: unknown) => void });
+      }
       return channel;
     });
     channel.subscribe = vi.fn(() => channel);
@@ -62,7 +64,10 @@ describe("SupabaseMessagingRealtimeRepository", () => {
     expect(getMessage).toHaveBeenCalledTimes(1);
     expect(onEvent).toHaveBeenCalledTimes(1);
     expect(createChannel).toHaveBeenCalledWith("conversation:conversation-1", expect.objectContaining({
-      config: expect.objectContaining({ private: true }),
+      config: expect.objectContaining({
+        private: true,
+        broadcast: expect.objectContaining({ replication_ready: true }),
+      }),
     }));
 
     const preferences = handlers.find((handler) => handler.config.table === "conversation_preferences");
@@ -88,8 +93,12 @@ describe("SupabaseMessagingRealtimeRepository", () => {
 
   it("publishes typing only after the private channel subscribes and cleans presence once", async () => {
     let statusCallback: ((status: string) => void) | undefined;
+    let systemCallback: ((payload: { extension: string; status: string }) => void) | undefined;
     const channel: Record<string, unknown> = {};
-    channel.on = vi.fn(() => channel);
+    channel.on = vi.fn((type: string, _config: unknown, callback: typeof systemCallback) => {
+      if (type === "system") systemCallback = callback;
+      return channel;
+    });
     channel.subscribe = vi.fn((callback: (status: string) => void) => { statusCallback = callback; return channel; });
     channel.presenceState = vi.fn(() => ({}));
     channel.send = vi.fn().mockResolvedValue("ok");
@@ -100,14 +109,25 @@ describe("SupabaseMessagingRealtimeRepository", () => {
     const repository = { getMessage: vi.fn() } as unknown as MessagingRepository;
     const realtime = new SupabaseMessagingRealtimeRepository(client, repository);
 
-    const session = realtime.subscribe({ conversationId: "conversation-1", userId: "user-1", onEvent: vi.fn() });
+    const onEvent = vi.fn();
+    const session = realtime.subscribe({ conversationId: "conversation-1", userId: "user-1", onEvent });
     await session.setTyping(true);
     expect(channel.send).not.toHaveBeenCalled();
 
     statusCallback?.("SUBSCRIBED");
     await session.setTyping(true);
+    expect(channel.track).not.toHaveBeenCalled();
+    expect(channel.send).not.toHaveBeenCalled();
+
+    systemCallback?.({ extension: "system", status: "ok" });
+    await session.setTyping(true);
     expect(channel.track).toHaveBeenCalledWith(expect.objectContaining({ userId: "user-1" }));
     expect(channel.send).toHaveBeenCalledWith(expect.objectContaining({ event: "typing", payload: expect.objectContaining({ isTyping: true }) }));
+    expect(onEvent).toHaveBeenCalledWith({
+      entity: "sync",
+      operation: "ready",
+      conversationId: "conversation-1",
+    });
 
     session.unsubscribe();
     session.unsubscribe();

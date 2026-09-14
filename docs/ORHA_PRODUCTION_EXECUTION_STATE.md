@@ -2,14 +2,14 @@
 
 Atualizado em: 2026-09-14  
 Branch: `codex/production-launch`  
-Commit-base publicado antes deste checkpoint: `18fa02c`
+Commit-base publicado antes deste checkpoint: `46d8742`
 Projeto vinculado durante os gates: `bgeauxljwjbtbwpbzpoo` (ORHA-Staging)  
 Produção: `iuaczhkfmwpyhtpdmuyt` (ORHA), ainda não promovida  
-Estado: **staging saudável e alinhado às 22 migrations locais; 40 tabelas públicas com RLS, 16 tabelas Realtime, cinco Edge Functions ativas, gates anônimo/CORS 7/7, autenticado catálogo/export/mídia 14/14 e ciclo de conta 17/17 via worker/Vault, dois jobs Cron ativos; Preview Vercel `Ready` porém ainda protegido por SSO; Auth remoto sincronizado; produção intacta**.
+Estado: **staging saudável e alinhado às 25 migrations locais; 40 tabelas públicas com RLS, 16 tabelas Realtime, cinco Edge Functions ativas, gates anônimo/CORS 7/7, autenticado catálogo/export/mídia 14/14, ciclo de conta 17/17 e mensageria/mídia privada 18/18, dois jobs Cron ativos; Preview Vercel `Ready` porém ainda protegido por SSO; Auth remoto sincronizado; produção intacta**.
 
 ## Resumo executivo
 
-O banco de produção ainda não recebeu a cadeia social desta branch. No staging isolado `bgeauxljwjbtbwpbzpoo`, as 22 migrations versionadas, de `20260811040000` a `20260914104000`, estão agora aplicadas e registradas no ledger remoto. O lint hospedado passa sem erros, o gate estrutural passou em 23/23 checks e as matrizes transacionais de RLS/onboarding/suporte/papéis globais/consentimento passaram integralmente, terminando em `ROLLBACK` sem fixtures residuais.
+O banco de produção ainda não recebeu a cadeia social desta branch. No staging isolado `bgeauxljwjbtbwpbzpoo`, as 25 migrations versionadas, de `20260811040000` a `20260914107000`, estão agora aplicadas e registradas no ledger remoto. O lint hospedado passa sem erros nem avisos, o gate estrutural passou em 23/23 checks e as matrizes transacionais de RLS/onboarding/suporte/papéis globais/consentimento passaram integralmente, terminando em `ROLLBACK` sem fixtures residuais.
 
 Em 2026-09-14, ambos os projetos foram confirmados como ativos no control plane e o staging como `Healthy` no Dashboard. A CLI foi autenticada pelo fluxo oficial no navegador e o workspace foi vinculado temporariamente ao staging. A primeira aplicação publicou `1800` a `2200`; `2300` falhou atomicamente por um alias SQL reservado e por uma pós-validação que não aceitava a serialização `search_path=""` do PostgreSQL hospedado. As duas causas foram corrigidas no SQL versionado. A retomada aplicou `2300`, `2400`, `2500` e `20260903010000` com sucesso. O único aviso final foi a impossibilidade de gerar cache local do catálogo porque Docker não está instalado; isso não afetou o commit remoto das migrations.
 
@@ -19,7 +19,9 @@ As cinco Edge Functions estão `ACTIVE` no staging. `ORHA_CRON_SECRET` foi gerad
 
 O gate autenticado staging passou 14/14 com conta efêmera e cleanup verificado: sessão por senha, catálogo externo real com retry limitado apenas para falhas transitórias, request persistida de exportação, criação/download privado, integridade SHA-256 e owner e retry idempotente. Também comprovou reserva, upload privado, inspeção binária pela `media-verify`, promoção server-side, signed URL, bytes intactos, fila de remoção e exclusão física + metadata da mídia. O script recusa explicitamente o project-ref de produção e não imprime credenciais nem signed URLs.
 
-O gate de ciclo de conta passou 17/17 usando somente contas efêmeras. A desativação rejeitou confirmação inválida, aplicou restrição imediata e foi concluída pelo worker real. A exclusão negou confirmação inválida, persistiu o request atrasado, restringiu o vencimento ao ID temporário, acionou o worker pela função privada/Vault e reconciliou Auth/profile/Storage/lifecycle/tombstone com conclusão auditada. A trilha `audit_logs` permaneceu por desenho append-only; todo estado sintético mutável foi removido e as contagens finais de contas de smoke e tombstones retornaram zero. Jornadas multiusuário permanecem separadas.
+O gate de ciclo de conta passou 17/17 usando somente contas efêmeras. A desativação rejeitou confirmação inválida, aplicou restrição imediata e foi concluída pelo worker real. A exclusão negou confirmação inválida, persistiu o request atrasado, restringiu o vencimento ao ID temporário, acionou o worker pela função privada/Vault e reconciliou Auth/profile/Storage/lifecycle/tombstone com conclusão auditada. A trilha `audit_logs` permaneceu por desenho append-only; todo estado sintético mutável foi removido e as contagens finais de contas de smoke e tombstones retornaram zero.
+
+O gate `npm run smoke:messaging:media` passou 18/18 com duas contas efêmeras onboarded. Ele comprovou pedido/aceite de conversa, canal privado com readiness de replicação, texto via Postgres Changes, imagem e WAV validados pela Edge Function, waveform persistida, download por URL assinada apenas para participante, recibo de leitura, retenção exata do anexo denunciado, evidência privada e canais próprios de notificações/suporte. As migrations `20260914105000` a `20260914107000` corrigiram a autorização RLS do upload de evidência, autorizaram somente tópicos operacionais do próprio usuário e eliminaram o último aviso do lint SQL. A consulta independente final retornou zero contas, perfis e objetos sintéticos.
 
 ## Inventário remoto confirmado
 
@@ -123,8 +125,8 @@ O script de inventário está em `scripts/remote-inventory.sql` e consulta apena
 | Workers/lifecycle | `20260816180000_edge_worker_contracts.sql` + cinco Edge Functions | mesma implementação versionada | catálogo/export/mídia 14/14; ciclo de conta 17/17; multiusuário pendente |
 | Explore/chat/perfil/Home | `20260816190000` → `20260816220000` | mesma cadeia | aplicado e validado estruturalmente |
 | Antiabuso/notificações | `20260816230000` → `20260816240000` | mesma cadeia | aplicado e validado estruturalmente |
-| Storage | cinco buckets privados e policies | mesma configuração | aplicado; mídia autenticada pendente |
-| Realtime | 16 tabelas + Broadcast/Presence privados | mesma configuração | aplicado; jornada multiusuário persistente ainda pendente |
+| Storage | cinco buckets privados e policies | mesma configuração | aplicado; perfil 14/14 e chat/evidência 18/18 comprovados no staging |
+| Realtime | 16 tabelas + canais privados de conversa/notificações/suporte | mesma configuração | aplicado; entrega de texto e readiness de replicação comprovados entre dois usuários efêmeros |
 | Suporte | tickets, mensagens, 6 RPCs, rate limits e audit log | rota `/suporte`, Drawer GodUI e fila chatcn | aplicado e gate transacional aprovado |
 | Papéis globais | `user_roles`, 2 RPCs, rate limit, notificação e audit log | rota `/admin/funcoes` e atalhos operacionais por papel | aplicado e gate transacional aprovado |
 | Analytics consentido | `user_settings.analytics_enabled` + timestamp do servidor | PostHog lazy atrás do `AnalyticsPort`, allowlist de eventos e Configurações > Dados | aplicado e gate transacional aprovado; serviço externo ainda sem key |
@@ -235,7 +237,7 @@ Evidência obtida no Dashboard e pela CLI oficial, sem copiar secrets para logs:
 ## Gates concluídos e próximos gates
 
 - concluído: snapshot pré-promoção da produção, hashes e isolamento do staging;
-- concluído: 22 migrations ledgered, lint SQL remoto, validação estrutural 23/23 e matrizes RLS/Storage/Realtime/onboarding/suporte/papéis globais/consentimento com rollback;
+- concluído: 25 migrations ledgered, lint SQL remoto sem achados, validação estrutural 23/23 e matrizes RLS/Storage/Realtime/onboarding/suporte/papéis globais/consentimento com rollback;
 - concluído: cinco Edge Functions ativas, CORS/anon 7/7, Cron/Vault e workers com filas vazias;
 - concluído nesta fatia: Auth config sincronizada, política de senha endurecida e contrato do cliente atualizado para `current_password`;
 - concluído nesta fatia: onboarding finalizado somente por RPC autenticada e idempotente; o gate transacional rejeitou perfil incompleto, UF inválida e escrita direta do timestamp, aceitou o perfil válido e preservou o primeiro timestamp no retry;
@@ -255,7 +257,7 @@ Evidência obtida no Dashboard e pela CLI oficial, sem copiar secrets para logs:
 - concluído nesta fatia: o Preview do commit `28cae8b` foi criado e concluiu o build em 52 s. Splash, Auth e guard de deep link foram inspecionados no Chrome. O acesso anônimo ainda recebe `302` para `vercel.com/sso-api`, então a proteção de Preview precisa ser desligada e o gate HTTP repetido antes de chamar a URL de pública.
 - concluído nesta fatia: `npm run smoke:edge:authenticated` passou 14/14 contra staging com conta efêmera removida; catálogo real, export privado, SHA-256/owner, retry idempotente e mídia completa reserva → upload → verify → signed URL → remove → cleanup foram comprovados sem resíduos nem exposição de secrets.
 - concluído nesta fatia: `npm run smoke:worker:account-deletion` passou 17/17; worker/Vault executou desativação com restrição imediata e exclusão final de contas efêmeras, reconciliando Auth, perfil, Storage, lifecycle e tombstone e preservando somente a auditoria append-only. A pós-validação confirmou zero usuários sintéticos e zero tombstones mutáveis.
-- gates atuais: matriz E2E pública completa `111/111`, inclusive WebKit 390×844 após reforço dos alvos de toque canônicos contra arredondamento subpixel; guards/deep links de `/suporte` e `/admin/funcoes` revalidados em `66/66` nos 11 projetos públicos; Playwright descobre 128 execuções em 16 arquivos — 111 públicas, 12 jornadas autenticadas e cinco setups de sessão —; Vitest `354/354` em 81 arquivos, Deno `11/11`, Edge anônimo/CORS `7/7`, Edge autenticado catálogo/export/mídia `14/14`, ciclo de conta `17/17`, catálogo, TypeScript, ESLint, secrets, encoding, dívida de produção, auditoria de dependências, orçamento de bundle e build PWA com 103 entradas aprovados;
+- gates atuais: matriz E2E pública completa `111/111`, inclusive WebKit 390×844 após reforço dos alvos de toque canônicos contra arredondamento subpixel; guards/deep links de `/suporte` e `/admin/funcoes` revalidados em `66/66` nos 11 projetos públicos; Playwright descobre 128 execuções em 16 arquivos — 111 públicas, 12 jornadas autenticadas e cinco setups de sessão —; Vitest `363/363` em 85 arquivos, Deno `11/11`, Edge anônimo/CORS `7/7`, Edge autenticado catálogo/export/mídia `14/14`, ciclo de conta `17/17`, mensageria/mídia privada `18/18`, catálogo, TypeScript, ESLint, secrets, encoding, dívida de produção, auditoria de dependências, orçamento de bundle e build PWA com 103 entradas aprovados;
 - pendente: fornecer e aprovar os sete valores públicos reais do gate jurídico/de suporte; nenhuma identidade, endereço, foro ou e-mail foi inventado ou presumido;
 - pendente: custom SMTP + domínio de envio, CAPTCHA e jornadas reais de confirmação/reenvio/reset;
 - pendente: contas sintéticas A/B/Admin/Moderador/Suporte e execução das jornadas autenticadas completas já contratadas, inclusive suporte, autoridade por papel e rejeição da senha atual incorreta;
@@ -266,7 +268,7 @@ Evidência obtida no Dashboard e pela CLI oficial, sem copiar secrets para logs:
 
 - Docker/Podman não está disponível neste workspace; `supabase status/db reset` não pode executar o banco local;
 - os testes locais continuam sendo estáticos/contratuais, mas o schema social também passou por aplicação SQL real, 23/23 validações e gates transacionais de RLS, onboarding, suporte, papéis globais e consentimento com `ROLLBACK` no staging `bgeauxljwjbtbwpbzpoo`;
-- todas as 22 migrations locais estão aplicadas no staging; produção permanece sem promoção;
+- todas as 25 migrations locais estão aplicadas no staging; produção permanece sem promoção;
 - buckets, publication e policies do staging foram criados pelas migrations e cobertos pela repetição integral dos gates estrutural e RLS/Storage/Realtime;
 - os workers estão implantados, protegidos por bearer próprio e agendados por Cron/Vault; exportação, perfil-mídia, desativação e delete final/purge foram comprovados com contas efêmeras. Ainda faltam anexos reais de conversa/denúncia e retenção temporal;
 - as Edge Functions de mídia estão implantadas e passam o gate anônimo/CORS; PDF/arquivo genérico permanece fora do lançamento até existir quarentena e antimalware.

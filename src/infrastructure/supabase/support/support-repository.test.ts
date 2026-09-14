@@ -145,4 +145,41 @@ describe("Supabase support repository", () => {
       message: "Você não tem permissão para acessar este chamado.",
     });
   });
+
+  it("opens a private Realtime channel on the PrivateOnly project", async () => {
+    const removeChannel = vi.fn().mockResolvedValue("ok");
+    let systemListener: ((payload: { extension: string; status: string }) => void) | undefined;
+    const channelApi = {
+      on: vi.fn((type: string, _config: unknown, listener: typeof systemListener) => {
+        if (type === "system") systemListener = listener;
+        return channelApi;
+      }),
+      subscribe: vi.fn((listener: (status: string) => void) => {
+        listener("SUBSCRIBED");
+        systemListener?.({ extension: "system", status: "ok" });
+        return channelApi;
+      }),
+    };
+    const channel = vi.fn().mockReturnValue(channelApi);
+    const repository = new SupabaseSupportRepository({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: requesterId } },
+          error: null,
+        }),
+      },
+      channel,
+      removeChannel,
+    } as unknown as SupabaseClient<Database>);
+
+    const unsubscribe = await repository.subscribe(vi.fn());
+    expect(channel).toHaveBeenCalledWith(`support:${requesterId}`, {
+      config: {
+        private: true,
+        broadcast: { ack: false, self: false, replication_ready: true },
+      },
+    });
+    unsubscribe();
+    expect(removeChannel).toHaveBeenCalledWith(channelApi);
+  });
 });
