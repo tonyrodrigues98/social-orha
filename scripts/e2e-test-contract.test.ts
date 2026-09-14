@@ -15,6 +15,7 @@ const forbiddenTestDoubleApis = [
 const requiredProductionJourneys = [
   "auth-lifecycle.spec.ts",
   "authenticated-broken-profile-media.spec.ts",
+  "authenticated-keyboard-focus.spec.ts",
   "authenticated-load-baseline.spec.ts",
   "authenticated-navigation.spec.ts",
   "authenticated-profile-journey.spec.ts",

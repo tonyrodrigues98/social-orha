@@ -152,6 +152,7 @@ As jornadas autenticadas cobrem, pela UI e contra o Supabase real:
 - chamado persistente, resposta/estado em Realtime e isolamento da função Suporte;
 - matriz de rotas de Usuário, Suporte, Moderador e Admin;
 - troca reversível de senha, logout, troca de conta sem cache cruzado e deep links.
+- contenção de foco por Tab/Shift+Tab e devolução ao acionador ao fechar os Drawers GodUI com Escape.
 
 ## Política contra falsos positivos
 
