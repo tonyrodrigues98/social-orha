@@ -126,6 +126,7 @@ npm run typecheck
 npm run lint
 npm test
 npm run build
+npm run audit:bundle
 ```
 
 Executar as jornadas críticas com duas contas e confirmar ausência de cache cruzado.

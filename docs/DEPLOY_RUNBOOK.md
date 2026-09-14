@@ -74,6 +74,7 @@ npm run audit:secrets
 npm run audit:text-encoding
 npm test
 npm run build
+npm run audit:bundle
 ```
 
 Executar também a suíte E2E e a inspeção PWA definida no repositório. As jornadas

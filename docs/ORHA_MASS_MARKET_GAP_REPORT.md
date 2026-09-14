@@ -63,8 +63,9 @@ Fontes versionadas: `scripts/remote-inventory.sql`, `scripts/supabase-validate.s
 |---|---|
 | `npm run typecheck` | Aprovado fora do sandbox |
 | `npm run lint` | Aprovado |
-| `npm test` | 74 arquivos e 318 testes aprovados |
+| `npm test` | 75 arquivos e 320 testes aprovados |
 | `npm run build` | Aprovado; 5.983 módulos, manifest e service worker gerados, precache de 103 entradas |
+| `npm run audit:bundle` | Aprovado; entrada JS 291,9 KiB gzip, CSS 27,8 KiB gzip e maior lazy chunk 78,8 KiB gzip |
 | `npm run check:catalog` | Aprovado |
 | `npm run audit:production-debt` | Aprovado; zero mock, seed, TODO e localStorage; ocorrências legadas explicitamente allowlisted |
 | `npm run audit:secrets` | Aprovado |
@@ -155,7 +156,7 @@ O audit produtivo foi reexecutado em 2026-09-14 e retornou `found 0 vulnerabilit
 Evidência preservada:
 
 - `npm audit --omit=dev --audit-level=high`: zero vulnerabilidades;
-- catálogo, TypeScript, ESLint, 318 testes e build PWA verdes;
+- catálogo, TypeScript, ESLint, 320 testes, orçamento de bundle e build PWA verdes;
 - E2E autenticado continua sendo um gate separado e não foi inferido deste resultado.
 
 ## Bloqueadores P1 — produto completo e operável
@@ -218,16 +219,16 @@ Critério de aceite:
 
 ### P1.5 Prova de carga, observabilidade e resposta a incidentes — fundação consentida concluída
 
-O repositório possui rate limits server-authoritative para amizade, pedidos de conversa, reports, posts, comentários e mensagens em `20260816230000_abuse_rate_limits.sql`. A fundação de analytics agora está completa: escolha owner-only no Supabase, desligada por padrão, timestamp do servidor, adapter PostHog lazy, reset por conta e allowlist sem conteúdo/URL/autocapture/replay. Ainda não há key/host PostHog provisionados, evidência de teste de carga, SLO, alertas, budget, métricas de latência/erro ou runbook de incidentes em produção.
+O repositório possui rate limits server-authoritative para amizade, pedidos de conversa, reports, posts, comentários e mensagens em `20260816230000_abuse_rate_limits.sql`. A fundação de analytics agora está completa: escolha owner-only no Supabase, desligada por padrão, timestamp do servidor, adapter PostHog lazy, reset por conta e allowlist sem conteúdo/URL/autocapture/replay. `docs/OBSERVABILITY_AND_INCIDENT_RESPONSE.md` define SLIs/SLOs, orçamento de erro, severidades, alertas e contenção; `npm run audit:bundle` impõe limites verificáveis no CI. Ainda não há key/host PostHog provisionados, prova de carga, dashboards, alertas externos ativos ou escala humana nomeada.
 
 Critério de aceite:
 
-- definir SLOs de Auth, feed, chat, upload e Realtime;
+- manter e calibrar os SLOs versionados de Auth, leitura/mutação social, chat, upload, PWA e Realtime com dados reais;
 - medir p95/p99 e concorrência com dados sintéticos isolados;
 - criar alertas para erros 5xx, Auth, Functions, banco, Storage e Realtime;
 - provisionar o projeto PostHog e comprovar ingestão apenas depois do opt-in, usando a fundação já validada;
 - validar rate limits e backpressure sob abuso;
-- documentar on-call, severidades, contenção e comunicação.
+- provisionar a escala humana privada e comprovar o runbook versionado com um exercício de incidente.
 
 ## P2 — qualidade de lançamento e fechamento funcional
 
