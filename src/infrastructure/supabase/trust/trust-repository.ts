@@ -38,6 +38,15 @@ type BlockRow = {
   created_at: string;
 };
 
+type BlockSummaryRow = {
+  block_id: string;
+  blocked_profile_id: string;
+  full_name: string | null;
+  username: string | null;
+  avatar_path: string | null;
+  created_at: string;
+};
+
 type ReportRow = {
   id: string;
   reporter_id: string;
@@ -122,7 +131,8 @@ export function mapTrustError(error: unknown): TrustError {
   if (
     code === "invalid_credentials" ||
     code === "current_password_required" ||
-    code === "current_password_mismatch"
+    code === "current_password_mismatch" ||
+    code === "current_password_invalid"
   ) {
     return new TrustError("authentication", "A senha atual não foi confirmada.", { cause: error });
   }
@@ -183,6 +193,20 @@ export function mapBlockRow(row: BlockRow): BlockedProfile {
     id: row.id,
     blockedProfileId: row.blocked_id,
     blockedProfile: profileFromRelation(row.blocked_profile),
+    createdAt: row.created_at,
+  };
+}
+
+export function mapBlockSummaryRow(row: BlockSummaryRow): BlockedProfile {
+  return {
+    id: row.block_id,
+    blockedProfileId: row.blocked_profile_id,
+    blockedProfile: {
+      id: row.blocked_profile_id,
+      fullName: row.full_name,
+      username: row.username,
+      avatarPath: row.avatar_path,
+    },
     createdAt: row.created_at,
   };
 }
@@ -337,44 +361,44 @@ export class SupabaseTrustRepository implements TrustRepository {
   constructor(private readonly client: SupabaseClient = getSupabaseClient()) {}
 
   async getBlockedProfile(profileId: string): Promise<BlockedProfile | null> {
-    const user = await requireUser(this.client);
-    const { data, error } = await this.client
-      .from("blocks")
-      .select("id,blocked_id,created_at,blocked_profile:profiles!blocks_blocked_id_fkey(id,full_name,username,avatar_path)")
-      .eq("blocker_id", user.id)
-      .eq("blocked_id", profileId)
-      .maybeSingle();
+    const { data, error } = await this.client.rpc("list_own_blocked_profiles", {
+      p_limit: 1,
+      p_before_created_at: null,
+      p_before_id: null,
+      p_blocked_profile_id: profileId,
+    });
     if (error) throw mapTrustError(error);
-    if (!data) return null;
-    return mapBlockRow(data as unknown as BlockRow);
+    const row = Array.isArray(data) ? data[0] : null;
+    return row ? mapBlockSummaryRow(row as BlockSummaryRow) : null;
   }
 
   async listBlockedProfiles(request: TrustPageRequest = {}): Promise<TrustPage<BlockedProfile>> {
     const limit = Math.min(Math.max(request.limit ?? 20, 1), 50);
-    let query = this.client
-      .from("blocks")
-      .select("id,blocked_id,created_at,blocked_profile:profiles!blocks_blocked_id_fkey(id,full_name,username,avatar_path)")
-      .order("created_at", { ascending: false })
-      .order("id", { ascending: false })
-      .limit(limit + 1);
+    let beforeCreatedAt: string | null = null;
+    let beforeId: string | null = null;
     if (request.cursor) {
       const cursor = decodeTrustCursor(request.cursor);
       if (!cursor) throw new TrustError("validation", "O cursor de paginação é inválido.");
-      query = query.or(
-        `created_at.lt."${cursor.createdAt}",and(created_at.eq."${cursor.createdAt}",id.lt.${cursor.id})`,
-      );
+      beforeCreatedAt = cursor.createdAt;
+      beforeId = cursor.id;
     }
+    let query = this.client.rpc("list_own_blocked_profiles", {
+      p_limit: limit + 1,
+      p_before_created_at: beforeCreatedAt,
+      p_before_id: beforeId,
+      p_blocked_profile_id: null,
+    });
     if (request.signal) query = query.abortSignal(request.signal);
     const { data, error } = await query;
     if (error) throw mapTrustError(error);
-    const rows = (data ?? []) as unknown as BlockRow[];
+    const rows = (data ?? []) as unknown as BlockSummaryRow[];
     const visibleRows = rows.slice(0, limit);
     const last = visibleRows.at(-1);
     return {
-      items: visibleRows.map(mapBlockRow),
+      items: visibleRows.map(mapBlockSummaryRow),
       nextCursor:
         rows.length > limit && last
-          ? encodeTrustCursor({ createdAt: last.created_at, id: last.id })
+          ? encodeTrustCursor({ createdAt: last.created_at, id: last.block_id })
           : null,
     };
   }

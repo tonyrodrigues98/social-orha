@@ -469,7 +469,7 @@ button {
 .eyebrow,
 .section-overline,
 .card-kicker {
-  color: #777872;
+  color: var(--orha-subtle);
   font-size: 10px;
   font-weight: 760;
   letter-spacing: 0.13em;
@@ -619,7 +619,10 @@ button {
 
 .text-button {
   display: flex;
+  min-width: 44px;
+  min-height: 44px;
   align-items: center;
+  justify-content: center;
   gap: 4px;
   padding: 5px 0;
   border: 0;
@@ -827,6 +830,7 @@ button {
 
 .light-action {
   display: flex;
+  min-height: 44px;
   align-items: center;
   gap: 5px;
   margin-top: 18px;

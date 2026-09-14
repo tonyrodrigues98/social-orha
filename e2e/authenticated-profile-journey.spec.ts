@@ -1,6 +1,7 @@
 import path from "node:path";
 import { test, expect, type BrowserContext, type Page } from "playwright/test";
 import { observeRuntimeQuality } from "./support/quality-gate";
+import { withSupabaseFailureDiagnostics } from "./support/supabase-diagnostics";
 import {
   createNamedBrowserContext,
   openAppPath,
@@ -43,10 +44,10 @@ async function restorePrivacy(
     .getByRole("button", { name: "Configurar privacidade do perfil" })
     .click();
   const dialog = page.getByRole("dialog", { name: "Privacidade" });
-  await dialog.getByLabel("Perfil").selectOption(original.profile);
-  await dialog.getByLabel("Localização").selectOption(original.location);
-  await dialog.getByLabel("Favoritos").selectOption(original.favorites);
-  await dialog.getByLabel("Galeria").selectOption(original.gallery);
+  await dialog.getByRole("combobox", { name: "Perfil", exact: true }).selectOption(original.profile);
+  await dialog.getByRole("combobox", { name: "Localização", exact: true }).selectOption(original.location);
+  await dialog.getByRole("combobox", { name: "Favoritos", exact: true }).selectOption(original.favorites);
+  await dialog.getByRole("combobox", { name: "Galeria", exact: true }).selectOption(original.gallery);
   const datingToggle = dialog.getByRole("switch", { name: "Modo namoro" });
   if ((await datingToggle.isChecked()) !== original.dating) {
     await datingToggle.click();
@@ -80,7 +81,7 @@ async function trimGalleryToCount(page: Page, baseline: number): Promise<void> {
 
 test.describe("jornada E — perfil, upload e privacidade persistentes", () => {
   test("edita e restaura bio/privacidade e adiciona/remove foto real", async ({ browser }) => {
-    test.setTimeout(180_000);
+    test.setTimeout(300_000);
     const accountA = requireNamedCredentials("user-a");
     const accountB = requireNamedCredentials("user-b");
     const contexts: BrowserContext[] = await Promise.all([
@@ -123,10 +124,12 @@ test.describe("jornada E — perfil, upload e privacidade persistentes", () => {
       const photosBefore = await galleryPhotos.count();
       galleryBaseline = photosBefore;
       galleryNeedsRestore = true;
-      await pageA.getByLabel("Selecionar fotos para a galeria").setInputFiles(
-        path.resolve("public/brand/orha-icon-192.png"),
-      );
-      await expect.poll(() => galleryPhotos.count(), { timeout: 45_000 }).toBe(photosBefore + 1);
+      await withSupabaseFailureDiagnostics(pageA, async () => {
+        await pageA.getByLabel("Selecionar fotos para a galeria").setInputFiles(
+          path.resolve("public/brand/orha-icon-192.png"),
+        );
+        await expect.poll(() => galleryPhotos.count(), { timeout: 45_000 }).toBe(photosBefore + 1);
+      });
       await pageA.getByRole("button", { name: "Gerenciar fotos da galeria" }).click();
       await pageA
         .getByRole("button", { name: `Remover foto ${photosBefore + 1} da galeria` })
@@ -140,15 +143,16 @@ test.describe("jornada E — perfil, upload e privacidade persistentes", () => {
       await pageA.getByRole("button", { name: "Configurar privacidade do perfil" }).click();
       let privacyDialog = pageA.getByRole("dialog", { name: "Privacidade" });
       originalPrivacy = {
-        profile: await privacyDialog.getByLabel("Perfil").inputValue(),
-        location: await privacyDialog.getByLabel("Localização").inputValue(),
-        favorites: await privacyDialog.getByLabel("Favoritos").inputValue(),
-        gallery: await privacyDialog.getByLabel("Galeria").inputValue(),
+        profile: await privacyDialog.getByRole("combobox", { name: "Perfil", exact: true }).inputValue(),
+        location: await privacyDialog.getByRole("combobox", { name: "Localização", exact: true }).inputValue(),
+        favorites: await privacyDialog.getByRole("combobox", { name: "Favoritos", exact: true }).inputValue(),
+        gallery: await privacyDialog.getByRole("combobox", { name: "Galeria", exact: true }).inputValue(),
         dating: await privacyDialog.getByRole("switch", { name: "Modo namoro" }).isChecked(),
       };
       privacyNeedsRestore = true;
-      await privacyDialog.getByLabel("Perfil").selectOption("public");
+      await privacyDialog.getByRole("combobox", { name: "Perfil", exact: true }).selectOption("public");
       await privacyDialog.getByRole("button", { name: "Salvar privacidade" }).click();
+      await expect(privacyDialog).toBeHidden({ timeout: 30_000 });
 
       await openPersonFromSearch(pageB, accountA.expectedProfileText!);
       await pageB.keyboard.press("Escape");
@@ -159,30 +163,32 @@ test.describe("jornada E — perfil, upload e privacidade persistentes", () => {
       await openAppPath(pageA, "/perfil");
       await pageA.getByRole("button", { name: "Configurar privacidade do perfil" }).click();
       privacyDialog = pageA.getByRole("dialog", { name: "Privacidade" });
-      await privacyDialog.getByLabel("Perfil").selectOption("private");
-      await privacyDialog.getByLabel("Localização").selectOption("private");
-      await privacyDialog.getByLabel("Galeria").selectOption("private");
+      await privacyDialog.getByRole("combobox", { name: "Perfil", exact: true }).selectOption("private");
+      await privacyDialog.getByRole("combobox", { name: "Localização", exact: true }).selectOption("private");
+      await privacyDialog.getByRole("combobox", { name: "Galeria", exact: true }).selectOption("private");
       await privacyDialog.getByRole("button", { name: "Salvar privacidade" }).click();
+      await expect(privacyDialog).toBeHidden({ timeout: 30_000 });
 
       await expectPersonAbsentFromSearch(pageB, accountA.expectedProfileText!);
 
       await openAppPath(pageA, "/perfil");
       await pageA.getByRole("button", { name: "Configurar privacidade do perfil" }).click();
       privacyDialog = pageA.getByRole("dialog", { name: "Privacidade" });
-      await privacyDialog.getByLabel("Perfil").selectOption(originalPrivacy.profile);
-      await privacyDialog.getByLabel("Localização").selectOption(originalPrivacy.location);
-      await privacyDialog.getByLabel("Favoritos").selectOption(originalPrivacy.favorites);
-      await privacyDialog.getByLabel("Galeria").selectOption(originalPrivacy.gallery);
+      await privacyDialog.getByRole("combobox", { name: "Perfil", exact: true }).selectOption(originalPrivacy.profile);
+      await privacyDialog.getByRole("combobox", { name: "Localização", exact: true }).selectOption(originalPrivacy.location);
+      await privacyDialog.getByRole("combobox", { name: "Favoritos", exact: true }).selectOption(originalPrivacy.favorites);
+      await privacyDialog.getByRole("combobox", { name: "Galeria", exact: true }).selectOption(originalPrivacy.gallery);
       const datingToggle = privacyDialog.getByRole("switch", { name: "Modo namoro" });
       if ((await datingToggle.isChecked()) !== originalPrivacy.dating) await datingToggle.click();
       await privacyDialog.getByRole("button", { name: "Salvar privacidade" }).click();
+      await expect(privacyDialog).toBeHidden({ timeout: 30_000 });
 
       await pageA.reload({ waitUntil: "domcontentloaded" });
       await pageA.getByRole("button", { name: "Configurar privacidade do perfil" }).click();
       privacyDialog = pageA.getByRole("dialog", { name: "Privacidade" });
-      await expect(privacyDialog.getByLabel("Perfil")).toHaveValue(originalPrivacy.profile);
-      await expect(privacyDialog.getByLabel("Localização")).toHaveValue(originalPrivacy.location);
-      await expect(privacyDialog.getByLabel("Galeria")).toHaveValue(originalPrivacy.gallery);
+      await expect(privacyDialog.getByRole("combobox", { name: "Perfil", exact: true })).toHaveValue(originalPrivacy.profile);
+      await expect(privacyDialog.getByRole("combobox", { name: "Localização", exact: true })).toHaveValue(originalPrivacy.location);
+      await expect(privacyDialog.getByRole("combobox", { name: "Galeria", exact: true })).toHaveValue(originalPrivacy.gallery);
       await privacyDialog.getByRole("button", { name: "Cancelar" }).click();
       privacyNeedsRestore = false;
       await expect(pageA.getByText(accountA.expectedProfileText!)).toBeVisible();

@@ -16,6 +16,7 @@
     "test:e2e": "npm run test:e2e:production",
     "test:e2e:public": "playwright test --project=public-*",
     "test:e2e:staging:social": "playwright test --project=staging-social-smoke-chromium",
+    "test:e2e:staging:matrix": "tsx scripts/run-staging-e2e-matrix.ts",
     "test:e2e:production": "tsx scripts/require-production-e2e-secrets.ts && playwright test --project=public-* && playwright test --project=auth-lifecycle-chromium --workers=1 && playwright test --project=authenticated-chromium --workers=1",
     "audit:production-debt": "tsx scripts/audit-production-debt.ts",
     "audit:host": "tsx scripts/host-capability-audit.ts",

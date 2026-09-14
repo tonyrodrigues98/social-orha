@@ -45,17 +45,30 @@ export type ProfilePrivacyUpdate = Pick<
 
 export type ProfileDataRepository = ReturnType<typeof createProfileDataRepository>;
 
-export function createProfileDataRepository(client: SupabaseClient) {
+type ProfileDataRepositoryOptions = {
+  sleep?: (milliseconds: number) => Promise<void>;
+};
+
+const FUTURE_JWT_RETRY_DELAY_MS = 1_250;
+
+function isFutureJwtError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const candidate = error as { code?: unknown; message?: unknown };
+  return candidate.code === "PGRST303"
+    && typeof candidate.message === "string"
+    && /jwt issued at future/i.test(candidate.message);
+}
+
+export function createProfileDataRepository(
+  client: SupabaseClient,
+  options: ProfileDataRepositoryOptions = {},
+) {
+  const sleep = options.sleep ?? ((milliseconds: number) =>
+    new Promise<void>((resolve) => globalThis.setTimeout(resolve, milliseconds)));
+
   return {
     async loadIdentity(userId: string): Promise<UserIdentity> {
-      const [
-        profileResult,
-        detailsResult,
-        privacyResult,
-        moderationResult,
-        accountStatusResult,
-        roleResult,
-      ] = await Promise.all([
+      const loadSnapshot = () => Promise.all([
         client.from("profiles").select("*").eq("id", userId).single(),
         client.from("profile_details").select("*").eq("profile_id", userId).single(),
         client.from("profile_privacy").select("*").eq("profile_id", userId).single(),
@@ -66,15 +79,28 @@ export function createProfileDataRepository(client: SupabaseClient) {
           .single(),
         client.rpc("get_own_account_status"),
         client.from("user_roles").select("role").eq("user_id", userId).single(),
-      ]);
+      ] as const);
 
-      const error = profileResult.error
-        ?? detailsResult.error
-        ?? privacyResult.error
-        ?? moderationResult.error
-        ?? accountStatusResult.error
-        ?? roleResult.error;
+      let snapshot = await loadSnapshot();
+      let error = snapshot.find((result) => result.error)?.error ?? null;
+      // Supabase Auth and PostgREST can briefly disagree on clock time directly
+      // after issuing a token. Retry this one explicit transient once; every
+      // other authentication or authorization error remains fail-closed.
+      if (isFutureJwtError(error)) {
+        await sleep(FUTURE_JWT_RETRY_DELAY_MS);
+        snapshot = await loadSnapshot();
+        error = snapshot.find((result) => result.error)?.error ?? null;
+      }
       if (error) throw error;
+
+      const [
+        profileResult,
+        detailsResult,
+        privacyResult,
+        moderationResult,
+        accountStatusResult,
+        roleResult,
+      ] = snapshot;
 
       const accountStatusData = Array.isArray(accountStatusResult.data)
         ? accountStatusResult.data[0]

@@ -51,6 +51,57 @@ function identityClient(rows: Record<string, unknown>) {
 }
 
 describe("createProfileDataRepository", () => {
+  it("repete uma única vez a hidratação quando PostgREST rejeita um JWT recém-emitido por clock skew", async () => {
+    const rows: Record<string, unknown> = {
+      profiles: { id: "user-1" },
+      profile_details: { profile_id: "user-1" },
+      profile_privacy: { profile_id: "user-1" },
+      profile_moderation_state: {
+        profile_id: "user-1",
+        status: "active",
+        public_reason: null,
+        restricted_until: null,
+        created_at: "2026-08-16T00:00:00Z",
+        updated_at: "2026-08-16T00:00:00Z",
+      },
+      user_roles: { role: "user" },
+    };
+    let roleReads = 0;
+    const client = {
+      from: vi.fn((table: string) => {
+        const result = table === "user_roles" && roleReads++ === 0
+          ? { data: null, error: { code: "PGRST303", message: "JWT issued at future" } }
+          : { data: rows[table], error: null };
+        const builder = {
+          select: vi.fn(),
+          eq: vi.fn(),
+          single: vi.fn().mockResolvedValue(result),
+        };
+        builder.select.mockReturnValue(builder);
+        builder.eq.mockReturnValue(builder);
+        return builder;
+      }),
+      rpc: vi.fn().mockResolvedValue({
+        data: [{
+          effective_status: "active",
+          recorded_status: "active",
+          restricted_until: null,
+          access_enabled: true,
+        }],
+        error: null,
+      }),
+    } as unknown as SupabaseClient;
+    const sleep = vi.fn().mockResolvedValue(undefined);
+    const repository = createProfileDataRepository(client, { sleep });
+
+    await expect(repository.loadIdentity("user-1")).resolves.toMatchObject({
+      profile: { id: "user-1" },
+      role: "user",
+    });
+    expect(sleep).toHaveBeenCalledWith(1_250);
+    expect(roleReads).toBe(2);
+  });
+
   it("carrega o estado de moderação definido pelo servidor junto da identidade", async () => {
     const moderationState = {
       profile_id: "user-1",

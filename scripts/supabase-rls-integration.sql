@@ -453,6 +453,15 @@ select pg_temp.assert_true(
   ),
   'blocker must resolve only their own blocked profile for unblock UI'
 );
+select pg_temp.assert_true(
+  (
+    select count(*) = 1
+      and bool_and(blocked_profile_id = '11111111-1111-4111-8111-000000000004'::uuid)
+      and bool_and(full_name = 'RLS Blocked')
+    from public.list_own_blocked_profiles(20, null, null, null)
+  ),
+  'blocker must list the minimum identity for blocks they own'
+);
 select public.set_community_member_role(
   '22222222-2222-4222-8222-000000000001'::uuid,
   '11111111-1111-4111-8111-000000000003'::uuid,
@@ -805,6 +814,10 @@ select pg_temp.assert_true(
 select pg_temp.assert_true(
   (select count(*) = 0 from public.get_own_blocked_profile_by_username('rls.owner')),
   'inverse block must remain indistinguishable from private or missing profile'
+);
+select pg_temp.assert_true(
+  (select count(*) = 0 from public.list_own_blocked_profiles(20, null, null, null)),
+  'blocked profile must not list inverse block metadata'
 );
 select pg_temp.assert_true(
   (select count(*) = 0 from public.get_community_discovery('22222222-2222-4222-8222-000000000001'::uuid)),

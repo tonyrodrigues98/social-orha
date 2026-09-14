@@ -1,9 +1,16 @@
 import path from "node:path";
-import type { Browser, BrowserContext, Page } from "playwright/test";
+import { createClient, type Session } from "@supabase/supabase-js";
+import type {
+  Browser,
+  BrowserContext,
+  BrowserContextOptions,
+  Page,
+} from "playwright/test";
 
 export const AUTH_STATE_DIRECTORY = path.resolve("playwright/.auth");
 
-export type TestPrincipal = "user-a" | "user-b" | "admin" | "moderator" | "support";
+export type TestPrincipal =
+  "user-a" | "user-b" | "admin" | "moderator" | "support";
 export type ExpectedAppRole = "user" | "admin" | "moderator" | "support";
 
 export type NamedCredentials = {
@@ -70,14 +77,91 @@ export function e2eBaseUrl(): string {
   return base.endsWith("/") ? base : `${base}/`;
 }
 
-export function createNamedBrowserContext(
+function stagingBrowserCredentials(): { url: string; publishableKey: string } {
+  const url = process.env.ORHA_STAGING_SUPABASE_URL?.trim();
+  const publishableKey =
+    process.env.ORHA_STAGING_SUPABASE_PUBLISHABLE_KEY?.trim();
+  if (!url || !publishableKey) {
+    throw new Error(
+      "ORHA_STAGING_SUPABASE_URL e ORHA_STAGING_SUPABASE_PUBLISHABLE_KEY são obrigatórias para criar uma sessão E2E isolada.",
+    );
+  }
+  if (new URL(url).host !== expectedSupabaseHost()) {
+    throw new Error(
+      "A URL usada para autenticar o contexto E2E não corresponde ao host de staging esperado.",
+    );
+  }
+  return { url, publishableKey };
+}
+
+function supabaseAuthStorageKey(url: string): string {
+  const projectRef = new URL(url).hostname.split(".")[0];
+  if (!projectRef) {
+    throw new Error(
+      "A URL de staging não contém um project ref Supabase válido.",
+    );
+  }
+  return `sb-${projectRef}-auth-token`;
+}
+
+function browserStorageStateForSession(
+  url: string,
+  session: Session,
+): BrowserContextOptions["storageState"] {
+  return {
+    cookies: [],
+    origins: [
+      {
+        origin: new URL(e2eBaseUrl()).origin,
+        localStorage: [
+          {
+            name: supabaseAuthStorageKey(url),
+            value: JSON.stringify(session),
+          },
+        ],
+      },
+    ],
+  };
+}
+
+/**
+ * Creates a new Supabase session for every browser context.
+ *
+ * Supabase rotates refresh tokens. Reusing a saved Playwright storageState in
+ * several sequential contexts therefore makes a later journey inherit a token
+ * that an earlier context already consumed. A fresh password sign-in keeps the
+ * identities stable while isolating the session lifecycle of every journey.
+ */
+export async function createNamedBrowserContext(
   browser: Browser,
   principal: TestPrincipal,
   options: { serviceWorkers?: "allow" | "block" } = {},
 ): Promise<BrowserContext> {
+  const credentials = requireNamedCredentials(principal);
+  const staging = stagingBrowserCredentials();
+  const authClient = createClient(staging.url, staging.publishableKey, {
+    auth: {
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+      persistSession: false,
+    },
+  });
+  const signedIn = await authClient.auth.signInWithPassword({
+    email: credentials.email,
+    password: credentials.password,
+  });
+  if (signedIn.error || !signedIn.data.session) {
+    throw new Error(
+      `Não foi possível criar uma sessão isolada para a identidade E2E ${principal}.`,
+    );
+  }
+
   return browser.newContext({
     baseURL: e2eBaseUrl(),
-    storageState: authStatePath(principal),
+    storageState: browserStorageStateForSession(
+      staging.url,
+      signedIn.data.session,
+    ),
     viewport: { width: 390, height: 844 },
     locale: "pt-BR",
     timezoneId: "America/Sao_Paulo",
@@ -108,7 +192,8 @@ export function getNamedCredentials(
   return {
     email,
     password,
-    expectedProfileText: process.env[keys.expectedProfileText]?.trim() || undefined,
+    expectedProfileText:
+      process.env[keys.expectedProfileText]?.trim() || undefined,
   };
 }
 
@@ -184,7 +269,10 @@ type StorageState = Awaited<ReturnType<BrowserContext["storageState"]>>;
 export function readSupabaseSessionSubject(state: StorageState): string | null {
   for (const origin of state.origins) {
     for (const entry of origin.localStorage) {
-      if (!entry.name.startsWith("sb-") || !entry.name.endsWith("-auth-token")) {
+      if (
+        !entry.name.startsWith("sb-") ||
+        !entry.name.endsWith("-auth-token")
+      ) {
         continue;
       }
 

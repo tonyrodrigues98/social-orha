@@ -5,6 +5,7 @@ import {
   SupabaseTrustRepository,
   mapAccountLifecycleRow,
   mapBlockRow,
+  mapBlockSummaryRow,
   mapModerationReportContextRow,
   mapReportRow,
   mapTrustError,
@@ -25,6 +26,20 @@ describe("SupabaseTrustRepository mapping", () => {
         created_at: "2026-08-16T10:00:00.000Z",
       }).blockedProfile?.username,
     ).toBe("bloqueada");
+  });
+
+  it("normaliza a projeção autoritativa da própria lista de bloqueios", () => {
+    expect(mapBlockSummaryRow({
+      block_id: "10000000-0000-4000-8000-000000000001",
+      blocked_profile_id: "10000000-0000-4000-8000-000000000002",
+      full_name: "Pessoa bloqueada",
+      username: "bloqueada",
+      avatar_path: null,
+      created_at: "2026-08-16T10:00:00.000Z",
+    })).toMatchObject({
+      blockedProfileId: "10000000-0000-4000-8000-000000000002",
+      blockedProfile: { fullName: "Pessoa bloqueada", username: "bloqueada" },
+    });
   });
 
   it("normaliza denúncia sem conceder autoridade no cliente", () => {
@@ -55,42 +70,37 @@ describe("SupabaseTrustRepository mapping", () => {
     expect(mapTrustError({ code: "current_password_mismatch" }).message).toBe(
       "A senha atual não foi confirmada.",
     );
+    expect(mapTrustError({ code: "current_password_invalid" }).message).toBe(
+      "A senha atual não foi confirmada.",
+    );
     expect(mapTrustError({ code: "same_password" }).message).toContain("diferente");
     expect(mapTrustError({ code: "weak_password" }).message).toContain("12 caracteres");
   });
 
   it("consulta o bloqueio exato sem inferir pela página da lista", async () => {
     const row = {
-      id: "10000000-0000-4000-8000-000000000001",
-      blocked_id: "10000000-0000-4000-8000-000000000002",
-      blocked_profile: null,
+      block_id: "10000000-0000-4000-8000-000000000001",
+      blocked_profile_id: "10000000-0000-4000-8000-000000000002",
+      full_name: "Pessoa bloqueada",
+      username: "bloqueada",
+      avatar_path: null,
       created_at: "2026-08-16T10:00:00.000Z",
     };
-    const builder = {
-      select: vi.fn(),
-      eq: vi.fn(),
-      maybeSingle: vi.fn().mockResolvedValue({ data: row, error: null }),
-    };
-    builder.select.mockReturnValue(builder);
-    builder.eq.mockReturnValue(builder);
-    const from = vi.fn().mockReturnValue(builder);
-    const getUser = vi.fn().mockResolvedValue({
-      data: { user: { id: "10000000-0000-4000-8000-000000000003" } },
-      error: null,
-    });
+    const rpc = vi.fn().mockResolvedValue({ data: [row], error: null });
     const repository = new SupabaseTrustRepository({
-      from,
-      auth: { getUser },
+      rpc,
     } as unknown as SupabaseClient);
 
-    await expect(repository.getBlockedProfile(row.blocked_id)).resolves.toMatchObject({
-      id: row.id,
-      blockedProfileId: row.blocked_id,
+    await expect(repository.getBlockedProfile(row.blocked_profile_id)).resolves.toMatchObject({
+      id: row.block_id,
+      blockedProfileId: row.blocked_profile_id,
     });
-    expect(from).toHaveBeenCalledWith("blocks");
-    expect(builder.eq).toHaveBeenCalledWith("blocker_id", "10000000-0000-4000-8000-000000000003");
-    expect(builder.eq).toHaveBeenCalledWith("blocked_id", row.blocked_id);
-    expect(builder.maybeSingle).toHaveBeenCalledOnce();
+    expect(rpc).toHaveBeenCalledWith("list_own_blocked_profiles", {
+      p_limit: 1,
+      p_before_created_at: null,
+      p_before_id: null,
+      p_blocked_profile_id: row.blocked_profile_id,
+    });
   });
 
   it("altera senha com validação server-side da senha atual e encerra sessões", async () => {

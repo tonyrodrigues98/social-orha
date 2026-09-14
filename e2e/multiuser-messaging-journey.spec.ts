@@ -14,6 +14,7 @@ import {
   requireNamedCredentials,
 } from "./support/environment";
 import { observeRuntimeQuality } from "./support/quality-gate";
+import { withSupabaseFailureDiagnostics } from "./support/supabase-diagnostics";
 import {
   closeBrowserContexts,
   runCleanupSteps,
@@ -63,18 +64,20 @@ async function expectSuccessfulSupabaseMutation(
   method: "POST" | "PATCH",
   action: () => Promise<unknown>,
 ): Promise<void> {
-  const responsePromise = page.waitForResponse(
-    (response) =>
-      endpoint.test(new URL(response.url()).pathname) &&
-      response.request().method() === method,
-    { timeout: SUPABASE_MUTATION_TIMEOUT },
-  );
-  await action();
-  const response = await responsePromise;
-  expect(
-    response.ok(),
-    `A mutação Supabase ${method} ${endpoint.source} precisa ser confirmada pelo backend.`,
-  ).toBe(true);
+  await withSupabaseFailureDiagnostics(page, async () => {
+    const responsePromise = page.waitForResponse(
+      (response) =>
+        endpoint.test(new URL(response.url()).pathname) &&
+        response.request().method() === method,
+      { timeout: SUPABASE_MUTATION_TIMEOUT },
+    );
+    await action();
+    const response = await responsePromise;
+    expect(
+      response.ok(),
+      `A mutação Supabase ${method} ${endpoint.source} precisa ser confirmada pelo backend.`,
+    ).toBe(true);
+  });
 }
 
 async function tryOpenExistingConversation(

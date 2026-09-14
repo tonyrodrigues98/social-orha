@@ -46,10 +46,12 @@ const completionLabels: Record<HomeCompletionField, string> = {
 };
 
 const dashboardRowButtonClass = [
-  "w-full justify-start rounded-2xl border border-secondary bg-primary p-3 text-left",
+  "w-full justify-start rounded-2xl border border-secondary bg-card p-3 text-left",
   "[&>[data-text]]:flex [&>[data-text]]:min-w-0 [&>[data-text]]:w-full",
   "[&>[data-text]]:items-center [&>[data-text]]:gap-3",
 ].join(" ");
+
+const homeCompactActionClass = "min-h-11 min-w-11";
 
 function personName(person: HomePersonSummary): string {
   return person.fullName?.trim() || (person.username ? `@${person.username}` : "Perfil");
@@ -135,20 +137,21 @@ export function HomePage() {
         </section>
 
         {dashboard.isPending ? (
-          <section className="rounded-3xl border border-secondary bg-primary p-5" aria-busy="true" role="status">
+          <section className="rounded-3xl border border-secondary bg-card p-5" aria-busy="true" role="status">
             <div className="flex items-center gap-3 text-sm font-medium text-tertiary">
               <RefreshCw className="size-5 animate-spin" aria-hidden="true" />
               Carregando sua página inicial…
             </div>
           </section>
         ) : dashboard.isError || !summary ? (
-          <section className="rounded-3xl border border-secondary bg-primary p-5" role="alert">
+          <section className="rounded-3xl border border-secondary bg-card p-5" role="alert">
             <h2 className="m-0 text-lg font-semibold text-primary">Não foi possível carregar sua página inicial</h2>
             <p className="mb-4 mt-1 text-sm text-tertiary">Verifique sua conexão e tente novamente.</p>
             <Button
               type="button"
               size="md"
               color="secondary"
+              className={homeCompactActionClass}
               iconLeading={RefreshCw}
               onPress={() => void dashboard.refetch()}
             >
@@ -184,7 +187,12 @@ export function HomePage() {
                       style={{ width: `${summary.profileCompletion.percentage}%` }}
                     />
                   </div>
-                  <Button size="md" color="primary" onPress={() => navigate("perfil")}>
+                  <Button
+                    size="md"
+                    color="primary"
+                    className={homeCompactActionClass}
+                    onPress={() => navigate("perfil")}
+                  >
                     Continuar perfil
                   </Button>
                 </div>
@@ -195,7 +203,7 @@ export function HomePage() {
             <section className="content-section">
               <SectionHeader eyebrow="PENDÊNCIAS" title="Esperando por você" />
               <div className="grid gap-3 sm:grid-cols-2">
-                <article className="rounded-2xl border border-secondary bg-primary p-4">
+                <article className="rounded-2xl border border-secondary bg-card p-4">
                   <div className="flex items-start justify-between gap-3">
                     <span className="grid size-10 place-items-center rounded-xl bg-brand-secondary text-brand-secondary">
                       <HeartHandshake className="size-5" aria-hidden="true" />
@@ -216,6 +224,7 @@ export function HomePage() {
                     type="button"
                     size="sm"
                     color="link-gray"
+                    className={homeCompactActionClass}
                     isDisabled={summary.pendingFriendRequests.count === 0}
                     onPress={() => openDrawer({ type: "friendships", initialTab: "incoming" })}
                   >
@@ -223,7 +232,7 @@ export function HomePage() {
                   </Button>
                 </article>
 
-                <article className="rounded-2xl border border-secondary bg-primary p-4">
+                <article className="rounded-2xl border border-secondary bg-card p-4">
                   <div className="flex items-start justify-between gap-3">
                     <span className="grid size-10 place-items-center rounded-xl bg-success-secondary text-success-primary">
                       <MessageCircle className="size-5" aria-hidden="true" />
@@ -244,6 +253,7 @@ export function HomePage() {
                     type="button"
                     size="sm"
                     color="link-gray"
+                    className={homeCompactActionClass}
                     isDisabled={summary.pendingConversationRequests.count === 0}
                     onPress={() => navigate("conversas")}
                   >
@@ -258,7 +268,12 @@ export function HomePage() {
                 eyebrow="CONVERSAS"
                 title="Continue de onde parou"
                 action={(
-                  <Button size="sm" color="link-gray" onPress={() => navigate("conversas")}>
+                  <Button
+                    size="sm"
+                    color="link-gray"
+                    className={homeCompactActionClass}
+                    onPress={() => navigate("conversas")}
+                  >
                     Ver todas
                   </Button>
                 )}
@@ -289,7 +304,7 @@ export function HomePage() {
                     <ChevronRight className="size-4 text-quaternary" aria-hidden="true" />
                   </Button>
                 )) : (
-                  <p className="rounded-2xl border border-secondary bg-primary p-4 text-center text-sm text-tertiary">
+                  <p className="rounded-2xl border border-secondary bg-card p-4 text-center text-sm text-tertiary">
                     Você ainda não tem conversas recentes.
                   </p>
                 )}
@@ -301,7 +316,12 @@ export function HomePage() {
                 eyebrow="NOVIDADES"
                 title="Notificações recentes"
                 action={(
-                  <Button size="sm" color="link-gray" onPress={() => openDrawer({ type: "notifications" })}>
+                  <Button
+                    size="sm"
+                    color="link-gray"
+                    className={homeCompactActionClass}
+                    onPress={() => openDrawer({ type: "notifications" })}
+                  >
                     Ver todas {summary.notifications.unreadCount > 0 ? `(${summary.notifications.unreadCount})` : ""}
                   </Button>
                 )}
@@ -329,7 +349,7 @@ export function HomePage() {
                     {!notification.readAt ? <span className="size-2 rounded-full bg-brand-solid" aria-label="Não lida" /> : null}
                   </Button>
                 )) : (
-                  <p className="rounded-2xl border border-secondary bg-primary p-4 text-center text-sm text-tertiary">
+                  <p className="rounded-2xl border border-secondary bg-card p-4 text-center text-sm text-tertiary">
                     Nenhuma notificação recente.
                   </p>
                 )}
@@ -341,7 +361,12 @@ export function HomePage() {
                 eyebrow="COMUNIDADES"
                 title="Seus espaços"
                 action={(
-                  <Button size="sm" color="link-gray" onPress={() => navigate("comunidade")}>
+                  <Button
+                    size="sm"
+                    color="link-gray"
+                    className={homeCompactActionClass}
+                    onPress={() => navigate("comunidade")}
+                  >
                     Explorar
                   </Button>
                 )}
@@ -370,10 +395,15 @@ export function HomePage() {
                     <ChevronRight className="size-4 text-quaternary" aria-hidden="true" />
                   </Button>
                 )) : (
-                  <div className="rounded-2xl border border-secondary bg-primary p-4 text-center">
+                  <div className="rounded-2xl border border-secondary bg-card p-4 text-center">
                     <UsersRound className="mx-auto size-6 text-quaternary" aria-hidden="true" />
                     <p className="mb-3 mt-2 text-sm text-tertiary">Você ainda não participa de uma comunidade.</p>
-                    <Button size="sm" color="secondary" onPress={() => navigate("comunidade")}>
+                    <Button
+                      size="sm"
+                      color="secondary"
+                      className={homeCompactActionClass}
+                      onPress={() => navigate("comunidade")}
+                    >
                       Encontrar comunidades
                     </Button>
                   </div>
@@ -406,7 +436,7 @@ export function HomePage() {
                     <ChevronRight className="size-4 text-quaternary" aria-hidden="true" />
                   </Button>
                 )) : (
-                  <p className="rounded-2xl border border-secondary bg-primary p-4 text-center text-sm text-tertiary">
+                  <p className="rounded-2xl border border-secondary bg-card p-4 text-center text-sm text-tertiary">
                     Nenhuma atividade recente nas suas comunidades.
                   </p>
                 )}

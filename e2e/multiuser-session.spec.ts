@@ -2,6 +2,7 @@ import { test, expect } from "playwright/test";
 import { observeRuntimeQuality } from "./support/quality-gate";
 import {
   createNamedBrowserContext,
+  openAppPath,
   requireNamedCredentials,
   openApp,
   readSupabaseSessionSubject,
@@ -55,6 +56,7 @@ test.describe("isolamento de sessão multiusuário", () => {
         sessionsAreDistinct: true,
       });
 
+      await Promise.all([openAppPath(pageA, "/perfil"), openAppPath(pageB, "/perfil")]);
       await expect(pageA.getByText(credentialsA.expectedProfileText!)).toBeVisible();
       await expect(pageB.getByText(credentialsB.expectedProfileText!)).toBeVisible();
       qualityA.expectClean();

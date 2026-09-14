@@ -210,6 +210,7 @@ expected_functions(function_signature) as (
     ('public.search_discoverable_interests(text,integer,integer)'),
     ('public.search_discoverable_posts(text,integer,integer)'),
     ('public.get_own_blocked_profile_by_username(text)'),
+    ('public.list_own_blocked_profiles(integer,timestamptz,uuid,uuid)'),
     ('public.get_community_discovery(uuid)'),
     ('public.update_community_details(uuid,text,text,text,public.community_visibility,text,text)'),
     ('public.archive_community(uuid)'),

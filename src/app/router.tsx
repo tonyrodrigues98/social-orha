@@ -206,9 +206,11 @@ function AuthenticatedRouteLayout() {
     return <RouterLoadingScreen />;
   }
   return (
-    <LazyRoute>
-      <Outlet />
-    </LazyRoute>
+    <div className="contents" data-authenticated-route="true">
+      <LazyRoute>
+        <Outlet />
+      </LazyRoute>
+    </div>
   );
 }
 

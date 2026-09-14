@@ -2819,6 +2819,22 @@ export type Database = {
           username: string
         }[]
       }
+      list_own_blocked_profiles: {
+        Args: {
+          p_before_created_at?: string
+          p_before_id?: string
+          p_blocked_profile_id?: string
+          p_limit?: number
+        }
+        Returns: {
+          avatar_path: string
+          block_id: string
+          blocked_profile_id: string
+          created_at: string
+          full_name: string
+          username: string
+        }[]
+      }
       get_messaging_profile_summaries: {
         Args: { p_profile_ids: string[] }
         Returns: {

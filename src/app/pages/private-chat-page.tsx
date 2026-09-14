@@ -57,6 +57,7 @@ import {
 } from "@/domains/messaging";
 import { useProfiles } from "@/domains/social";
 import { BrowserAudioRecorder } from "@/infrastructure/media/browser-audio-recorder";
+import { loadLocalImageDimensions } from "@/infrastructure/media/profile-image-validation";
 import { useAuth } from "../auth/auth-context";
 import { useAppUi } from "../ui-state-context";
 
@@ -81,23 +82,28 @@ function normalizedMime(value: string) {
   return value.toLocaleLowerCase("en-US").split(";", 1)[0]?.trim() ?? "";
 }
 
-async function createWaveform(blob: Blob) {
+async function inspectAudio(blob: Blob) {
   const context = new AudioContext();
   try {
     const buffer = await context.decodeAudioData((await blob.arrayBuffer()).slice(0));
     const samples = buffer.getChannelData(0);
     const bars = 64;
     const blockSize = Math.max(1, Math.floor(samples.length / bars));
-    return Array.from({ length: bars }, (_, index) => {
+    const waveform = Array.from({ length: bars }, (_, index) => {
       let peak = 0;
       for (let sample = index * blockSize; sample < Math.min(samples.length, (index + 1) * blockSize); sample += 1) {
         peak = Math.max(peak, Math.abs(samples[sample] ?? 0));
       }
       return Math.min(1, Math.max(0.025, peak));
     });
+    return { durationSeconds: buffer.duration, waveform };
   } finally {
     await context.close();
   }
+}
+
+async function createWaveform(blob: Blob) {
+  return (await inspectAudio(blob)).waveform;
 }
 
 function ContactDetails({
@@ -326,16 +332,40 @@ export function PrivateChatPage({ conversationId, onBack }: PrivateChatPageProps
     finally { if (recorderRef.current === recorder) recorderRef.current = null; setRecordingPhase("idle"); setRecordedSeconds(0); }
   }
 
-  function submitComposer({ text, files }: { text: string; files: File[] }) {
+  async function submitComposer({ text, files }: { text: string; files: File[] }) {
     if (files.length > 1) { announce("Envie somente uma imagem ou um áudio por mensagem."); return; }
-    const media = files.flatMap((file) => {
-      const mimeType = normalizedMime(file.type); const kind = ALLOWED_MIME_KIND.get(mimeType);
-      return kind ? [{ kind, blob: file, fileName: file.name, mimeType }] : [];
-    });
-    if (media.length !== files.length) { announce("Use somente imagens JPG, PNG, WebP ou AVIF e áudios compatíveis de até 25 MB."); return; }
-    const kind = media.length === 0 ? "text" : media[0]!.kind;
-    sendMessageMutation.mutate({ conversationId, senderId: userId, senderName: currentUser.name, clientMessageId: createClientMessageId(), kind, body: text || null, replyToMessageId, media }, { onError: () => announce("Não foi possível enviar a mensagem.") });
-    setReplyToMessageId(null);
+    try {
+      const media = await Promise.all(files.map(async (file) => {
+        const mimeType = normalizedMime(file.type);
+        const kind = ALLOWED_MIME_KIND.get(mimeType);
+        if (!kind) throw new Error("Formato de mídia não permitido.");
+        if (kind === "image") {
+          const dimensions = await loadLocalImageDimensions(file);
+          return {
+            kind,
+            blob: file,
+            fileName: file.name,
+            mimeType,
+            width: dimensions.width,
+            height: dimensions.height,
+          };
+        }
+        const inspection = await inspectAudio(file);
+        return {
+          kind,
+          blob: file,
+          fileName: file.name,
+          mimeType,
+          durationSeconds: inspection.durationSeconds,
+          waveform: inspection.waveform,
+        };
+      }));
+      const kind = media.length === 0 ? "text" : media[0]!.kind;
+      sendMessageMutation.mutate({ conversationId, senderId: userId, senderName: currentUser.name, clientMessageId: createClientMessageId(), kind, body: text || null, replyToMessageId, media }, { onError: () => announce("Não foi possível enviar a mensagem.") });
+      setReplyToMessageId(null);
+    } catch {
+      announce("Não foi possível ler a mídia selecionada. Escolha outro arquivo.");
+    }
   }
 
   const muteConversation = () => { setChatMenuOpen(false); const notificationsEnabled = preferencesQuery.data?.notificationsEnabled === false; preferencesMutation.mutate({ notificationsEnabled, mutedUntil: null }, { onSuccess: () => announce(notificationsEnabled ? "Notificações ativadas." : "Notificações silenciadas."), onError: () => announce("Não foi possível atualizar as notificações.") }); };

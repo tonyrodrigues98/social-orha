@@ -397,7 +397,7 @@ function ChatVoiceMessage({ voice, isOutgoing }: { voice: NonNullable<ChatMessag
     })
     const offPlay = player.on("play", () => setPlaying(true))
     const offPause = player.on("pause", () => setPlaying(false))
-    const offFinish = player.on("finish", () => { setPlaying(false); setProgress(0) })
+    const offFinish = player.on("finish", () => { setPlaying(false); setProgress(1) })
     return () => {
       offReady(); offDecode(); offError(); offTime(); offPlay(); offPause(); offFinish()
       player.destroy()
@@ -480,7 +480,7 @@ function ChatVoiceMessage({ voice, isOutgoing }: { voice: NonNullable<ChatMessag
           className="hidden"
           onPlay={() => setPlaying(true)}
           onPause={() => setPlaying(false)}
-          onEnded={() => { setPlaying(false); setProgress(0) }}
+          onEnded={() => { setPlaying(false); setProgress(1) }}
           onTimeUpdate={(event) => {
             const audio = event.currentTarget
             setProgress(audio.duration ? audio.currentTime / audio.duration : 0)

@@ -60,13 +60,26 @@ describe("E2E production contract", () => {
       )
       .flatMap((file) => {
         const source = readFileSync(file, "utf8");
-        return Array.from(source.matchAll(/\bbrowser\.newContext\s*\(/g), (match) => ({
-          file: path.relative(".", file).replaceAll("\\", "/"),
-          line: source.slice(0, match.index).split(/\r?\n/).length,
-        }));
+        return Array.from(
+          source.matchAll(/\bbrowser\.newContext\s*\(/g),
+          (match) => ({
+            file: path.relative(".", file).replaceAll("\\", "/"),
+            line: source.slice(0, match.index).split(/\r?\n/).length,
+          }),
+        );
       });
 
     expect(directContextCreation).toEqual([]);
+
+    const environmentSource = readFileSync(
+      path.resolve("e2e/support/environment.ts"),
+      "utf8",
+    );
+    expect(environmentSource).toContain("signInWithPassword");
+    expect(environmentSource).toContain("browserStorageStateForSession");
+    expect(environmentSource).not.toContain(
+      "storageState: authStatePath(principal)",
+    );
   });
 
   it("binds every named principal to one exact backend role", () => {
@@ -99,7 +112,8 @@ describe("E2E production contract", () => {
     const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as {
       scripts?: Record<string, string>;
     };
-    const productionCommand = packageJson.scripts?.["test:e2e:production"] ?? "";
+    const productionCommand =
+      packageJson.scripts?.["test:e2e:production"] ?? "";
     expect(productionCommand).toContain("require-production-e2e-secrets.ts");
     expect(productionCommand).toContain("--project=public-*");
     expect(productionCommand).toContain(
@@ -125,7 +139,10 @@ describe("E2E production contract", () => {
       /\n[ ]{2}build:\r?\n([\s\S]*?)\n[ ]{2}e2e:/,
     )?.[1];
 
-    expect(e2eJob, "O workflow precisa manter um job E2E dedicado.").toBeTruthy();
+    expect(
+      e2eJob,
+      "O workflow precisa manter um job E2E dedicado.",
+    ).toBeTruthy();
     expect(e2eJob).toContain(
       "ORHA_STAGING_SUPABASE_URL: ${{ vars.ORHA_STAGING_SUPABASE_URL }}",
     );

@@ -34,9 +34,9 @@ test.describe("jornada de suporte persistente", () => {
       await expect(userPage.getByRole("heading", { level: 1, name: "Suporte ORHA" })).toBeVisible();
       await userPage.getByRole("button", { name: "Novo" }).click();
       const drawer = userPage.getByRole("dialog", { name: "Novo chamado" });
-      await drawer.getByLabel("Assunto").fill(subject);
-      await drawer.getByLabel("Categoria").selectOption("technical");
-      await drawer.getByLabel("Como podemos ajudar?").fill(initialMessage);
+      await drawer.getByLabel(/^Assunto\b/).fill(subject);
+      await drawer.getByRole("combobox", { name: "Categoria", exact: true }).selectOption("technical");
+      await drawer.getByLabel(/^Como podemos ajudar\?/).fill(initialMessage);
       await drawer.getByRole("button", { name: "Enviar chamado" }).click();
       await expect(userPage.getByText(initialMessage, { exact: true })).toBeVisible({ timeout: 30_000 });
 
@@ -51,8 +51,8 @@ test.describe("jornada de suporte persistente", () => {
       await supportPage.getByRole("button", { name: "Enviar mensagem" }).click();
 
       await expect(userPage.getByText(operatorReply, { exact: true })).toBeVisible({ timeout: 30_000 });
-      await supportPage.getByLabel("Estado do chamado").selectOption("resolved");
-      await expect(supportPage.getByLabel("Estado do chamado")).toHaveValue("resolved", { timeout: 30_000 });
+      await supportPage.getByLabel("Estado do chamado", { exact: true }).selectOption("resolved");
+      await expect(supportPage.getByLabel("Estado do chamado", { exact: true })).toHaveValue("resolved", { timeout: 30_000 });
 
       userQuality.expectClean();
       supportQuality.expectClean();

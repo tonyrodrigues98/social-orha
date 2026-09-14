@@ -13,6 +13,7 @@ import { getSupabaseClient } from "@/infrastructure/supabase/client";
 import { loadUserIdentity } from "@/infrastructure/supabase/identity-repository";
 import { appQueryClient } from "../query-client";
 import { AuthContext, type AuthContextValue, type AuthStatus } from "./auth-context";
+import { canReuseHydratedIdentity } from "./auth-event-policy";
 import { clearRuntimeOnAuthPrincipalChange } from "./session-runtime-cleanup";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -70,11 +71,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       currentUserId.current = nextSession.user.id;
 
-      // Refresh events only replace the token. Re-querying four identity tables
-      // here would duplicate work every time the tab regains focus.
-      if (event === "TOKEN_REFRESHED" && hydratedUserId.current === nextSession.user.id) return;
-      if (event === "SIGNED_IN" && hydratedUserId.current === nextSession.user.id) {
-        setStatus("ready");
+      // Events from the same principal may update the token or Auth user without
+      // changing the ORHA profile tables. Preserving the hydrated identity avoids
+      // unmounting the active private route (notably after a password update).
+      if (canReuseHydratedIdentity(event, hydratedUserId.current, nextSession.user.id)) {
+        if (event === "SIGNED_IN") setStatus("ready");
         return;
       }
 
