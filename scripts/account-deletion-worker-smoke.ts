@@ -122,6 +122,138 @@ async function waitForWorkerDeletion(
   return !(await authUserExists(admin, userId));
 }
 
+async function waitForLifecycleCompletion(
+  admin: SupabaseClient,
+  requestId: string,
+  attempts: number,
+): Promise<boolean> {
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const result = await admin
+      .from("account_lifecycle_requests")
+      .select("status")
+      .eq("id", requestId)
+      .maybeSingle();
+    if (result.error)
+      throw new Error("Could not inspect the temporary lifecycle request.");
+    if (result.data?.status === "completed") return true;
+    await delay(1_000);
+  }
+  return false;
+}
+
+async function cleanupDeactivationFixture(
+  admin: SupabaseClient,
+  userClient: SupabaseClient,
+  userId: string | null,
+): Promise<void> {
+  await userClient.auth.signOut().catch(() => undefined);
+  if (userId && (await authUserExists(admin, userId))) {
+    const deletion = await admin.auth.admin.deleteUser(userId, false);
+    if (deletion.error)
+      throw new Error("Could not clean the deactivation-smoke Auth user.");
+  }
+  if (userId && (await authUserExists(admin, userId)))
+    throw new Error(
+      "Temporary deactivation-smoke user remained after cleanup.",
+    );
+}
+
+async function runDeactivationJourney(
+  admin: SupabaseClient,
+  publishableKey: string,
+  supabaseUrl: string,
+  workspace: string,
+  checks: string[],
+): Promise<void> {
+  const unique = randomUUID();
+  const email = `orha-deactivate-smoke-${unique}@example.invalid`;
+  const password = `Orha-Deactivate-${unique}!`;
+  const userClient = client(supabaseUrl, publishableKey);
+  let userId: string | null = null;
+
+  try {
+    const created = await admin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { test_scope: "account-deactivation-worker-smoke" },
+    });
+    if (created.error || !created.data.user)
+      throw new Error(
+        "Could not create the temporary deactivation-smoke user.",
+      );
+    userId = created.data.user.id;
+    checks.push("temporary-deactivation-user-created");
+
+    const signedIn = await userClient.auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (signedIn.error || !signedIn.data.session)
+      throw new Error(
+        "Temporary deactivation-smoke user could not authenticate.",
+      );
+    checks.push("deactivation-fresh-session-issued");
+
+    const denied = await userClient.rpc("request_account_lifecycle", {
+      p_kind: "deactivate",
+      p_confirmation: "INVALID",
+    });
+    if (!denied.error)
+      throw new Error("Account deactivation accepted an invalid confirmation.");
+    checks.push("deactivation-invalid-confirmation-rejected");
+
+    const requested = await userClient.rpc("request_account_lifecycle", {
+      p_kind: "deactivate",
+      p_confirmation: "CONFIRMAR",
+    });
+    const lifecycle = Array.isArray(requested.data)
+      ? requested.data[0]
+      : requested.data;
+    const requestId =
+      lifecycle && typeof lifecycle === "object"
+        ? (lifecycle as { id?: unknown }).id
+        : null;
+    if (requested.error || typeof requestId !== "string")
+      throw new Error(
+        "Could not persist the temporary account-deactivation request.",
+      );
+    checks.push("account-deactivation-requested");
+
+    const restriction = await admin
+      .from("profile_moderation_state")
+      .select("status,public_reason")
+      .eq("profile_id", userId)
+      .single();
+    if (
+      restriction.error ||
+      restriction.data.status !== "restricted" ||
+      restriction.data.public_reason !==
+        `account_lifecycle:deactivate:${requestId}`
+    ) {
+      throw new Error(
+        "Account deactivation did not persist its immediate restriction.",
+      );
+    }
+    checks.push("deactivation-restriction-persisted");
+
+    await triggerLinkedLifecycleWorker(workspace);
+    let completed = await waitForLifecycleCompletion(admin, requestId, 20);
+    if (!completed) {
+      await triggerLinkedLifecycleWorker(workspace);
+      completed = await waitForLifecycleCompletion(admin, requestId, 20);
+    }
+    if (!completed)
+      throw new Error(
+        "Account-lifecycle worker did not complete deactivation.",
+      );
+    checks.push("worker-completed-account-deactivation");
+  } finally {
+    await cleanupDeactivationFixture(admin, userClient, userId);
+  }
+  checks.push("deactivation-user-cleaned");
+}
+
 async function cleanupFixture(
   admin: SupabaseClient,
   input: {
@@ -193,6 +325,14 @@ export async function runAccountDeletionWorkerSmoke(
   let cleanupVerified: boolean | undefined;
 
   try {
+    await runDeactivationJourney(
+      admin,
+      environment.publishableKey,
+      supabaseUrl,
+      environment.workspace,
+      checks,
+    );
+
     const created = await admin.auth.admin.createUser({
       email,
       password,
