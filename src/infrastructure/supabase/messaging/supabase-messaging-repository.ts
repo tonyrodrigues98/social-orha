@@ -501,17 +501,11 @@ export class SupabaseMessagingRepository implements MessagingRepository {
 
   async setReaction(input: { conversationId: string; messageId: string; userId: string; emoji: string; active: boolean }): Promise<void> {
     const kind = reactionKindFromEmoji(input.emoji);
-    if (input.active) {
-      const { error } = await this.client.from("message_reactions").upsert({
-        message_id: input.messageId,
-        reactor_id: input.userId,
-        kind,
-      }, { onConflict: "message_id,reactor_id" });
-      if (error) throw error;
-      return;
-    }
-    const { error } = await this.client.from("message_reactions").delete()
-      .eq("message_id", input.messageId).eq("reactor_id", input.userId);
+    const { error } = await this.client.rpc("set_message_reaction", {
+      p_message_id: input.messageId,
+      p_kind: kind,
+      p_active: input.active,
+    });
     if (error) throw error;
   }
 

@@ -95,6 +95,28 @@ describe("SupabaseMessagingRepository", () => {
     });
   });
 
+  it("sets reactions through the actor-authoritative RPC", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: true, error: null });
+    const repository = new SupabaseMessagingRepository(
+      { rpc } as unknown as SupabaseClient,
+      mediaRepository(),
+    );
+
+    await repository.setReaction({
+      conversationId: "conversation-1",
+      messageId: "message-1",
+      userId: "forged-user-id-is-ignored",
+      emoji: "👍",
+      active: true,
+    });
+
+    expect(rpc).toHaveBeenCalledWith("set_message_reaction", {
+      p_message_id: "message-1",
+      p_kind: "like",
+      p_active: true,
+    });
+  });
+
   it("sends media through the atomic verification worker without pre-creating a message", async () => {
     const invoke = vi.fn().mockResolvedValue({ data: { message: { id: "message-1" } }, error: null });
     const rpc = vi.fn().mockResolvedValue({

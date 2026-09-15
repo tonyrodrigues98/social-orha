@@ -146,7 +146,8 @@ As jornadas autenticadas cobrem, pela UI e contra o Supabase real:
   sessão, recovery/reset e remoção administrativa dos usuários temporários;
 - amizade A↔B, incluindo aceite e remoção;
 - comunidade, publicação, comentário, reação persistida e limpeza;
-- solicitação/conversa, texto, imagem, áudio com waveform, recibo e preferência;
+- solicitação/conversa, texto, reply, reação actor-authoritative, encaminhamento,
+  imagem, áudio com waveform, recibo, preferência e soft-delete;
 - perfil, galeria, privacidade cruzada e restauração;
 - bloqueio, denúncia e ação administrativa de moderação;
 - chamado persistente, resposta/estado em Realtime e isolamento da função Suporte;

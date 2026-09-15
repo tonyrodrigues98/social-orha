@@ -506,6 +506,8 @@ function ChatMessage({
 
   return (
     <div
+      data-chat-message-id={message.id}
+      data-message-direction={isOutgoing ? "outgoing" : "incoming"}
       className={cn(
         "chat-message group/message relative flex items-end gap-2",
         isOutgoing ? "flex-row-reverse" : "flex-row",

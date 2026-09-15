@@ -2052,20 +2052,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      assign_global_role: {
-        Args: {
-          p_reason: string
-          p_role: Database["public"]["Enums"]["app_role"]
-          p_target_user_id: string
-        }
-        Returns: {
-          full_name: string
-          role: Database["public"]["Enums"]["app_role"]
-          updated_at: string
-          user_id: string
-          username: string
-        }[]
-      }
       apply_moderation_action: {
         Args: {
           p_action_type: Database["public"]["Enums"]["moderation_action_type"]
@@ -2118,6 +2104,20 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      assign_global_role: {
+        Args: {
+          p_reason: string
+          p_role: Database["public"]["Enums"]["app_role"]
+          p_target_user_id: string
+        }
+        Returns: {
+          full_name: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+          user_id: string
+          username: string
+        }[]
       }
       ban_community_member: {
         Args: {
@@ -2772,6 +2772,15 @@ export type Database = {
         Args: { p_recent_limit?: number }
         Returns: Json
       }
+      get_messaging_profile_summaries: {
+        Args: { p_profile_ids: string[] }
+        Returns: {
+          avatar_path: string
+          full_name: string
+          profile_id: string
+          username: string
+        }[]
+      }
       get_moderation_report_attachment: {
         Args: { p_attachment_id: string; p_report_id: string }
         Returns: {
@@ -2816,31 +2825,6 @@ export type Database = {
           block_id: string
           blocked_profile_id: string
           full_name: string
-          username: string
-        }[]
-      }
-      list_own_blocked_profiles: {
-        Args: {
-          p_before_created_at?: string
-          p_before_id?: string
-          p_blocked_profile_id?: string
-          p_limit?: number
-        }
-        Returns: {
-          avatar_path: string
-          block_id: string
-          blocked_profile_id: string
-          created_at: string
-          full_name: string
-          username: string
-        }[]
-      }
-      get_messaging_profile_summaries: {
-        Args: { p_profile_ids: string[] }
-        Returns: {
-          avatar_path: string
-          full_name: string
-          profile_id: string
           username: string
         }[]
       }
@@ -3027,6 +3011,21 @@ export type Database = {
           object_path: string
         }[]
       }
+      list_global_role_assignments: {
+        Args: {
+          p_before_updated_at?: string
+          p_before_user_id?: string
+          p_limit?: number
+          p_query?: string
+        }
+        Returns: {
+          full_name: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+          user_id: string
+          username: string
+        }[]
+      }
       list_message_attachment_cleanup: {
         Args: { p_limit?: number }
         Returns: {
@@ -3048,6 +3047,22 @@ export type Database = {
         Returns: {
           bucket_id: string
           object_path: string
+        }[]
+      }
+      list_own_blocked_profiles: {
+        Args: {
+          p_before_created_at?: string
+          p_before_id?: string
+          p_blocked_profile_id?: string
+          p_limit?: number
+        }
+        Returns: {
+          avatar_path: string
+          block_id: string
+          blocked_profile_id: string
+          created_at: string
+          full_name: string
+          username: string
         }[]
       }
       list_post_media_cleanup: {
@@ -3097,21 +3112,6 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
-      }
-      list_global_role_assignments: {
-        Args: {
-          p_before_updated_at?: string
-          p_before_user_id?: string
-          p_limit?: number
-          p_query?: string
-        }
-        Returns: {
-          full_name: string
-          role: Database["public"]["Enums"]["app_role"]
-          updated_at: string
-          user_id: string
-          username: string
-        }[]
       }
       list_report_evidence_cleanup: {
         Args: { p_limit?: number }
@@ -3886,6 +3886,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      set_message_reaction: {
+        Args: {
+          p_active: boolean
+          p_kind: Database["public"]["Enums"]["reaction_kind"]
+          p_message_id: string
+        }
+        Returns: boolean
       }
       text_array_payload_is_valid: {
         Args: {

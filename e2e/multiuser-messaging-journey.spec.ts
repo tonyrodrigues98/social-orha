@@ -30,7 +30,11 @@ function privateChat(page: Page): Locator {
 function chatMessage(page: Page, uniqueText: string): Locator {
   return privateChat(page)
     .locator(".chat-message")
-    .filter({ hasText: uniqueText })
+    .filter({
+      has: page
+        .locator(".chat-bubble > p")
+        .filter({ hasText: uniqueText }),
+    })
     .last();
 }
 
@@ -277,6 +281,92 @@ async function sendTextMessage(page: Page, text: string): Promise<void> {
   await expect(chatMessage(page, text)).toBeVisible({ timeout: UI_TIMEOUT });
 }
 
+async function replyToMessage(
+  page: Page,
+  sourceText: string,
+  replyText: string,
+): Promise<void> {
+  const source = chatMessage(page, sourceText);
+  await source.scrollIntoViewIfNeeded();
+  await source.hover();
+  await source
+    .locator("[data-message-id]")
+    .getByRole("button", { name: "Responder" })
+    .click();
+
+  const composer = privateChat(page).getByPlaceholder("Escreva sua resposta");
+  await expect(composer).toBeVisible();
+  await composer.fill(replyText);
+  await expectSuccessfulSupabaseMutation(
+    page,
+    /\/rest\/v1\/rpc\/send_message$/,
+    "POST",
+    () =>
+      privateChat(page)
+        .getByRole("button", { name: "Enviar mensagem" })
+        .click(),
+  );
+
+  const reply = chatMessage(page, replyText);
+  await expect(reply).toBeVisible({ timeout: UI_TIMEOUT });
+  await expect(reply.getByText(sourceText, { exact: true })).toBeVisible();
+}
+
+async function reactToMessage(
+  page: Page,
+  sourceText: string,
+  emoji: string,
+): Promise<void> {
+  const source = chatMessage(page, sourceText);
+  await source.scrollIntoViewIfNeeded();
+  await source.hover();
+  const toolbar = source.locator("[data-message-id]");
+  await toolbar.getByRole("button", { name: "Adicionar reação" }).click();
+  await expectSuccessfulSupabaseMutation(
+    page,
+    /\/rest\/v1\/rpc\/set_message_reaction$/,
+    "POST",
+    () => toolbar.getByRole("button", { name: `React with ${emoji}` }).click(),
+  );
+  await expect(
+    source.getByRole("button", { name: `${emoji} 1 reaction` }),
+  ).toBeVisible({ timeout: UI_TIMEOUT });
+}
+
+async function forwardToCurrentConversation(
+  page: Page,
+  sourceText: string,
+  conversationTitle: string,
+): Promise<void> {
+  const source = chatMessage(page, sourceText);
+  await source.scrollIntoViewIfNeeded();
+  await source.hover();
+  const toolbar = source.locator("[data-message-id]");
+  await toolbar.getByRole("button", { name: "Mais ações" }).click();
+  await toolbar.getByRole("button", { name: "Encaminhar" }).click();
+
+  const dialog = page.getByRole("dialog", { name: "Encaminhar mensagem" });
+  await expect(dialog).toBeVisible();
+  const target = dialog
+    .locator("button[aria-pressed]")
+    .filter({ hasText: conversationTitle })
+    .first();
+  await expect(target).toBeVisible({ timeout: UI_TIMEOUT });
+  await target.click();
+  await expectSuccessfulSupabaseMutation(
+    page,
+    /\/rest\/v1\/rpc\/forward_message$/,
+    "POST",
+    () => dialog.getByRole("button", { name: "Encaminhar (1)" }).click(),
+  );
+  await expect(dialog).toBeHidden({ timeout: UI_TIMEOUT });
+
+  const forwarded = chatMessage(page, sourceText);
+  await expect(forwarded.getByText("Encaminhada", { exact: true })).toBeVisible({
+    timeout: UI_TIMEOUT,
+  });
+}
+
 async function chooseAttachment(
   page: Page,
   menuItemName: "Foto" | "Áudio",
@@ -425,14 +515,26 @@ async function notificationsEnabled(page: Page): Promise<boolean> {
 }
 
 async function deleteSentMessage(page: Page, uniqueText: string): Promise<void> {
-  const message = chatMessage(page, uniqueText);
+  const message = privateChat(page)
+    .locator('.chat-message[data-message-direction="outgoing"]')
+    .filter({ hasText: uniqueText })
+    .last();
   if (!(await message.isVisible().catch(() => false))) return;
 
   await message.scrollIntoViewIfNeeded();
   await message.hover();
+  const messageId = await message.getAttribute("data-chat-message-id");
+  expect(messageId, "A mensagem precisa expor seu identificador estável.").toBeTruthy();
   const toolbar = message.locator("[data-message-id]");
-  await toolbar.getByRole("button", { name: "Mais ações" }).click();
-  await toolbar.getByRole("button", { name: "Excluir", exact: true }).click();
+  const moreActions = toolbar.getByRole("button", { name: "Mais ações" });
+  await moreActions.focus();
+  await moreActions.press("Enter");
+  const deleteAction = toolbar.getByRole("button", {
+    name: "Excluir",
+    exact: true,
+  });
+  await expect(deleteAction).toBeVisible({ timeout: 5_000 });
+  await deleteAction.click();
   const confirmation = page.getByRole("alertdialog", {
     name: "Excluir mensagem?",
   });
@@ -446,18 +548,23 @@ async function deleteSentMessage(page: Page, uniqueText: string): Promise<void> 
         .getByRole("button", { name: "Excluir", exact: true })
         .click(),
   );
-  await expect(message).toHaveCount(0, { timeout: UI_TIMEOUT });
+  await expect(
+    privateChat(page)
+      .locator(`.chat-message[data-chat-message-id="${messageId}"]`)
+      .getByText("Mensagem excluída", { exact: true }),
+  ).toBeVisible({ timeout: UI_TIMEOUT });
 }
 
 test.describe("jornada real de mensagens entre duas contas", () => {
-  test("persiste consentimento, texto, imagem, WAV, recibo e preferência", async ({
+  test("persiste texto, reply, reação, encaminhamento, mídia, recibo e preferência", async ({
     browser,
   }) => {
-    test.setTimeout(180_000);
+    test.setTimeout(300_000);
     const credentialsA = requireNamedCredentials("user-a");
     const credentialsB = requireNamedCredentials("user-b");
     const runToken = `ORHA-E2E-${Date.now()}`;
     const textMessage = `Mensagem real ${runToken}`;
+    const replyMessage = `Resposta real ${runToken}`;
     const imageCaption = `Imagem real ${runToken}`;
     const audioCaption = `Áudio WAV real ${runToken}`;
     const audioFileName = `${runToken}.wav`;
@@ -473,7 +580,7 @@ test.describe("jornada real de mensagens entre duas contas", () => {
     ]);
     const qualityA = observeRuntimeQuality(pageA);
     const qualityB = observeRuntimeQuality(pageB);
-    const sentMessages: string[] = [];
+    const sentMessages: Array<{ page: Page; text: string }> = [];
     let originalNotificationsEnabled: boolean | null = null;
     let notificationsNeedRestore = false;
 
@@ -489,7 +596,7 @@ test.describe("jornada real de mensagens entre duas contas", () => {
       await expectContractedChatViewport(pageA);
 
       await sendTextMessage(pageA, textMessage);
-      sentMessages.push(textMessage);
+      sentMessages.push({ page: pageA, text: textMessage });
       await expect(chatMessage(pageB, textMessage)).toBeVisible({
         timeout: UI_TIMEOUT,
       });
@@ -500,6 +607,36 @@ test.describe("jornada real de mensagens entre duas contas", () => {
         "O recibo entregue/lido precisa ter nome acessível.",
       ).toBeVisible({ timeout: UI_TIMEOUT });
 
+      await replyToMessage(pageB, textMessage, replyMessage);
+      sentMessages.push({ page: pageB, text: replyMessage });
+      await expect(chatMessage(pageA, replyMessage)).toBeVisible({
+        timeout: UI_TIMEOUT,
+      });
+      await expect(
+        chatMessage(pageA, replyMessage).getByText(textMessage, {
+          exact: true,
+        }),
+      ).toBeVisible();
+
+      await reactToMessage(pageB, textMessage, "👍");
+      await expect(
+        chatMessage(pageA, textMessage).getByRole("button", {
+          name: "👍 1 reaction",
+        }),
+      ).toBeVisible({ timeout: UI_TIMEOUT });
+
+      await forwardToCurrentConversation(
+        pageA,
+        textMessage,
+        credentialsB.expectedProfileText!,
+      );
+      sentMessages.push({ page: pageA, text: textMessage });
+      await expect(
+        chatMessage(pageB, textMessage).getByText("Encaminhada", {
+          exact: true,
+        }),
+      ).toBeVisible({ timeout: UI_TIMEOUT });
+
       await sendAttachmentMessage(
         pageA,
         imageCaption,
@@ -507,7 +644,7 @@ test.describe("jornada real de mensagens entre duas contas", () => {
         "Foto",
         path.resolve("public/brand/orha-icon-192.png"),
       );
-      sentMessages.push(imageCaption);
+      sentMessages.push({ page: pageA, text: imageCaption });
       await expect(chatMessage(pageB, imageCaption)).toBeVisible({
         timeout: UI_TIMEOUT,
       });
@@ -523,7 +660,7 @@ test.describe("jornada real de mensagens entre duas contas", () => {
           buffer: createValidPcmWav(),
         },
       );
-      sentMessages.push(audioCaption);
+      sentMessages.push({ page: pageA, text: audioCaption });
       await expect(chatMessage(pageB, audioCaption)).toBeVisible({
         timeout: UI_TIMEOUT,
       });
@@ -600,9 +737,9 @@ test.describe("jornada real de mensagens entre duas contas", () => {
               ? () => setNotificationsEnabled(pageA, originalNotificationsEnabled!)
               : undefined,
         },
-        ...sentMessages.reverse().map((messageText) => ({
-          name: `excluir mensagem E2E ${messageText}`,
-          run: () => deleteSentMessage(pageA, messageText),
+        ...sentMessages.reverse().map(({ page, text }) => ({
+          name: `excluir mensagem E2E ${text}`,
+          run: () => deleteSentMessage(page, text),
         })),
         {
           name: "fechar contextos da jornada de mensagens",
